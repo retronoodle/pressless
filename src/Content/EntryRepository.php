@@ -18,6 +18,8 @@ use Stead\Exception\SafeException;
  */
 final class EntryRepository
 {
+    public const PAGE_SIZE = 10;
+
     public function __construct(
         private readonly Connection $connection,
         private readonly FieldTypeRegistry $fieldTypes,
@@ -65,6 +67,45 @@ final class EntryRepository
             $out[] = $this->hydrate($row);
         }
         return $out;
+    }
+
+    /**
+     * Returns one page of entries for the collection ordered by id ascending.
+     * Page numbers are 1-based; values below 1 are treated as 1. A page
+     * beyond the last entry returns an empty entries list without raising.
+     *
+     * @return array{entries: list<Entry>, has_next: bool, total: int, page: int, page_size: int}
+     */
+    public function listByCollectionPaged(int $collectionId, int $page): array
+    {
+        $pageSize = self::PAGE_SIZE;
+        $page = $page < 1 ? 1 : $page;
+        $offset = ($page - 1) * $pageSize;
+
+        $total = $this->countByCollection($collectionId);
+
+        $rows = $this->connection->fetchAll(
+            'SELECT id, collection_id, slug, title FROM entries
+              WHERE collection_id = :collection_id
+              ORDER BY id ASC LIMIT :limit OFFSET :offset',
+            [
+                'collection_id' => $collectionId,
+                'limit' => $pageSize,
+                'offset' => $offset,
+            ],
+        );
+        $entries = [];
+        foreach ($rows as $row) {
+            $entries[] = $this->hydrate($row);
+        }
+
+        return [
+            'entries' => $entries,
+            'has_next' => ($offset + count($entries)) < $total,
+            'total' => $total,
+            'page' => $page,
+            'page_size' => $pageSize,
+        ];
     }
 
     public function count(): int

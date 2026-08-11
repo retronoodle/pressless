@@ -66,4 +66,91 @@ final class TwigRendererTest extends TestCase
             $this->assertStringContainsString('Could not render template', $e->getMessage());
         }
     }
+
+    /**
+     * @return array{config: Configuration, root: string}
+     */
+    private function configWithTheme(string $activeTheme, ?string $themePath = null): array
+    {
+        $tmp = sys_get_temp_dir() . '/stead-twig-' . bin2hex(random_bytes(4));
+        mkdir($tmp . '/templates', 0775, true);
+        mkdir($tmp . '/var/cache', 0775, true);
+
+        file_put_contents($tmp . '/templates/greet.twig', 'default {{ name }}');
+        file_put_contents($tmp . '/templates/only-default.twig', 'only default');
+
+        $themeDir = $tmp . '/' . trim($themePath ?? 'themes', '/') . '/' . $activeTheme;
+        mkdir($themeDir, 0775, true);
+        file_put_contents($themeDir . '/greet.twig', 'theme {{ name }}');
+
+        $config = new Configuration($tmp, 'test', [
+            'paths' => [
+                'templates' => 'templates',
+                'cache' => 'var/cache',
+                'theme' => $themePath ?? 'themes',
+            ],
+            'theme' => ['active' => $activeTheme],
+        ]);
+
+        return ['config' => $config, 'root' => $tmp];
+    }
+
+    public function testThemeTemplateOverridesTheDefault(): void
+    {
+        $env = $this->configWithTheme('starter');
+
+        $output = (new TwigRenderer($env['config']))->render('greet', ['name' => 'Ada']);
+
+        $this->assertSame('theme Ada', $output);
+    }
+
+    public function testUnprovidedTemplateFallsBackToDefaultDirectory(): void
+    {
+        $env = $this->configWithTheme('starter');
+
+        $output = (new TwigRenderer($env['config']))->render('only-default');
+
+        $this->assertSame('only default', $output);
+    }
+
+    public function testNoThemeConfiguredBehavesAsBefore(): void
+    {
+        $tmp = sys_get_temp_dir() . '/stead-twig-' . bin2hex(random_bytes(4));
+        mkdir($tmp . '/templates', 0775, true);
+        mkdir($tmp . '/var/cache', 0775, true);
+        file_put_contents($tmp . '/templates/greet.twig', 'default {{ name }}');
+
+        $config = new Configuration($tmp, 'test', [
+            'paths' => [
+                'templates' => 'templates',
+                'cache' => 'var/cache',
+            ],
+        ]);
+
+        $output = (new TwigRenderer($config))->render('greet', ['name' => 'Ada']);
+
+        $this->assertSame('default Ada', $output);
+    }
+
+    public function testMissingThemeDirectoryFallsBackToDefault(): void
+    {
+        $tmp = sys_get_temp_dir() . '/stead-twig-' . bin2hex(random_bytes(4));
+        mkdir($tmp . '/templates', 0775, true);
+        mkdir($tmp . '/var/cache', 0775, true);
+        mkdir($tmp . '/themes', 0775, true);
+        file_put_contents($tmp . '/templates/greet.twig', 'default {{ name }}');
+
+        $config = new Configuration($tmp, 'test', [
+            'paths' => [
+                'templates' => 'templates',
+                'cache' => 'var/cache',
+                'theme' => 'themes',
+            ],
+            'theme' => ['active' => 'no-such-theme'],
+        ]);
+
+        $output = (new TwigRenderer($config))->render('greet', ['name' => 'Ada']);
+
+        $this->assertSame('default Ada', $output);
+    }
 }

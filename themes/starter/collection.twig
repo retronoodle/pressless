@@ -1,0 +1,16 @@
+{% extends 'base.twig' %}
+
+{% block title %}{{ collection.name }}{% endblock %}
+
+{% block body %}
+<h1>{{ collection.name }}</h1>
+{% if entries|length == 0 %}
+    <p class="empty">No entries yet.</p>
+{% else %}
+    <ul class="entries">
+    {% for entry in entries %}
+        <li><a href="/{{ collection.slug }}/{{ entry.slug }}">{{ entry.value('title') }}</a></li>
+    {% endfor %}
+    </ul>
+{% endif %}
+{% endblock %}

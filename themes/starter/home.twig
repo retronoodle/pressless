@@ -1,0 +1,17 @@
+{% extends 'base.twig' %}
+
+{% block title %}{{ site_name|default('Stead') }}{% endblock %}
+
+{% block body %}
+<h1>Welcome to {{ site_name|default('Stead') }}</h1>
+{% if collections is defined and collections|length > 0 %}
+    <h2>Collections</h2>
+    <ul class="entries">
+    {% for collection in collections %}
+        <li><a href="/{{ collection.slug }}">{{ collection.name }}</a></li>
+    {% endfor %}
+    </ul>
+{% else %}
+    <p class="empty">No collections yet. Sign in to the admin to create one.</p>
+{% endif %}
+{% endblock %}

@@ -36,6 +36,7 @@ final class Configuration
         'PATHS_MIGRATIONS' => 'paths.migrations',
         'PATHS_SEED' => 'paths.seed',
         'PATHS_TEMPLATES' => 'paths.templates',
+        'PATHS_THEME' => 'paths.theme',
         'PATHS_CACHE' => 'paths.cache',
         'PATHS_LOG' => 'paths.log',
         'SESSION_NAME' => 'sessions.name',

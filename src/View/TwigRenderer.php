@@ -17,6 +17,12 @@ use Twig\Loader\FilesystemLoader;
  * so the project root resolver is the only place paths come from. A missing
  * template surfaces as {@see SafeException} so the kernel returns a controlled
  * 500 rather than leaking a stack trace to the browser.
+ *
+ * When `theme.active` is set in configuration and resolves to an existing
+ * directory under `paths.theme`, the theme directory is registered ahead of
+ * the default templates directory. Twig's FilesystemLoader returns the
+ * first match, so theme templates win and unmatched names fall back to the
+ * default directory.
  */
 final class TwigRenderer implements Renderer
 {
@@ -24,7 +30,15 @@ final class TwigRenderer implements Renderer
 
     public function __construct(Configuration $config)
     {
-        $loader = new FilesystemLoader($config->path('paths.templates'));
+        $defaultTemplates = $config->path('paths.templates');
+        $loader = new FilesystemLoader();
+
+        $themePath = $this->resolveThemePath($config);
+        if ($themePath !== null) {
+            $loader->addPath($themePath);
+        }
+        $loader->addPath($defaultTemplates);
+
         $cache = $config->path('paths.cache') . '/twig';
 
         if (!is_dir($cache)) {
@@ -52,5 +66,21 @@ final class TwigRenderer implements Renderer
                 $e,
             );
         }
+    }
+
+    private function resolveThemePath(Configuration $config): ?string
+    {
+        $active = $config->getString('theme.active');
+        if ($active === '') {
+            return null;
+        }
+
+        $themesRoot = $config->getString('paths.theme');
+        if ($themesRoot === '') {
+            return null;
+        }
+
+        $candidate = rtrim($config->projectRoot(), '/') . '/' . trim($themesRoot, '/') . '/' . trim($active, '/');
+        return is_dir($candidate) ? $candidate : null;
     }
 }

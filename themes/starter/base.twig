@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}{{ site_name|default('Stead') }}{% endblock %}</title>
+    <style>
+        body { font-family: system-ui, -apple-system, sans-serif; max-width: 42rem; margin: 2rem auto; padding: 0 1rem; color: #222; line-height: 1.5; }
+        h1 { font-size: 1.6rem; }
+        h2 { font-size: 1.2rem; }
+        a { color: #0a58ca; }
+        .theme-mark { font-size: 0.75rem; color: #888; text-transform: uppercase; letter-spacing: 0.05em; }
+        ul.entries { list-style: none; padding: 0; }
+        ul.entries li { padding: 0.5rem 0; border-bottom: 1px solid #eee; }
+        .entry-body { white-space: pre-wrap; }
+        .empty { color: #777; font-style: italic; }
+    </style>
+</head>
+<body class="theme-starter {% block body_class %}{% endblock %}">
+<p class="theme-mark">Starter theme</p>
+{% block body %}{% endblock %}
+</body>
+</html>

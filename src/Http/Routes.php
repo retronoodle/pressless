@@ -34,6 +34,7 @@ use Stead\Http\Controller\AdminController;
 use Stead\Http\Controller\CollectionAdminController;
 use Stead\Http\Controller\EntryAdminController;
 use Stead\Http\Controller\LoginController;
+use Stead\Http\Controller\PublicController;
 use Stead\View\Renderer;
 use Stead\View\SimpleRenderer;
 use Stead\View\TwigRenderer;
@@ -118,6 +119,8 @@ final class Routes
             $slugs,
         );
 
+        $publicController = new PublicController($renderer, $collections, $entryRepository);
+
         $router = new Router();
 
         // Phase 1 — auth + dashboard.
@@ -143,6 +146,12 @@ final class Routes
         $router->get('/admin/collections/{slug}/entries/{id}/edit', $guard->protect($entriesController->edit(...)), 'entries.edit');
         $router->post('/admin/collections/{slug}/entries/{id}/edit', $guard->protect($entriesController->update(...)), 'entries.update');
         $router->post('/admin/collections/{slug}/entries/{id}/delete', $guard->protect($entriesController->destroy(...)), 'entries.destroy');
+
+        // Phase 3 — public collection listing and single entry pages. These
+        // patterns are registered last so the literal admin paths above win.
+        $router->get('/', $publicController->home(...), 'public.home');
+        $router->get('/{collectionSlug}', $publicController->collection(...), 'public.collection');
+        $router->get('/{collectionSlug}/{entrySlug}', $publicController->entry(...), 'public.entry');
 
         return $router;
     }

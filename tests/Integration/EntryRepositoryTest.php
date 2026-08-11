@@ -256,6 +256,70 @@ final class EntryRepositoryTest extends DatabaseTestCase
         $this->assertSame([$a->id(), $b->id()], array_map(static fn(Entry $e) => $e->id(), $listed));
     }
 
+    public function testListByCollectionPagedReturnsFirstPageAndIndicatesMoreEntriesExist(): void
+    {
+        $collection = $this->postsCollection();
+        $repo = $this->buildRepository();
+        $saved = [];
+        for ($i = 0; $i < EntryRepository::PAGE_SIZE + 5; $i++) {
+            $saved[] = $repo->save(
+                new Entry(0, $collection->id(), '', []),
+                $collection,
+                ['title' => 'Post ' . $i, 'body' => ''],
+            );
+        }
+
+        $page = $repo->listByCollectionPaged($collection->id(), 1);
+
+        $this->assertCount(EntryRepository::PAGE_SIZE, $page['entries']);
+        $this->assertTrue($page['has_next']);
+        $this->assertSame(EntryRepository::PAGE_SIZE + 5, $page['total']);
+        $this->assertSame(1, $page['page']);
+        $this->assertSame(EntryRepository::PAGE_SIZE, $page['page_size']);
+        $this->assertSame(
+            array_slice(array_map(static fn(Entry $e) => $e->id(), $saved), 0, EntryRepository::PAGE_SIZE),
+            array_map(static fn(Entry $e) => $e->id(), $page['entries']),
+        );
+    }
+
+    public function testListByCollectionPagedReturnsEmptyPageBeyondTheLastEntry(): void
+    {
+        $collection = $this->postsCollection();
+        $repo = $this->buildRepository();
+        $repo->save(new Entry(0, $collection->id(), '', []), $collection, ['title' => 'Only', 'body' => '']);
+
+        $page = $repo->listByCollectionPaged($collection->id(), 99);
+
+        $this->assertSame([], $page['entries']);
+        $this->assertFalse($page['has_next']);
+        $this->assertSame(1, $page['total']);
+        $this->assertSame(99, $page['page']);
+    }
+
+    public function testListByCollectionPagedReturnsAllEntriesAndIndicatesNoNextPageWhenFewerThanPageSize(): void
+    {
+        $collection = $this->postsCollection();
+        $repo = $this->buildRepository();
+        $saved = [];
+        for ($i = 0; $i < 3; $i++) {
+            $saved[] = $repo->save(
+                new Entry(0, $collection->id(), '', []),
+                $collection,
+                ['title' => 'Few ' . $i, 'body' => ''],
+            );
+        }
+
+        $page = $repo->listByCollectionPaged($collection->id(), 1);
+
+        $this->assertCount(3, $page['entries']);
+        $this->assertFalse($page['has_next']);
+        $this->assertSame(3, $page['total']);
+        $this->assertSame(
+            array_map(static fn(Entry $e) => $e->id(), $saved),
+            array_map(static fn(Entry $e) => $e->id(), $page['entries']),
+        );
+    }
+
     public function testDeleteRemovesEntryAndValues(): void
     {
         $collection = $this->postsCollection();

@@ -30,6 +30,12 @@ defaults:
         templates: templates
         cache: var/cache
         log: var/log
+        # When `theme.active` is set, theme templates resolve from
+        # `themes/<active>/` ahead of the default `templates/` directory.
+        # Leave `theme.active` empty to use the default templates only.
+        theme: themes
+    theme:
+        active: starter
     sessions:
         name: stead_session
         lifetime: 7200
