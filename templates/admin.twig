@@ -10,7 +10,7 @@
     <nav class="admin-nav" aria-label="Admin sections">
         <ul>
             <li><a href="/admin" aria-current="page">Dashboard</a></li>
-            <li><span class="nav-placeholder" aria-disabled="true">Collections</span></li>
+            <li><a href="/admin/collections">Collections</a></li>
             <li><span class="nav-placeholder" aria-disabled="true">Media</span></li>
             <li><span class="nav-placeholder" aria-disabled="true">Users</span></li>
             <li><span class="nav-placeholder" aria-disabled="true">Settings</span></li>
@@ -25,11 +25,23 @@
 </header>
 
 <main class="admin-main">
-    <section class="empty-state">
-        <h2>No collections yet</h2>
-        <p>Pressless is in Phase 1. Once you create a collection, entries and
-            field values will live here. For now, this is intentionally empty so
-            you can confirm the administrator shell is wired up correctly.</p>
-    </section>
+    {% if collection_count == 0 %}
+        <section class="empty-state">
+            <h2>Create your first collection</h2>
+            <p>Collections define the shape of your content. Each one is a list
+                of fields (text, dates, numbers, and so on) and a list of
+                entries that hold values for those fields.</p>
+            <p><a class="button" href="/admin/collections/new">Create your first collection</a></p>
+        </section>
+    {% else %}
+        <section class="dashboard-summary">
+            <h2>Dashboard</h2>
+            <p>
+                <strong>{{ collection_count }}</strong> collection{{ collection_count == 1 ? '' : 's' }},
+                <strong>{{ entry_count }}</strong> entr{{ entry_count == 1 ? 'y' : 'ies' }}.
+            </p>
+            <p><a href="/admin/collections">Manage collections</a></p>
+        </section>
+    {% endif %}
 </main>
 {% endblock %}

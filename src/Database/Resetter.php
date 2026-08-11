@@ -15,6 +15,7 @@ final class Resetter
         'entry_values',
         'entries',
         'media',
+        'schema_change_log',
         'collections',
         'sessions',
         'users',

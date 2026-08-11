@@ -26,10 +26,48 @@ final class Seeder
     private const ADMIN_NAME = 'Site Administrator';
     private const ADMIN_PASSWORD_LENGTH = 16;
 
-    /** Sample collections created on first seed. */
+    /** Empty sample collections created on first seed. */
     private const SAMPLE_COLLECTIONS = [
         ['slug' => 'pages', 'name' => 'Pages'],
-        ['slug' => 'posts', 'name' => 'Posts'],
+    ];
+
+    /** Slug of the demo content collection seeded with three sample entries. */
+    private const POSTS_COLLECTION_SLUG = 'posts';
+    private const POSTS_COLLECTION_NAME = 'Posts';
+
+    /** Field set for the demo `posts` collection. */
+    private const POSTS_FIELDS = [
+        ['key' => 'title', 'type' => 'text', 'label' => 'Title', 'required' => true],
+        ['key' => 'body', 'type' => 'richtext', 'label' => 'Body'],
+        ['key' => 'published_at', 'type' => 'date', 'label' => 'Published at'],
+    ];
+
+    /** Deterministic sample entries for the `posts` collection. */
+    private const POSTS_ENTRIES = [
+        [
+            'slug' => 'hello-world',
+            'title' => 'Hello, world',
+            'body' => "Welcome to Pressless. This is the first post in the seeded "
+                . "`posts` collection, so you can see the content engine at "
+                . "work without configuring anything by hand.",
+            'published_at' => '2025-01-01',
+        ],
+        [
+            'slug' => 'why-a-typed-cms',
+            'title' => 'Why a typed CMS',
+            'body' => "Pressless stores every field value in the typed column "
+                . "that matches its kind, so the public site can sort, filter, "
+                . "and render without branching on string drift.",
+            'published_at' => '2025-01-08',
+        ],
+        [
+            'slug' => 'field-types-in-plain-english',
+            'title' => 'Field types, in plain English',
+            'body' => "Eight field types ship out of the box: text, richtext, "
+                . "number, boolean, date, select, media, and relation. Each one "
+                . "owns its schema fragment, validation, persistence, and form.",
+            'published_at' => '2025-01-15',
+        ],
     ];
 
     public function __construct(
@@ -45,7 +83,7 @@ final class Seeder
      * Pass `allowProduction = true` from an explicit override (e.g.
      * `bin/serve --allow-production-seed`) to seed in a production environment.
      *
-     * @return array{admin_email: ?string, admin_password: ?string, collections_created: int}
+     * @return array{admin_email: ?string, admin_password: ?string, collections_created: int, entries_created: int}
      */
     public function seed(bool $allowProduction = false): array
     {
@@ -79,10 +117,20 @@ final class Seeder
             $created++;
         }
 
+        $entriesCreated = 0;
+        if (!$this->collectionExists(self::POSTS_COLLECTION_SLUG)) {
+            $this->createPostsCollection();
+            $created++;
+            $entriesCreated = $this->createPostsEntries();
+        } else {
+            $entriesCreated = $this->createPostsEntries();
+        }
+
         return [
             'admin_email' => $adminEmail,
             'admin_password' => $adminPassword,
             'collections_created' => $created,
+            'entries_created' => $entriesCreated,
         ];
     }
 
@@ -101,6 +149,15 @@ final class Seeder
         $row = $this->connection->fetchOne(
             'SELECT id FROM collections WHERE slug = :slug',
             ['slug' => $slug],
+        );
+        return $row !== null;
+    }
+
+    private function entryExists(int $collectionId, string $slug): bool
+    {
+        $row = $this->connection->fetchOne(
+            'SELECT id FROM entries WHERE collection_id = :collection_id AND slug = :slug',
+            ['collection_id' => $collectionId, 'slug' => $slug],
         );
         return $row !== null;
     }
@@ -125,6 +182,136 @@ final class Seeder
                 'created_at' => $now,
                 'updated_at' => $now,
             ],
+        );
+    }
+
+    private function createPostsCollection(): void
+    {
+        $now = gmdate('Y-m-d H:i:s');
+        $schema = json_encode(['fields' => self::POSTS_FIELDS]);
+
+        $this->connection->execute(
+            'INSERT INTO collections (slug, name, schema_definition, created_at, updated_at)
+             VALUES (:slug, :name, :schema_definition, :created_at, :updated_at)',
+            [
+                'slug' => self::POSTS_COLLECTION_SLUG,
+                'name' => self::POSTS_COLLECTION_NAME,
+                'schema_definition' => $schema,
+                'created_at' => $now,
+                'updated_at' => $now,
+            ],
+        );
+    }
+
+    /**
+     * @return int number of entries actually inserted (already-existing entries are skipped)
+     */
+    private function createPostsEntries(): int
+    {
+        $row = $this->connection->fetchOne(
+            'SELECT id FROM collections WHERE slug = :slug',
+            ['slug' => self::POSTS_COLLECTION_SLUG],
+        );
+        if ($row === null) {
+            return 0;
+        }
+        $collectionId = (int) $row['id'];
+
+        $created = 0;
+        foreach (self::POSTS_ENTRIES as $entry) {
+            $slug = (string) $entry['slug'];
+            if ($this->entryExists($collectionId, $slug)) {
+                continue;
+            }
+            $this->createPostEntry($collectionId, $entry);
+            $created++;
+        }
+        return $created;
+    }
+
+    /**
+     * @param array{slug: string, title: string, body: string, published_at: string} $entry
+     */
+    private function createPostEntry(int $collectionId, array $entry): void
+    {
+        $now = gmdate('Y-m-d H:i:s');
+        $this->connection->execute(
+            'INSERT INTO entries (collection_id, slug, title, status, created_at, updated_at)
+             VALUES (:collection_id, :slug, :title, :status, :created_at, :updated_at)',
+            [
+                'collection_id' => $collectionId,
+                'slug' => $entry['slug'],
+                'title' => $entry['title'],
+                'status' => 'published',
+                'created_at' => $now,
+                'updated_at' => $now,
+            ],
+        );
+
+        $entryRow = $this->connection->fetchOne(
+            'SELECT id FROM entries WHERE collection_id = :collection_id AND slug = :slug',
+            ['collection_id' => $collectionId, 'slug' => $entry['slug']],
+        );
+        if ($entryRow === null) {
+            return;
+        }
+        $entryId = (int) $entryRow['id'];
+
+        $titleRow = [
+            'entry_id' => $entryId,
+            'field_key' => 'title',
+            'field_type' => 'text',
+            'value' => $entry['title'],
+            'value_text' => $entry['title'],
+            'value_index' => '',
+            'created_at' => $now,
+            'updated_at' => $now,
+        ];
+        $this->connection->execute(
+            'INSERT INTO entry_values
+                 (entry_id, field_key, field_type, value,
+                  value_text, value_number, value_date, value_bool, value_json,
+                  value_index, created_at, updated_at)
+             VALUES
+                 (:entry_id, :field_key, :field_type, :value,
+                  :value_text, NULL, NULL, NULL, NULL,
+                  :value_index, :created_at, :updated_at)',
+            $titleRow,
+        );
+
+        $bodyRow = $titleRow;
+        $bodyRow['field_key'] = 'body';
+        $bodyRow['field_type'] = 'richtext';
+        $bodyRow['value'] = $entry['body'];
+        $bodyRow['value_text'] = $entry['body'];
+        $this->connection->execute(
+            'INSERT INTO entry_values
+                 (entry_id, field_key, field_type, value,
+                  value_text, value_number, value_date, value_bool, value_json,
+                  value_index, created_at, updated_at)
+             VALUES
+                 (:entry_id, :field_key, :field_type, :value,
+                  :value_text, NULL, NULL, NULL, NULL,
+                  :value_index, :created_at, :updated_at)',
+            $bodyRow,
+        );
+
+        $dateRow = $titleRow;
+        $dateRow['field_key'] = 'published_at';
+        $dateRow['field_type'] = 'date';
+        $dateRow['value'] = $entry['published_at'];
+        $dateRow['value_text'] = null;
+        $dateRow['value_date'] = $entry['published_at'];
+        $this->connection->execute(
+            'INSERT INTO entry_values
+                 (entry_id, field_key, field_type, value,
+                  value_text, value_number, value_date, value_bool, value_json,
+                  value_index, created_at, updated_at)
+             VALUES
+                 (:entry_id, :field_key, :field_type, :value,
+                  :value_text, NULL, :value_date, NULL, NULL,
+                  :value_index, :created_at, :updated_at)',
+            $dateRow,
         );
     }
 

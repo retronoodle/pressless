@@ -23,10 +23,9 @@ final class ServePreflightTest extends TestCase
     {
         $this->projectRoot = sys_get_temp_dir() . '/pressless-serve-' . bin2hex(random_bytes(4));
         mkdir($this->projectRoot . '/database/migrations', 0775, true);
-        copy(
-            __DIR__ . '/../../../database/migrations/20260811000001_initial_schema.sqlite.sql',
-            $this->projectRoot . '/database/migrations/20260811000001_initial_schema.sqlite.sql',
-        );
+        foreach (glob(__DIR__ . '/../../../database/migrations/*.sqlite.sql') ?: [] as $src) {
+            copy($src, $this->projectRoot . '/database/migrations/' . basename($src));
+        }
         $this->dbPath = $this->projectRoot . '/pressless.sqlite';
 
         $this->config = new Configuration(
@@ -52,10 +51,31 @@ final class ServePreflightTest extends TestCase
     {
         $this->connection->close();
         @unlink($this->dbPath);
-        @unlink("{$this->projectRoot}/database/migrations/20260811000001_initial_schema.sqlite.sql");
-        @rmdir("{$this->projectRoot}/database/migrations");
-        @rmdir("{$this->projectRoot}/database");
-        @rmdir($this->projectRoot);
+        foreach ([
+            "{$this->projectRoot}/database/migrations",
+            "{$this->projectRoot}/database",
+            $this->projectRoot,
+        ] as $path) {
+            if (is_dir($path)) {
+                $this->rrmdir($path);
+            }
+        }
+    }
+
+    private function rrmdir(string $dir): void
+    {
+        foreach (scandir($dir) ?: [] as $entry) {
+            if ($entry === '.' || $entry === '..') {
+                continue;
+            }
+            $path = $dir . '/' . $entry;
+            if (is_dir($path)) {
+                $this->rrmdir($path);
+            } else {
+                @unlink($path);
+            }
+        }
+        @rmdir($dir);
     }
 
     public function testNormalStartupAppliesPendingMigrations(): void
@@ -66,7 +86,7 @@ final class ServePreflightTest extends TestCase
             server: ['host' => '127.0.0.1', 'port' => 8000],
         );
 
-        $this->assertCount(1, $result['migrations']['applied']);
+        $this->assertCount(3, $result['migrations']['applied']);
         $this->assertNull($result['seed']);
     }
 
@@ -84,7 +104,7 @@ final class ServePreflightTest extends TestCase
             server: ['host' => '127.0.0.1', 'port' => 8000],
         );
 
-        $this->assertCount(1, $result['migrations']['applied']);
+        $this->assertCount(3, $result['migrations']['applied']);
         $row = $this->connection->fetchOne('SELECT COUNT(*) AS c FROM users');
         $this->assertSame(0, (int) $row['c']);
     }

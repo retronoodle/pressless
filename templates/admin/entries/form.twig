@@ -1,0 +1,73 @@
+{% extends 'layout/base.twig' %}
+
+{% block title %}{{ form_title|e }}{% endblock %}
+
+{% block body_class %}pressless pressless-admin pressless-entries{% endblock %}
+
+{% block body %}
+<header class="admin-header">
+    <h1>Pressless admin</h1>
+    <nav class="admin-nav" aria-label="Admin sections">
+        <ul>
+            <li><a href="/admin">Dashboard</a></li>
+            <li><a href="/admin/collections">Collections</a></li>
+            <li><span class="nav-placeholder" aria-disabled="true">Media</span></li>
+            <li><span class="nav-placeholder" aria-disabled="true">Users</span></li>
+            <li><span class="nav-placeholder" aria-disabled="true">Settings</span></li>
+        </ul>
+    </nav>
+    <div class="admin-account">
+        <p>Signed in as <strong>{{ user_name }}</strong>.</p>
+        <form method="post" action="/admin/logout">
+            <button type="submit">Sign out</button>
+        </form>
+    </div>
+</header>
+
+<main class="admin-main">
+    <section class="active-collection">
+        <p>Now editing <strong>{{ collection.name|e }}</strong> (<code>{{ collection.slug|e }}</code>)
+            &middot;
+            <a href="/admin/collections/{{ collection.slug|e }}">Back to entries</a>
+        </p>
+    </section>
+
+    <h2>{{ form_title|e }}</h2>
+
+    {% if slug_preview %}
+        <p class="slug-preview">
+            <strong>Slug:</strong>
+            <code>{{ slug_preview|e }}</code>
+            {% if not is_edit %}<small>(generated from the slug source field)</small>{% endif %}
+        </p>
+    {% endif %}
+
+    {% if errors.__schema is defined %}
+        <ul class="form-errors" role="alert">
+            {% for message in errors.__schema %}
+                <li>{{ message|e }}</li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+
+    <form method="post" action="{{ action_url }}">
+        {% for field in fields %}
+            {% set field_key = field.key|default('') %}
+            {% set field_type = field.type|default('text') %}
+            {% if field_types.has(field_type) %}
+                {% set type_handler = field_types.get(field_type) %}
+                {% set field_value = values[field_key]|default(null) %}
+                {% set field_errors = errors[field_key]|default([]) %}
+                <fieldset class="field field-{{ field_type|e }}">
+                    {{ type_handler.renderForm(field, field_value, field_errors)|raw }}
+                </fieldset>
+            {% endif %}
+        {% endfor %}
+
+        <p>
+            <button type="submit">Save entry</button>
+            <a href="{{ cancel_url|e }}">Cancel</a>
+        </p>
+    </form>
+</main>
+{% endblock %}

@@ -29,15 +29,19 @@ The system SHALL provide a calm, server-rendered login page at `GET /admin/login
 - **THEN** the page is rendered again with a generic actionable error and preserves only safe form values
 
 ### Requirement: Authenticated admin shell
-The system SHALL provide an authenticated admin shell at `/admin` with a consistent base layout, quiet navigation placeholders, and explicit empty states for features not implemented in Phase 1.
+The system SHALL provide an authenticated admin shell at `/admin` with a consistent base layout, quiet navigation placeholders, navigation that links to the active admin surfaces (Collections at minimum, with other entries remaining as placeholders), and explicit empty states for features not implemented in Phase 1.
 
 #### Scenario: Empty admin after login
 - **WHEN** an authenticated administrator requests `GET /admin`
-- **THEN** the response is a successful HTML page with the admin navigation and an explanation that no collections or content exist yet
+- **THEN** the response is a successful HTML page with the admin navigation, a link to the collections surface, and an explanation of the next step (create a collection) when no collections exist
 
 #### Scenario: Visitor cannot view shell
 - **WHEN** an unauthenticated browser requests `GET /admin`
 - **THEN** it is redirected to login and receives no shell markup
+
+#### Scenario: Navigation exposes Collections
+- **WHEN** an authenticated administrator views any admin page
+- **THEN** the navigation includes a link to the collections list and to the active collection if one is currently being edited
 
 ### Requirement: Accessible minimal presentation
 The initial admin templates SHALL use semantic headings, labels associated with form controls, keyboard-operable controls, and hand-rolled CSS without an admin template kit or frontend framework.

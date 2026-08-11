@@ -1,0 +1,65 @@
+{% extends 'layout/base.twig' %}
+
+{% block title %}Collections - Pressless admin{% endblock %}
+
+{% block body_class %}pressless pressless-admin pressless-collections{% endblock %}
+
+{% block body %}
+<header class="admin-header">
+    <h1>Pressless admin</h1>
+    <nav class="admin-nav" aria-label="Admin sections">
+        <ul>
+            <li><a href="/admin">Dashboard</a></li>
+            <li><a href="/admin/collections" aria-current="page">Collections</a></li>
+            <li><span class="nav-placeholder" aria-disabled="true">Media</span></li>
+            <li><span class="nav-placeholder" aria-disabled="true">Users</span></li>
+            <li><span class="nav-placeholder" aria-disabled="true">Settings</span></li>
+        </ul>
+    </nav>
+    <div class="admin-account">
+        <p>Signed in as <strong>{{ user_name }}</strong>.</p>
+        <form method="post" action="/admin/logout">
+            <button type="submit">Sign out</button>
+        </form>
+    </div>
+</header>
+
+<main class="admin-main">
+    <section class="collections-header">
+        <h2>Collections</h2>
+        <p><a href="/admin/collections/new">New collection</a></p>
+    </section>
+
+    {% if collections is empty %}
+        <section class="empty-state">
+            <h3>No collections yet</h3>
+            <p>Create your first collection to start defining content.</p>
+        </section>
+    {% else %}
+        <table class="collections-table">
+            <thead>
+                <tr>
+                    <th scope="col">Slug</th>
+                    <th scope="col">Name</th>
+                    <th scope="col">Fields</th>
+                    <th scope="col">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for collection in collections %}
+                    <tr>
+                        <td><code>{{ collection.slug|e }}</code></td>
+                        <td>{{ collection.name|e }}</td>
+                        <td>{{ collection.field_count }}</td>
+                        <td>
+                            <a href="/admin/collections/{{ collection.slug|e }}">Entries</a>
+                            &middot;
+                            <a href="/admin/collections/{{ collection.slug|e }}/edit">Edit</a>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% endif %}
+</main>
+{% endblock %}

@@ -56,10 +56,9 @@ final class InstallToLoginSmokeTest extends TestCase
         // exercised without external services.
         $dbHost = getenv('DB_HOST');
         if (is_string($dbHost) && $dbHost !== '') {
-            copy(
-                __DIR__ . '/../../database/migrations/20260811000001_initial_schema.mysql.sql',
-                $this->projectRoot . '/database/migrations/20260811000001_initial_schema.mysql.sql',
-            );
+            foreach (glob(__DIR__ . '/../../database/migrations/*.mysql.sql') ?: [] as $src) {
+                copy($src, $this->projectRoot . '/database/migrations/' . basename($src));
+            }
 
             $this->config = new Configuration(
                 $this->projectRoot,
@@ -86,10 +85,9 @@ final class InstallToLoginSmokeTest extends TestCase
                 ],
             );
         } else {
-            copy(
-                __DIR__ . '/../../database/migrations/20260811000001_initial_schema.sqlite.sql',
-                $this->projectRoot . '/database/migrations/20260811000001_initial_schema.sqlite.sql',
-            );
+            foreach (glob(__DIR__ . '/../../database/migrations/*.sqlite.sql') ?: [] as $src) {
+                copy($src, $this->projectRoot . '/database/migrations/' . basename($src));
+            }
             $this->dbPath = $this->projectRoot . '/pressless.sqlite';
 
             $this->config = new Configuration(
@@ -193,7 +191,6 @@ final class InstallToLoginSmokeTest extends TestCase
             seed: true,
             server: ['host' => '127.0.0.1', 'port' => 8000],
         );
-
         $app = new Application($this->config);
         $router = Routes::createWithStore($app, $this->makeStore(), new TwigRenderer($this->config));
         $kernel = new Kernel($app, $router);
@@ -217,6 +214,93 @@ final class InstallToLoginSmokeTest extends TestCase
         $this->assertStringContainsString('do not match our records', $body);
         $this->assertStringNotContainsString('inactive', strtolower($body));
         $this->assertStringNotContainsString('no such user', strtolower($body));
+    }
+
+    /**
+     * End-to-end evaluator path: fresh reset → migrations → seed → login →
+     * create a collection → edit its field set → create an entry → see the
+     * entry in the list with the auto-generated slug → delete it.
+     */
+    public function testEvaluatorPathFromFreshResetToEntryDelete(): void
+    {
+        $result = (new ServePreflight($this->connection, $this->config))->run(
+            fresh: true,
+            seed: true,
+            server: ['host' => '127.0.0.1', 'port' => 8000],
+        );
+
+        $adminEmail = (string) $result['seed']['admin_email'];
+        $adminPassword = (string) $result['seed']['admin_password'];
+
+        $app = new Application($this->config);
+        $router = Routes::createWithStore($app, $this->makeStore(), new TwigRenderer($this->config));
+        $kernel = new Kernel($app, $router);
+
+        // Login.
+        $login = $kernel->handle(Request::create('/admin/login', 'POST', [
+            'email' => $adminEmail,
+            'password' => $adminPassword,
+        ]));
+        $this->assertSame(302, $login->getStatusCode());
+
+        // Create a collection through the admin surface.
+        $create = $kernel->handle(Request::create('/admin/collections/new', 'POST', [
+            'slug' => 'notes',
+            'name' => 'Notes',
+            'fields' => [
+                ['key' => 'title', 'type' => 'text', 'label' => 'Title', 'required' => '1'],
+                ['key' => 'body', 'type' => 'richtext', 'label' => 'Body'],
+            ],
+        ]));
+        $this->assertSame(303, $create->getStatusCode());
+
+        // Edit the collection's field set (drop the body, add a summary).
+        $update = $kernel->handle(Request::create('/admin/collections/notes/edit', 'POST', [
+            'slug' => 'notes',
+            'name' => 'Notes',
+            'fields' => [
+                ['key' => 'title', 'type' => 'text', 'label' => 'Title', 'required' => '1'],
+                ['key' => 'summary', 'type' => 'text', 'label' => 'Summary'],
+            ],
+        ]));
+        $this->assertSame(303, $update->getStatusCode());
+
+        $schemaRow = $this->connection->fetchOne(
+            'SELECT schema_definition FROM collections WHERE slug = :slug',
+            ['slug' => 'notes'],
+        );
+        $schema = json_decode((string) $schemaRow['schema_definition'], true);
+        $fieldKeys = array_column($schema['fields'], 'key');
+        $this->assertSame(['title', 'summary'], $fieldKeys);
+
+        // Create an entry through the admin surface.
+        $entryCreate = $kernel->handle(Request::create('/admin/collections/notes/entries/new', 'POST', [
+            'fields' => [
+                'title' => 'Smoke test note',
+                'summary' => 'End-to-end evaluator path.',
+            ],
+        ]));
+        $this->assertSame(303, $entryCreate->getStatusCode());
+
+        $entryRow = $this->connection->fetchOne(
+            'SELECT id, slug FROM entries WHERE collection_id = (SELECT id FROM collections WHERE slug = :slug)',
+            ['slug' => 'notes'],
+        );
+        $this->assertNotNull($entryRow);
+        $this->assertSame('smoke-test-note', $entryRow['slug']);
+        $entryId = (int) $entryRow['id'];
+
+        // See the entry in the list with the auto-slug.
+        $list = $kernel->handle(Request::create('/admin/collections/notes'));
+        $this->assertSame(200, $list->getStatusCode());
+        $body = (string) $list->getContent();
+        $this->assertStringContainsString('code>smoke-test-note</code>', $body);
+        $this->assertStringContainsString('Smoke test note', $body);
+
+        // Delete the entry.
+        $delete = $kernel->handle(Request::create('/admin/collections/notes/entries/' . $entryId . '/delete', 'POST'));
+        $this->assertSame(303, $delete->getStatusCode());
+        $this->assertNull($this->connection->fetchOne('SELECT id FROM entries WHERE id = :id', ['id' => $entryId]));
     }
 
     private function makeStore(): ArraySessionStore

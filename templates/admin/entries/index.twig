@@ -1,0 +1,70 @@
+{% extends 'layout/base.twig' %}
+
+{% block title %}Entries - {{ collection.name|e }} - Pressless admin{% endblock %}
+
+{% block body_class %}pressless pressless-admin pressless-entries{% endblock %}
+
+{% block body %}
+<header class="admin-header">
+    <h1>Pressless admin</h1>
+    <nav class="admin-nav" aria-label="Admin sections">
+        <ul>
+            <li><a href="/admin">Dashboard</a></li>
+            <li><a href="/admin/collections">Collections</a></li>
+            <li><span class="nav-placeholder" aria-disabled="true">Media</span></li>
+            <li><span class="nav-placeholder" aria-disabled="true">Users</span></li>
+            <li><span class="nav-placeholder" aria-disabled="true">Settings</span></li>
+        </ul>
+    </nav>
+    <div class="admin-account">
+        <p>Signed in as <strong>{{ user_name }}</strong>.</p>
+        <form method="post" action="/admin/logout">
+            <button type="submit">Sign out</button>
+        </form>
+    </div>
+</header>
+
+<main class="admin-main">
+    <section class="active-collection">
+        <p>Now editing <strong>{{ collection.name|e }}</strong> (<code>{{ collection.slug|e }}</code>)</p>
+    </section>
+    <section class="entries-header">
+        <h2>{{ collection.name|e }} entries</h2>
+        <p>
+            <a href="/admin/collections">All collections</a>
+            &middot;
+            <a href="/admin/collections/{{ collection.slug|e }}/edit">Edit collection</a>
+            &middot;
+            <a href="/admin/collections/{{ collection.slug|e }}/entries/new">New entry</a>
+        </p>
+    </section>
+
+    {% if entries is empty %}
+        <section class="empty-state">
+            <h3>No entries yet</h3>
+            <p>Add the first entry to start filling this collection.</p>
+        </section>
+    {% else %}
+        <table class="entries-table">
+            <thead>
+                <tr>
+                    <th scope="col">Slug</th>
+                    <th scope="col">Preview</th>
+                    <th scope="col">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for entry in entries %}
+                    <tr>
+                        <td><code>{{ entry.slug|e }}</code></td>
+                        <td>{{ entry.preview|e }}</td>
+                        <td>
+                            <a href="/admin/collections/{{ collection.slug|e }}/entries/{{ entry.id }}/edit">Edit</a>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% endif %}
+</main>
+{% endblock %}

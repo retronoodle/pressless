@@ -93,26 +93,17 @@ final class AdminShellTest extends TestCase
         $this->connection->close();
         @unlink($this->dbPath);
         foreach ([
-            "{$this->projectRoot}/templates/login.twig",
-            "{$this->projectRoot}/templates/admin.twig",
-            "{$this->projectRoot}/templates/layout/base.twig",
-            "{$this->projectRoot}/database/migrations/20260811000001_initial_schema.sqlite.sql",
-            "{$this->projectRoot}/var/cache/twig",
+            "{$this->projectRoot}/templates",
+            "{$this->projectRoot}/database/migrations",
+            "{$this->projectRoot}/var/cache",
+            "{$this->projectRoot}/var/log",
+            "{$this->projectRoot}/var",
+            $this->projectRoot,
         ] as $path) {
-            if (is_file($path)) {
-                @unlink($path);
-            } elseif (is_dir($path)) {
+            if (is_dir($path)) {
                 $this->rrmdir($path);
             }
         }
-        @rmdir("{$this->projectRoot}/templates/layout");
-        @rmdir("{$this->projectRoot}/templates");
-        @rmdir("{$this->projectRoot}/database/migrations");
-        @rmdir("{$this->projectRoot}/database");
-        @rmdir("{$this->projectRoot}/var/cache");
-        @rmdir("{$this->projectRoot}/var/log");
-        @rmdir("{$this->projectRoot}/var");
-        @rmdir($this->projectRoot);
     }
 
     public function testLoginPageRendersTheLoginForm(): void
@@ -160,9 +151,142 @@ final class AdminShellTest extends TestCase
         $this->assertSame(200, $response->getStatusCode());
         $body = (string) $response->getContent();
         $this->assertStringContainsString('Pressless admin', $body);
-        $this->assertStringContainsString('No collections yet', $body);
+        $this->assertStringContainsString('Create your first collection', $body);
+        $this->assertStringContainsString('href="/admin/collections/new"', $body);
         $this->assertStringContainsString('Ada Lovelace', $body);
         $this->assertStringContainsString('action="/admin/logout"', $body);
+    }
+
+    public function testDashboardRendersCollectionAndEntryCountsWhenNotEmpty(): void
+    {
+        $this->users->create('ada@example.com', 'Ada Lovelace', self::PASSWORD, true, true);
+        $this->store->start();
+        $this->authService->attempt('ada@example.com', self::PASSWORD);
+
+        $this->seedCollection('posts', [
+            ['key' => 'title', 'type' => 'text', 'label' => 'Title'],
+        ]);
+        $this->seedEntry((int) $this->connection->fetchOne('SELECT id FROM collections WHERE slug = :s', ['s' => 'posts'])['id'], 'hello', 'Hello');
+
+        $response = $this->kernel->handle(Request::create('/admin'));
+
+        $this->assertSame(200, $response->getStatusCode());
+        $body = (string) $response->getContent();
+        $this->assertStringContainsString('Dashboard', $body);
+        $this->assertStringNotContainsString('Create your first collection', $body);
+        $this->assertStringContainsString('1</strong> collection', $body);
+        $this->assertStringContainsString('1</strong> entry', $body);
+        $this->assertStringContainsString('href="/admin/collections"', $body);
+    }
+
+    public function testCollectionsLinkIsActiveInTheDashboardNav(): void
+    {
+        $this->users->create('ada@example.com', 'Ada Lovelace', self::PASSWORD, true, true);
+        $this->store->start();
+        $this->authService->attempt('ada@example.com', self::PASSWORD);
+
+        $response = $this->kernel->handle(Request::create('/admin'));
+
+        $body = (string) $response->getContent();
+        $this->assertStringContainsString('href="/admin/collections"', $body);
+        $this->assertStringNotContainsString('nav-placeholder', $body);
+    }
+
+    public function testActiveCollectionNameIsSurfacedOnTheEntryList(): void
+    {
+        $this->users->create('ada@example.com', 'Ada Lovelace', self::PASSWORD, true, true);
+        $this->store->start();
+        $this->authService->attempt('ada@example.com', self::PASSWORD);
+
+        $this->seedCollection('posts', [
+            ['key' => 'title', 'type' => 'text', 'label' => 'Title'],
+        ]);
+
+        $response = $this->kernel->handle(Request::create('/admin/collections/posts'));
+
+        $this->assertSame(200, $response->getStatusCode());
+        $body = (string) $response->getContent();
+        $this->assertStringContainsString('Now editing', $body);
+        $this->assertStringContainsString('<strong>Posts</strong>', $body);
+        $this->assertStringContainsString('<code>posts</code>', $body);
+    }
+
+    public function testPhase2RoutesAreProtectedByTheAuthGuard(): void
+    {
+        $paths = [
+            '/admin/collections',
+            '/admin/collections/new',
+            '/admin/collections/posts/edit',
+            '/admin/collections/posts',
+            '/admin/collections/posts/entries/new',
+            '/admin/collections/posts/entries/1/edit',
+        ];
+
+        foreach ($paths as $path) {
+            $response = $this->kernel->handle(Request::create($path));
+            $this->assertSame(
+                302,
+                $response->getStatusCode(),
+                sprintf('Expected redirect for %s when unauthenticated.', $path),
+            );
+            $this->assertStringContainsString('/admin/login', (string) $response->headers->get('Location'));
+        }
+    }
+
+    public function testUnknownAdminPathsReturn404(): void
+    {
+        $this->users->create('ada@example.com', 'Ada Lovelace', self::PASSWORD, true, true);
+        $this->store->start();
+        $this->authService->attempt('ada@example.com', self::PASSWORD);
+
+        $response = $this->kernel->handle(Request::create('/admin/collections/missing/edit'));
+        $this->assertSame(404, $response->getStatusCode());
+
+        $response = $this->kernel->handle(Request::create('/admin/collections/missing'));
+        $this->assertSame(404, $response->getStatusCode());
+    }
+
+    public function testUnsupportedMethodReturns405(): void
+    {
+        $this->users->create('ada@example.com', 'Ada Lovelace', self::PASSWORD, true, true);
+        $this->store->start();
+        $this->authService->attempt('ada@example.com', self::PASSWORD);
+
+        $response = $this->kernel->handle(Request::create('/admin/collections', 'PUT'));
+        $this->assertSame(405, $response->getStatusCode());
+    }
+
+    /**
+     * @param list<array<string, mixed>> $fields
+     */
+    private function seedCollection(string $slug, array $fields): int
+    {
+        $now = gmdate('Y-m-d H:i:s');
+        $this->connection->execute(
+            'INSERT INTO collections (slug, name, schema_definition, created_at, updated_at)
+             VALUES (:slug, :name, :schema, :ts, :ts)',
+            [
+                'slug' => $slug,
+                'name' => ucfirst($slug),
+                'schema' => json_encode(['fields' => $fields]),
+                'ts' => $now,
+            ],
+        );
+        return (int) $this->connection->fetchOne('SELECT id FROM collections WHERE slug = :slug', ['slug' => $slug])['id'];
+    }
+
+    private function seedEntry(int $collectionId, string $slug, string $title): int
+    {
+        $now = gmdate('Y-m-d H:i:s');
+        $this->connection->execute(
+            'INSERT INTO entries (collection_id, slug, title, status, created_at, updated_at)
+             VALUES (:cid, :slug, :title, :status, :ts, :ts)',
+            ['cid' => $collectionId, 'slug' => $slug, 'title' => $title, 'status' => 'published', 'ts' => $now],
+        );
+        return (int) $this->connection->fetchOne(
+            'SELECT id FROM entries WHERE collection_id = :cid AND slug = :slug',
+            ['cid' => $collectionId, 'slug' => $slug],
+        )['id'];
     }
 
     public function testSuccessfulLoginRedirectsToTheShell(): void
@@ -213,10 +337,44 @@ final class AdminShellTest extends TestCase
             "{% extends 'layout/base.twig' %}\n"
             . "{% block title %}Pressless admin{% endblock %}\n"
             . "{% block body %}<h1>Pressless admin</h1>"
+            . "<nav class=\"admin-nav\"><ul>"
+            . "<li><a href=\"/admin\">Dashboard</a></li>"
+            . "<li><a href=\"/admin/collections\">Collections</a></li>"
+            . "</ul></nav>"
             . "<p>Signed in as <strong>{{ user_name }}</strong>.</p>"
-            . "<section class=\"empty-state\"><h2>No collections yet</h2><p>Phase 1 placeholder.</p></section>"
+            . "{% if collection_count is defined and collection_count > 0 %}"
+            . "<section class=\"dashboard-summary\">"
+            . "<h2>Dashboard</h2>"
+            . "<p><strong>{{ collection_count }}</strong> collection{{ collection_count == 1 ? '' : 's' }}, "
+            . "<strong>{{ entry_count }}</strong> entr{{ entry_count == 1 ? 'y' : 'ies' }}.</p>"
+            . "</section>"
+            . "{% else %}"
+            . "<section class=\"empty-state\">"
+            . "<h2>Create your first collection</h2>"
+            . "<p><a href=\"/admin/collections/new\">Create your first collection</a></p>"
+            . "</section>"
+            . "{% endif %}"
             . "<form method=\"post\" action=\"/admin/logout\"><button type=\"submit\">Sign out</button></form>"
             . "{% endblock %}\n",
+        );
+
+        $entriesDir = $this->templatesDir . '/admin/entries';
+        if (!is_dir($entriesDir)) {
+            mkdir($entriesDir, 0775, true);
+        }
+        file_put_contents(
+            $entriesDir . '/index.twig',
+            "{% extends 'layout/base.twig' %}\n"
+            . "{% block body %}<section class=\"active-collection\">"
+            . "<p>Now editing <strong>{{ collection.name|e }}</strong> (<code>{{ collection.slug|e }}</code>)</p>"
+            . "</section>{% endblock %}\n",
+        );
+        file_put_contents(
+            $entriesDir . '/form.twig',
+            "{% extends 'layout/base.twig' %}\n"
+            . "{% block body %}<section class=\"active-collection\">"
+            . "<p>Now editing <strong>{{ collection.name|e }}</strong> (<code>{{ collection.slug|e }}</code>)</p>"
+            . "</section>{% endblock %}\n",
         );
 
         $layoutDir = $this->templatesDir . '/layout';

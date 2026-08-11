@@ -4,6 +4,10 @@
 .opencode/
 docs/
 
+# Local override for ripgrep/gitignore-aware tools (opencode @-mentions, etc).
+# Keeps docs/ referenceable without committing it.
+.ignore
+
 # Composer
 /vendor/
 composer.lock

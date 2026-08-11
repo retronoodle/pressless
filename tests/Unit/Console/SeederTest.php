@@ -24,10 +24,9 @@ final class SeederTest extends TestCase
     {
         $this->projectRoot = sys_get_temp_dir() . '/pressless-seed-' . bin2hex(random_bytes(4));
         mkdir($this->projectRoot . '/database/migrations', 0775, true);
-        copy(
-            __DIR__ . '/../../../database/migrations/20260811000001_initial_schema.sqlite.sql',
-            $this->projectRoot . '/database/migrations/20260811000001_initial_schema.sqlite.sql',
-        );
+        foreach (glob(__DIR__ . '/../../../database/migrations/*.sqlite.sql') ?: [] as $src) {
+            copy($src, $this->projectRoot . '/database/migrations/' . basename($src));
+        }
         $this->dbPath = $this->projectRoot . '/pressless.sqlite';
 
         $this->config = new Configuration(
@@ -53,10 +52,31 @@ final class SeederTest extends TestCase
     {
         $this->connection->close();
         @unlink($this->dbPath);
-        @unlink("{$this->projectRoot}/database/migrations/20260811000001_initial_schema.sqlite.sql");
-        @rmdir("{$this->projectRoot}/database/migrations");
-        @rmdir("{$this->projectRoot}/database");
-        @rmdir($this->projectRoot);
+        foreach ([
+            "{$this->projectRoot}/database/migrations",
+            "{$this->projectRoot}/database",
+            $this->projectRoot,
+        ] as $path) {
+            if (is_dir($path)) {
+                $this->rrmdir($path);
+            }
+        }
+    }
+
+    private function rrmdir(string $dir): void
+    {
+        foreach (scandir($dir) ?: [] as $entry) {
+            if ($entry === '.' || $entry === '..') {
+                continue;
+            }
+            $path = $dir . '/' . $entry;
+            if (is_dir($path)) {
+                $this->rrmdir($path);
+            } else {
+                @unlink($path);
+            }
+        }
+        @rmdir($dir);
     }
 
     public function testSeedCreatesAdministratorAndSampleCollections(): void
@@ -118,6 +138,100 @@ final class SeederTest extends TestCase
 
         $this->assertNotNull($first['admin_password']);
         $this->assertNull($second['admin_password']);
+    }
+
+    public function testSeedCreatesPostsCollectionWithExpectedFields(): void
+    {
+        (new Seeder($this->connection, $this->config))->seed();
+
+        $row = $this->connection->fetchOne(
+            'SELECT slug, name, schema_definition FROM collections WHERE slug = :slug',
+            ['slug' => 'posts'],
+        );
+        $this->assertNotNull($row);
+        $this->assertSame('Posts', $row['name']);
+
+        $schema = json_decode((string) $row['schema_definition'], true);
+        $this->assertIsArray($schema);
+        $fields = $schema['fields'];
+        $this->assertCount(3, $fields);
+        $this->assertSame('title', $fields[0]['key']);
+        $this->assertSame('text', $fields[0]['type']);
+        $this->assertTrue($fields[0]['required']);
+        $this->assertSame('body', $fields[1]['key']);
+        $this->assertSame('richtext', $fields[1]['type']);
+        $this->assertSame('published_at', $fields[2]['key']);
+        $this->assertSame('date', $fields[2]['type']);
+    }
+
+    public function testSeedCreatesThreeSampleEntriesWithTypedValues(): void
+    {
+        (new Seeder($this->connection, $this->config))->seed();
+
+        $rows = $this->connection->fetchAll(
+            'SELECT e.id, e.slug, e.title, e.status, e.collection_id
+               FROM entries e
+               JOIN collections c ON c.id = e.collection_id
+               WHERE c.slug = :slug
+               ORDER BY e.slug ASC',
+            ['slug' => 'posts'],
+        );
+        $this->assertCount(3, $rows);
+
+        $slugs = array_column($rows, 'slug');
+        $this->assertSame(['field-types-in-plain-english', 'hello-world', 'why-a-typed-cms'], $slugs);
+
+        foreach ($rows as $row) {
+            $this->assertSame('published', $row['status']);
+            $entryId = (int) $row['id'];
+
+            $values = $this->connection->fetchAll(
+                'SELECT field_key, field_type, value_text, value_date FROM entry_values
+                   WHERE entry_id = :entry_id ORDER BY field_key',
+                ['entry_id' => $entryId],
+            );
+
+            $byKey = [];
+            foreach ($values as $v) {
+                $byKey[(string) $v['field_key']] = $v;
+            }
+
+            $this->assertArrayHasKey('title', $byKey);
+            $this->assertSame('text', $byKey['title']['field_type']);
+            $this->assertNotNull($byKey['title']['value_text']);
+
+            $this->assertArrayHasKey('body', $byKey);
+            $this->assertSame('richtext', $byKey['body']['field_type']);
+            $this->assertNotNull($byKey['body']['value_text']);
+
+            $this->assertArrayHasKey('published_at', $byKey);
+            $this->assertSame('date', $byKey['published_at']['field_type']);
+            $this->assertNotNull($byKey['published_at']['value_date']);
+        }
+    }
+
+    public function testSeedIsIdempotentForPostsCollectionAndEntries(): void
+    {
+        $seeder = new Seeder($this->connection, $this->config);
+        $first = $seeder->seed();
+        $second = $seeder->seed();
+        $third = $seeder->seed();
+
+        $this->assertSame(3, $first['entries_created']);
+        $this->assertSame(0, $second['entries_created']);
+        $this->assertSame(0, $third['entries_created']);
+
+        $rows = $this->connection->fetchAll(
+            'SELECT e.id FROM entries e JOIN collections c ON c.id = e.collection_id WHERE c.slug = :slug',
+            ['slug' => 'posts'],
+        );
+        $this->assertCount(3, $rows, 'entries must not be duplicated on repeat seed runs.');
+
+        $collectionCount = (int) ($this->connection->fetchOne(
+            'SELECT COUNT(*) AS c FROM collections WHERE slug = :slug',
+            ['slug' => 'posts'],
+        )['c'] ?? 0);
+        $this->assertSame(1, $collectionCount, 'posts collection must not be duplicated.');
     }
 
     private function findUser(string $email): ?User
