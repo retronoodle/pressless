@@ -2,20 +2,20 @@
 
 declare(strict_types=1);
 
-namespace Pressless\Tests\Integration;
+namespace Stead\Tests\Integration;
 
-use Pressless\Auth\ArraySessionStore;
-use Pressless\Auth\AuthenticationService;
-use Pressless\Auth\PasswordHasher;
-use Pressless\Auth\SessionRepository;
-use Pressless\Auth\UserRepository;
-use Pressless\Bootstrap\Application;
-use Pressless\Config\Configuration;
-use Pressless\Console\ServePreflight;
-use Pressless\Database\Connection;
-use Pressless\Http\Kernel;
-use Pressless\Http\Routes;
-use Pressless\View\TwigRenderer;
+use Stead\Auth\ArraySessionStore;
+use Stead\Auth\AuthenticationService;
+use Stead\Auth\PasswordHasher;
+use Stead\Auth\SessionRepository;
+use Stead\Auth\UserRepository;
+use Stead\Bootstrap\Application;
+use Stead\Config\Configuration;
+use Stead\Console\ServePreflight;
+use Stead\Database\Connection;
+use Stead\Http\Kernel;
+use Stead\Http\Routes;
+use Stead\View\TwigRenderer;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpFoundation\Request;
 
@@ -42,7 +42,7 @@ final class InstallToLoginSmokeTest extends TestCase
         putenv('DB_HOST');
         $_ENV['DB_HOST'] = '';
 
-        $this->projectRoot = sys_get_temp_dir() . '/pressless-smoke-' . bin2hex(random_bytes(4));
+        $this->projectRoot = sys_get_temp_dir() . '/stead-smoke-' . bin2hex(random_bytes(4));
         mkdir($this->projectRoot . '/database/migrations', 0775, true);
         mkdir($this->projectRoot . '/templates', 0775, true);
         mkdir($this->projectRoot . '/var/cache', 0775, true);
@@ -69,7 +69,7 @@ final class InstallToLoginSmokeTest extends TestCase
                         'connection' => 'mysql',
                         'host' => $dbHost,
                         'port' => (int) (getenv('DB_PORT') ?: 3306),
-                        'database' => (string) (getenv('DB_DATABASE') ?: 'pressless_smoke'),
+                        'database' => (string) (getenv('DB_DATABASE') ?: 'stead_smoke'),
                         'username' => (string) (getenv('DB_USERNAME') ?: 'root'),
                         'password' => (string) (getenv('DB_PASSWORD') ?: ''),
                         'charset' => 'utf8mb4',
@@ -80,7 +80,7 @@ final class InstallToLoginSmokeTest extends TestCase
                         'cache' => 'var/cache',
                         'log' => 'var/log',
                     ],
-                    'sessions' => ['name' => 'pressless_smoke'],
+                    'sessions' => ['name' => 'stead_smoke'],
                     'logging' => ['level' => 'error', 'file' => 'smoke.log'],
                 ],
             );
@@ -88,7 +88,7 @@ final class InstallToLoginSmokeTest extends TestCase
             foreach (glob(__DIR__ . '/../../database/migrations/*.sqlite.sql') ?: [] as $src) {
                 copy($src, $this->projectRoot . '/database/migrations/' . basename($src));
             }
-            $this->dbPath = $this->projectRoot . '/pressless.sqlite';
+            $this->dbPath = $this->projectRoot . '/stead.sqlite';
 
             $this->config = new Configuration(
                 $this->projectRoot,
@@ -105,7 +105,7 @@ final class InstallToLoginSmokeTest extends TestCase
                         'cache' => 'var/cache',
                         'log' => 'var/log',
                     ],
-                    'sessions' => ['name' => 'pressless_smoke'],
+                    'sessions' => ['name' => 'stead_smoke'],
                     'logging' => ['level' => 'error', 'file' => 'smoke.log'],
                 ],
             );
@@ -166,7 +166,7 @@ final class InstallToLoginSmokeTest extends TestCase
         // 4. GET /admin/login renders the login form.
         $loginPage = $kernel->handle(Request::create('/admin/login'));
         $this->assertSame(200, $loginPage->getStatusCode());
-        $this->assertStringContainsString('Sign in to Pressless', (string) $loginPage->getContent());
+        $this->assertStringContainsString('Sign in to Stead', (string) $loginPage->getContent());
 
         // 5. POST /admin/login with valid credentials redirects to /admin.
         $authResponse = $kernel->handle(Request::create('/admin/login', 'POST', [

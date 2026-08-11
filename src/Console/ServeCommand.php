@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Pressless\Console;
+namespace Stead\Console;
 
-use Pressless\Bootstrap\Application;
-use Pressless\Exception\SafeException;
+use Stead\Bootstrap\Application;
+use Stead\Exception\SafeException;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
@@ -77,7 +77,7 @@ final class ServeCommand extends Command
             return Command::FAILURE;
         }
 
-        $output->writeln(sprintf('<info>Pressless serving on http://%s:%d</info>', $host, $port));
+        $output->writeln(sprintf('<info>Stead serving on http://%s:%d</info>', $host, $port));
 
         $cmd = [
             escapeshellarg(PHP_BINARY),

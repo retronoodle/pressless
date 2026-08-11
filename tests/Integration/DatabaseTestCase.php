@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace Pressless\Tests\Integration;
+namespace Stead\Tests\Integration;
 
 use PHPUnit\Framework\TestCase;
-use Pressless\Config\Configuration;
-use Pressless\Database\Connection;
-use Pressless\Database\Migrator;
-use Pressless\Database\Resetter;
+use Stead\Config\Configuration;
+use Stead\Database\Connection;
+use Stead\Database\Migrator;
+use Stead\Database\Resetter;
 
 abstract class DatabaseTestCase extends TestCase
 {
@@ -32,7 +32,7 @@ abstract class DatabaseTestCase extends TestCase
 
     protected static function makeConfig(): Configuration
     {
-        $tmp = sys_get_temp_dir() . '/pressless-db-' . bin2hex(random_bytes(4));
+        $tmp = sys_get_temp_dir() . '/stead-db-' . bin2hex(random_bytes(4));
         mkdir($tmp . '/var/log', 0775, true);
         mkdir($tmp . '/config', 0775, true);
         mkdir($tmp . '/database/migrations', 0775, true);
@@ -42,7 +42,7 @@ abstract class DatabaseTestCase extends TestCase
         );
 
         $driver = static::driver();
-        $database = $driver === 'sqlite' ? ':memory:' : 'pressless_test';
+        $database = $driver === 'sqlite' ? ':memory:' : 'stead_test';
 
         $config = new Configuration(
             $tmp,
@@ -63,7 +63,7 @@ abstract class DatabaseTestCase extends TestCase
                     'cache' => 'var/cache',
                     'log' => 'var/log',
                 ],
-                'sessions' => ['name' => 'pressless_session'],
+                'sessions' => ['name' => 'stead_session'],
             ],
         );
         return $config;

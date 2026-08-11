@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Pressless\Content\FieldType;
+namespace Stead\Content\FieldType;
 
 /**
  * Fixed list of options rendered as a `<select>`. Persists to

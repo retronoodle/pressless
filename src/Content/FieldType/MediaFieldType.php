@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Pressless\Content\FieldType;
+namespace Stead\Content\FieldType;
 
 /**
  * Placeholder media reference. The picker UI is not wired until Phase 4;

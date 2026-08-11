@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Pressless\Auth;
+namespace Stead\Auth;
 
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;

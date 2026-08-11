@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Pressless\Content;
+namespace Stead\Content;
 
-use Pressless\Content\FieldType\FieldTypeRegistry;
-use Pressless\Database\Connection;
-use Pressless\Exception\SafeException;
+use Stead\Content\FieldType\FieldTypeRegistry;
+use Stead\Database\Connection;
+use Stead\Exception\SafeException;
 
 /**
  * Reads and writes `entries` rows plus their `entry_values` rows.

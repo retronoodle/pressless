@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Pressless\Http;
+namespace Stead\Http;
 
-use Pressless\Bootstrap\Application;
+use Stead\Bootstrap\Application;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Throwable;

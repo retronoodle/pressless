@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace Pressless\Console;
+namespace Stead\Console;
 
-use Pressless\Config\Configuration;
-use Pressless\Database\Connection;
-use Pressless\Database\Migrator;
-use Pressless\Exception\SafeException;
+use Stead\Config\Configuration;
+use Stead\Database\Connection;
+use Stead\Database\Migrator;
+use Stead\Exception\SafeException;
 use Psr\Log\LoggerInterface;
 
 /**

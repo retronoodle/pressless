@@ -7,7 +7,7 @@ TBD
 ## Requirements
 
 ### Requirement: Supported PHP project metadata
-The project SHALL declare PHP 8.2 or newer, define a stable `Pressless\\` PSR-4 namespace, and declare the focused runtime and development dependencies required by the Phase 1 application.
+The project SHALL declare PHP 8.2 or newer, define a stable `Stead\\` PSR-4 namespace, and declare the focused runtime and development dependencies required by the Phase 1 application.
 
 #### Scenario: Fresh dependency installation
 - **WHEN** a contributor runs `composer install` from a fresh checkout with PHP 8.2 or newer

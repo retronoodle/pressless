@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Pressless\Auth;
+namespace Stead\Auth;
 
 /**
  * An in-memory session store for tests and CLI contexts.

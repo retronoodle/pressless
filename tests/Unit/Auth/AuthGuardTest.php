@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Pressless\Tests\Unit\Auth;
+namespace Stead\Tests\Unit\Auth;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
-use Pressless\Auth\AuthGuard;
+use Stead\Auth\AuthGuard;
 use Symfony\Component\HttpFoundation\Request;
 
 final class AuthGuardTest extends TestCase

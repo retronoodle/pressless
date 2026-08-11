@@ -2,20 +2,20 @@
 
 declare(strict_types=1);
 
-namespace Pressless\Tests\Integration;
+namespace Stead\Tests\Integration;
 
-use Pressless\Auth\ArraySessionStore;
-use Pressless\Auth\AuthenticationService;
-use Pressless\Auth\PasswordHasher;
-use Pressless\Auth\SessionRepository;
-use Pressless\Auth\UserRepository;
-use Pressless\Bootstrap\Application;
-use Pressless\Config\Configuration;
-use Pressless\Database\Connection;
-use Pressless\Database\Migrator;
-use Pressless\Http\Kernel;
-use Pressless\Http\Routes;
-use Pressless\View\TwigRenderer;
+use Stead\Auth\ArraySessionStore;
+use Stead\Auth\AuthenticationService;
+use Stead\Auth\PasswordHasher;
+use Stead\Auth\SessionRepository;
+use Stead\Auth\UserRepository;
+use Stead\Bootstrap\Application;
+use Stead\Config\Configuration;
+use Stead\Database\Connection;
+use Stead\Database\Migrator;
+use Stead\Http\Kernel;
+use Stead\Http\Routes;
+use Stead\View\TwigRenderer;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpFoundation\Request;
 
@@ -41,7 +41,7 @@ final class CollectionAdminControllerTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->projectRoot = sys_get_temp_dir() . '/pressless-collections-' . bin2hex(random_bytes(4));
+        $this->projectRoot = sys_get_temp_dir() . '/stead-collections-' . bin2hex(random_bytes(4));
         mkdir($this->projectRoot . '/database/migrations', 0775, true);
         mkdir($this->projectRoot . '/var/cache', 0775, true);
         mkdir($this->projectRoot . '/var/log', 0775, true);
@@ -49,7 +49,7 @@ final class CollectionAdminControllerTest extends TestCase
             copy($src, $this->projectRoot . '/database/migrations/' . basename($src));
         }
         $this->copyDir(__DIR__ . '/../../templates', $this->projectRoot . '/templates');
-        $this->dbPath = $this->projectRoot . '/pressless.sqlite';
+        $this->dbPath = $this->projectRoot . '/stead.sqlite';
 
         $this->config = new Configuration(
             $this->projectRoot,
@@ -66,7 +66,7 @@ final class CollectionAdminControllerTest extends TestCase
                     'cache' => 'var/cache',
                     'log' => 'var/log',
                 ],
-                'sessions' => ['name' => 'pressless_test_collections'],
+                'sessions' => ['name' => 'stead_test_collections'],
             ],
         );
 

@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Pressless\Content\FieldType;
+namespace Stead\Content\FieldType;
 
-use Pressless\Exception\SafeException;
+use Stead\Exception\SafeException;
 
 /**
  * Raised when a field-type key is requested that has not been registered.

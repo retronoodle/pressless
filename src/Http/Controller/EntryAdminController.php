@@ -2,18 +2,18 @@
 
 declare(strict_types=1);
 
-namespace Pressless\Http\Controller;
+namespace Stead\Http\Controller;
 
-use Pressless\Auth\User;
-use Pressless\Content\Collection;
-use Pressless\Content\CollectionRepository;
-use Pressless\Content\Entry;
-use Pressless\Content\EntryRepository;
-use Pressless\Content\EntryValidator;
-use Pressless\Content\FieldType\FieldTypeRegistry;
-use Pressless\Content\SlugGenerator;
-use Pressless\Exception\SafeException;
-use Pressless\View\Renderer;
+use Stead\Auth\User;
+use Stead\Content\Collection;
+use Stead\Content\CollectionRepository;
+use Stead\Content\Entry;
+use Stead\Content\EntryRepository;
+use Stead\Content\EntryValidator;
+use Stead\Content\FieldType\FieldTypeRegistry;
+use Stead\Content\SlugGenerator;
+use Stead\Exception\SafeException;
+use Stead\View\Renderer;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;

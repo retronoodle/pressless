@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Pressless\Content;
+namespace Stead\Content;
 
-use Pressless\Exception\SafeException;
+use Stead\Exception\SafeException;
 
 /**
  * Immutable value object carrying one collection's metadata and its decoded

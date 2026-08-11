@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Pressless\Content;
+namespace Stead\Content;
 
 /**
  * Raised when a collection's proposed schema is invalid: malformed keys,
@@ -14,7 +14,7 @@ namespace Pressless\Content;
  * as its identifier, even on key-shape failures, so the controller can locate
  * the offending row in the form.
  */
-final class SchemaValidationException extends \Pressless\Exception\SafeException
+final class SchemaValidationException extends \Stead\Exception\SafeException
 {
     /**
      * @param array<string, list<string>> $errors

@@ -2,20 +2,20 @@
 
 declare(strict_types=1);
 
-namespace Pressless\Tests\Integration;
+namespace Stead\Tests\Integration;
 
-use Pressless\Auth\ArraySessionStore;
-use Pressless\Auth\AuthenticationService;
-use Pressless\Auth\AuthGuard;
-use Pressless\Auth\DatabaseSessionHandler;
-use Pressless\Auth\PasswordHasher;
-use Pressless\Auth\SessionPayload;
-use Pressless\Auth\SessionRepository;
-use Pressless\Auth\SessionStore;
-use Pressless\Auth\User;
-use Pressless\Auth\UserRepository;
-use Pressless\Http\Controller\LoginController;
-use Pressless\View\SimpleRenderer;
+use Stead\Auth\ArraySessionStore;
+use Stead\Auth\AuthenticationService;
+use Stead\Auth\AuthGuard;
+use Stead\Auth\DatabaseSessionHandler;
+use Stead\Auth\PasswordHasher;
+use Stead\Auth\SessionPayload;
+use Stead\Auth\SessionRepository;
+use Stead\Auth\SessionStore;
+use Stead\Auth\User;
+use Stead\Auth\UserRepository;
+use Stead\Http\Controller\LoginController;
+use Stead\View\SimpleRenderer;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
 

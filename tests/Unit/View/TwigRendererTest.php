@@ -2,18 +2,18 @@
 
 declare(strict_types=1);
 
-namespace Pressless\Tests\Unit\View;
+namespace Stead\Tests\Unit\View;
 
 use PHPUnit\Framework\TestCase;
-use Pressless\Config\Configuration;
-use Pressless\Exception\SafeException;
-use Pressless\View\TwigRenderer;
+use Stead\Config\Configuration;
+use Stead\Exception\SafeException;
+use Stead\View\TwigRenderer;
 
 final class TwigRendererTest extends TestCase
 {
     private function config(): Configuration
     {
-        $tmp = sys_get_temp_dir() . '/pressless-twig-' . bin2hex(random_bytes(4));
+        $tmp = sys_get_temp_dir() . '/stead-twig-' . bin2hex(random_bytes(4));
         mkdir($tmp . '/templates', 0775, true);
         mkdir($tmp . '/var/cache', 0775, true);
 
@@ -36,7 +36,7 @@ final class TwigRendererTest extends TestCase
 
     public function testEscapesHtmlByDefault(): void
     {
-        $tmp = sys_get_temp_dir() . '/pressless-twig-' . bin2hex(random_bytes(4));
+        $tmp = sys_get_temp_dir() . '/stead-twig-' . bin2hex(random_bytes(4));
         mkdir($tmp . '/templates', 0775, true);
         mkdir($tmp . '/var/cache', 0775, true);
         file_put_contents($tmp . '/templates/raw.twig', '{{ value }}');

@@ -2,19 +2,19 @@
 
 declare(strict_types=1);
 
-namespace Pressless\Tests\Integration;
+namespace Stead\Tests\Integration;
 
-use Pressless\Content\Collection;
-use Pressless\Content\CollectionRepository;
-use Pressless\Content\Entry;
-use Pressless\Content\EntryRepository;
-use Pressless\Content\FieldType\BooleanFieldType;
-use Pressless\Content\FieldType\DateFieldType;
-use Pressless\Content\FieldType\FieldTypeRegistry;
-use Pressless\Content\FieldType\NumberFieldType;
-use Pressless\Content\FieldType\RichtextFieldType;
-use Pressless\Content\FieldType\TextFieldType;
-use Pressless\Content\SlugGenerator;
+use Stead\Content\Collection;
+use Stead\Content\CollectionRepository;
+use Stead\Content\Entry;
+use Stead\Content\EntryRepository;
+use Stead\Content\FieldType\BooleanFieldType;
+use Stead\Content\FieldType\DateFieldType;
+use Stead\Content\FieldType\FieldTypeRegistry;
+use Stead\Content\FieldType\NumberFieldType;
+use Stead\Content\FieldType\RichtextFieldType;
+use Stead\Content\FieldType\TextFieldType;
+use Stead\Content\SlugGenerator;
 
 /**
  * Round-trips Entry value objects through EntryRepository against a real

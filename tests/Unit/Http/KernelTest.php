@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace Pressless\Tests\Unit\Http;
+namespace Stead\Tests\Unit\Http;
 
 use PHPUnit\Framework\TestCase;
-use Pressless\Bootstrap\Application;
-use Pressless\Config\Configuration;
-use Pressless\Http\Kernel;
-use Pressless\Http\Router;
+use Stead\Bootstrap\Application;
+use Stead\Config\Configuration;
+use Stead\Http\Kernel;
+use Stead\Http\Router;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -19,7 +19,7 @@ final class KernelTest extends TestCase
         $config = new Configuration(sys_get_temp_dir(), $environment, [
             'app' => ['debug' => false],
             'paths' => ['log' => 'var/log'],
-            'logging' => ['level' => 'debug', 'file' => 'pressless-test.log'],
+            'logging' => ['level' => 'debug', 'file' => 'stead-test.log'],
         ]);
 
         return new Kernel(new Application($config), $router);

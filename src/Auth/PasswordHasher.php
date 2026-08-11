@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Pressless\Auth;
+namespace Stead\Auth;
 
-use Pressless\Exception\SafeException;
+use Stead\Exception\SafeException;
 
 /**
  * Creates and verifies bcrypt password hashes.

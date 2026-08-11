@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Pressless\Content\FieldType;
+namespace Stead\Content\FieldType;
 
 /**
  * Multi-line plain text rendered as a `<textarea>`. Persists to

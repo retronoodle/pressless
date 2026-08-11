@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Pressless\Tests\Unit\Content;
+namespace Stead\Tests\Unit\Content;
 
 use PHPUnit\Framework\TestCase;
-use Pressless\Content\ValidationResult;
+use Stead\Content\ValidationResult;
 
 final class ValidationResultTest extends TestCase
 {

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Pressless\Support;
+namespace Stead\Support;
 
 final class ProjectRoot
 {
@@ -23,6 +23,6 @@ final class ProjectRoot
             $dir = $parent;
         }
 
-        throw new \RuntimeException('Could not resolve the Pressless project root.');
+        throw new \RuntimeException('Could not resolve the Stead project root.');
     }
 }

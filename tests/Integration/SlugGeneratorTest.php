@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Pressless\Tests\Integration;
+namespace Stead\Tests\Integration;
 
-use Pressless\Content\SlugGenerator;
+use Stead\Content\SlugGenerator;
 
 /**
  * Pure unit-level coverage of SlugGenerator. The uniqueness check is

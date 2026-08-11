@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Pressless\Content\FieldType;
+namespace Stead\Content\FieldType;
 
 /**
  * Single source of truth for which {@see FieldType} implementations are
@@ -25,7 +25,7 @@ final class FieldTypeRegistry
         foreach ($types as $type) {
             $key = $type->key();
             if (isset($byKey[$key])) {
-                throw new \Pressless\Exception\SafeException(
+                throw new \Stead\Exception\SafeException(
                     sprintf('Field type "%s" is registered twice.', $key),
                     ['key' => $key],
                 );

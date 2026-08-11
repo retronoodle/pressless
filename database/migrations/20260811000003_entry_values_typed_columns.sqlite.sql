@@ -1,4 +1,4 @@
--- Pressless Phase 2: typed-uniform columns on entry_values (SQLite)
+-- Stead Phase 2: typed-uniform columns on entry_values (SQLite)
 -- Adds one nullable column per phase-2 field kind and a unique key so each
 -- (entry, field) pair has at most one row.
 

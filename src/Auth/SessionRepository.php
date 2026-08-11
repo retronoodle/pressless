@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Pressless\Auth;
+namespace Stead\Auth;
 
-use Pressless\Database\Connection;
+use Stead\Database\Connection;
 
 /**
  * Owns all SQL for the `sessions` table.

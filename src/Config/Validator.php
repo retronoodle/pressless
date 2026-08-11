@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Pressless\Config;
+namespace Stead\Config;
 
-use Pressless\Exception\SafeException;
+use Stead\Exception\SafeException;
 
 final class Validator
 {

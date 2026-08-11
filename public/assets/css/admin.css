@@ -1,21 +1,21 @@
-/* Pressless admin styles.
+/* Stead admin styles.
    Minimal hand-rolled baseline; the admin layout expands on this. */
 
 :root {
-    --pressless-ink: #1c1c1c;
-    --pressless-muted: #5f5f5f;
-    --pressless-rule: #e0e0e0;
-    --pressless-error: #8a1c1c;
-    --pressless-bg: #fdfdfc;
-    --pressless-accent: #2f5fbf;
+    --stead-ink: #1c1c1c;
+    --stead-muted: #5f5f5f;
+    --stead-rule: #e0e0e0;
+    --stead-error: #8a1c1c;
+    --stead-bg: #fdfdfc;
+    --stead-accent: #2f5fbf;
 }
 
 body {
     margin: 0;
     padding: 2rem;
     font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
-    color: var(--pressless-ink);
-    background: var(--pressless-bg);
+    color: var(--stead-ink);
+    background: var(--stead-bg);
 }
 
 h1 {
@@ -37,14 +37,14 @@ p {
 label {
     display: block;
     margin-bottom: 0.25rem;
-    color: var(--pressless-muted);
+    color: var(--stead-muted);
 }
 
 input {
     width: 100%;
     max-width: 22rem;
     padding: 0.5rem;
-    border: 1px solid var(--pressless-rule);
+    border: 1px solid var(--stead-rule);
     border-radius: 3px;
     font: inherit;
     box-sizing: border-box;
@@ -52,9 +52,9 @@ input {
 
 button {
     padding: 0.5rem 1rem;
-    border: 1px solid var(--pressless-ink);
+    border: 1px solid var(--stead-ink);
     border-radius: 3px;
-    background: var(--pressless-ink);
+    background: var(--stead-ink);
     color: #fff;
     font: inherit;
     cursor: pointer;
@@ -63,30 +63,30 @@ button {
 button:focus-visible,
 input:focus-visible,
 a:focus-visible {
-    outline: 2px solid var(--pressless-accent);
+    outline: 2px solid var(--stead-accent);
     outline-offset: 2px;
 }
 
 .error {
-    color: var(--pressless-error);
+    color: var(--stead-error);
 }
 
 /* Login --------------------------------------------------------------------- */
 
-.pressless-login .login-shell {
+.stead-login .login-shell {
     max-width: 22rem;
     margin: 4rem auto 0;
 }
 
 /* Admin shell --------------------------------------------------------------- */
 
-.pressless-admin {
+.stead-admin {
     padding: 0;
 }
 
 .admin-header {
     padding: 1.5rem 2rem;
-    border-bottom: 1px solid var(--pressless-rule);
+    border-bottom: 1px solid var(--stead-rule);
     background: #fafaf8;
 }
 
@@ -104,17 +104,17 @@ a:focus-visible {
 }
 
 .admin-nav a {
-    color: var(--pressless-accent);
+    color: var(--stead-accent);
     text-decoration: none;
 }
 
 .admin-nav a[aria-current="page"] {
     font-weight: 600;
-    color: var(--pressless-ink);
+    color: var(--stead-ink);
 }
 
 .nav-placeholder {
-    color: var(--pressless-muted);
+    color: var(--stead-muted);
 }
 
 .admin-account {
@@ -129,8 +129,8 @@ a:focus-visible {
 
 .admin-account button {
     background: transparent;
-    color: var(--pressless-ink);
-    border-color: var(--pressless-rule);
+    color: var(--stead-ink);
+    border-color: var(--stead-rule);
 }
 
 .admin-main {
@@ -140,12 +140,12 @@ a:focus-visible {
 
 .empty-state {
     padding: 1.5rem;
-    border: 1px dashed var(--pressless-rule);
+    border: 1px dashed var(--stead-rule);
     border-radius: 4px;
     background: #fff;
 }
 
 .empty-state p {
-    color: var(--pressless-muted);
+    color: var(--stead-muted);
     margin: 0;
 }

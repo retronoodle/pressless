@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace Pressless\Tests\Unit\Content\FieldType;
+namespace Stead\Tests\Unit\Content\FieldType;
 
 use PHPUnit\Framework\TestCase;
-use Pressless\Content\FieldType\FieldType;
-use Pressless\Content\FieldType\FieldTypeRegistry;
-use Pressless\Content\FieldType\UnknownFieldTypeException;
-use Pressless\Exception\SafeException;
-use Pressless\Tests\Fixtures\Content\RecordingFieldType;
+use Stead\Content\FieldType\FieldType;
+use Stead\Content\FieldType\FieldTypeRegistry;
+use Stead\Content\FieldType\UnknownFieldTypeException;
+use Stead\Exception\SafeException;
+use Stead\Tests\Fixtures\Content\RecordingFieldType;
 
 final class FieldTypeRegistryTest extends TestCase
 {

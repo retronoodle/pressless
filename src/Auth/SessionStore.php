@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Pressless\Auth;
+namespace Stead\Auth;
 
 /**
  * The session state an authentication flow needs.

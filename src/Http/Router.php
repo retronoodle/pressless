@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Pressless\Http;
+namespace Stead\Http;
 
 use Symfony\Component\HttpFoundation\Request;
 

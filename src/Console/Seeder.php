@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace Pressless\Console;
+namespace Stead\Console;
 
-use Pressless\Auth\PasswordHasher;
-use Pressless\Auth\User;
-use Pressless\Auth\UserRepository;
-use Pressless\Config\Configuration;
-use Pressless\Database\Connection;
-use Pressless\Exception\SafeException;
+use Stead\Auth\PasswordHasher;
+use Stead\Auth\User;
+use Stead\Auth\UserRepository;
+use Stead\Config\Configuration;
+use Stead\Database\Connection;
+use Stead\Exception\SafeException;
 
 /**
  * Idempotent sample seeding for evaluator environments.
@@ -47,7 +47,7 @@ final class Seeder
         [
             'slug' => 'hello-world',
             'title' => 'Hello, world',
-            'body' => "Welcome to Pressless. This is the first post in the seeded "
+            'body' => "Welcome to Stead. This is the first post in the seeded "
                 . "`posts` collection, so you can see the content engine at "
                 . "work without configuring anything by hand.",
             'published_at' => '2025-01-01',
@@ -55,7 +55,7 @@ final class Seeder
         [
             'slug' => 'why-a-typed-cms',
             'title' => 'Why a typed CMS',
-            'body' => "Pressless stores every field value in the typed column "
+            'body' => "Stead stores every field value in the typed column "
                 . "that matches its kind, so the public site can sort, filter, "
                 . "and render without branching on string drift.",
             'published_at' => '2025-01-08',

@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace Pressless\Tests\Unit\Content;
+namespace Stead\Tests\Unit\Content;
 
 use PHPUnit\Framework\TestCase;
-use Pressless\Content\CollectionSchemaValidator;
-use Pressless\Content\FieldType\FieldType;
-use Pressless\Content\FieldType\FieldTypeRegistry;
-use Pressless\Content\SchemaValidationException;
-use Pressless\Tests\Fixtures\Content\RecordingFieldType;
+use Stead\Content\CollectionSchemaValidator;
+use Stead\Content\FieldType\FieldType;
+use Stead\Content\FieldType\FieldTypeRegistry;
+use Stead\Content\SchemaValidationException;
+use Stead\Tests\Fixtures\Content\RecordingFieldType;
 
 /**
  * Covers CollectionSchemaValidator's structural rules: required fields,

@@ -11,7 +11,7 @@ declare(strict_types=1);
 
 require dirname(__DIR__) . '/vendor/autoload.php';
 
-use Pressless\Http\DevServerRouter;
+use Stead\Http\DevServerRouter;
 
 $requestUri = isset($_SERVER['REQUEST_URI']) && is_string($_SERVER['REQUEST_URI'])
     ? $_SERVER['REQUEST_URI']

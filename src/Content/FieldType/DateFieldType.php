@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Pressless\Content\FieldType;
+namespace Stead\Content\FieldType;
 
 /**
  * ISO `YYYY-MM-DD` date rendered as `<input type="date">`. Persists to

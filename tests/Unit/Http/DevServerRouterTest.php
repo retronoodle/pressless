@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Pressless\Tests\Unit\Http;
+namespace Stead\Tests\Unit\Http;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
-use Pressless\Http\DevServerRouter;
+use Stead\Http\DevServerRouter;
 
 final class DevServerRouterTest extends TestCase
 {

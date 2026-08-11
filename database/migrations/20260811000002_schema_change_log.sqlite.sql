@@ -1,4 +1,4 @@
--- Pressless Phase 2: schema-change bookkeeping table (SQLite)
+-- Stead Phase 2: schema-change bookkeeping table (SQLite)
 
 CREATE TABLE IF NOT EXISTS schema_change_log (
     id INTEGER PRIMARY KEY AUTOINCREMENT,

@@ -2,19 +2,19 @@
 
 declare(strict_types=1);
 
-namespace Pressless\Tests\Unit\Content\FieldType;
+namespace Stead\Tests\Unit\Content\FieldType;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
-use Pressless\Content\FieldType\BooleanFieldType;
-use Pressless\Content\FieldType\DateFieldType;
-use Pressless\Content\FieldType\FieldType;
-use Pressless\Content\FieldType\MediaFieldType;
-use Pressless\Content\FieldType\NumberFieldType;
-use Pressless\Content\FieldType\RelationFieldType;
-use Pressless\Content\FieldType\RichtextFieldType;
-use Pressless\Content\FieldType\SelectFieldType;
-use Pressless\Content\FieldType\TextFieldType;
+use Stead\Content\FieldType\BooleanFieldType;
+use Stead\Content\FieldType\DateFieldType;
+use Stead\Content\FieldType\FieldType;
+use Stead\Content\FieldType\MediaFieldType;
+use Stead\Content\FieldType\NumberFieldType;
+use Stead\Content\FieldType\RelationFieldType;
+use Stead\Content\FieldType\RichtextFieldType;
+use Stead\Content\FieldType\SelectFieldType;
+use Stead\Content\FieldType\TextFieldType;
 
 /**
  * Runs the same four scenarios (validation, normalization, persistence

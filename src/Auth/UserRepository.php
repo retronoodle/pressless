@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Pressless\Auth;
+namespace Stead\Auth;
 
-use Pressless\Database\Connection;
+use Stead\Database\Connection;
 
 /**
  * Reads and writes user records for the Phase 1 schema.
@@ -65,7 +65,7 @@ final class UserRepository
 
         $user = $this->findByEmail($email);
         if ($user === null) {
-            throw new \Pressless\Exception\SafeException('User could not be read back after creation.');
+            throw new \Stead\Exception\SafeException('User could not be read back after creation.');
         }
 
         return $user;

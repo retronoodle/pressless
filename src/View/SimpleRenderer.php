@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Pressless\View;
+namespace Stead\View;
 
 /**
  * A dependency-free renderer producing minimal, fully escaped HTML.
@@ -20,7 +20,7 @@ final class SimpleRenderer implements Renderer
         return match ($template) {
             'login' => $this->login($data),
             'admin' => $this->admin($data),
-            default => $this->document('Pressless', '<p>' . self::e($template) . '</p>'),
+            default => $this->document('Stead', '<p>' . self::e($template) . '</p>'),
         };
     }
 
@@ -33,7 +33,7 @@ final class SimpleRenderer implements Renderer
         $email = isset($data['email']) ? (string) $data['email'] : '';
         $redirect = isset($data['redirect']) ? (string) $data['redirect'] : '';
 
-        $body = '<h1>Sign in to Pressless</h1>';
+        $body = '<h1>Sign in to Stead</h1>';
 
         if ($error !== '') {
             $body .= '<p role="alert" class="error">' . self::e($error) . '</p>';
@@ -62,7 +62,7 @@ final class SimpleRenderer implements Renderer
     {
         $name = isset($data['user_name']) ? (string) $data['user_name'] : '';
 
-        $body = '<h1>Pressless admin</h1>'
+        $body = '<h1>Stead admin</h1>'
             . '<p>Signed in as ' . self::e($name) . '.</p>'
             . '<form method="post" action="/admin/logout"><button type="submit">Sign out</button></form>';
 

@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace Pressless\Http\Controller;
+namespace Stead\Http\Controller;
 
-use Pressless\Auth\User;
-use Pressless\Content\CollectionRepository;
-use Pressless\Content\EntryRepository;
-use Pressless\View\Renderer;
+use Stead\Auth\User;
+use Stead\Content\CollectionRepository;
+use Stead\Content\EntryRepository;
+use Stead\View\Renderer;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 

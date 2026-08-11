@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Pressless\Content;
+namespace Stead\Content;
 
-use Pressless\Content\FieldType\FieldTypeRegistry;
+use Stead\Content\FieldType\FieldTypeRegistry;
 
 /**
  * Validates a collection's proposed field set against the registered field

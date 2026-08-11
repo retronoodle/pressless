@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Pressless\Http;
+namespace Stead\Http;
 
 /**
  * The static-file decision used by the `php -S` router script.

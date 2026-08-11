@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Pressless\Exception;
+namespace Stead\Exception;
 
 use RuntimeException;
 

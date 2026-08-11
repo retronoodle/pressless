@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Pressless\View;
+namespace Stead\View;
 
 /**
  * Renders a named template with simple view data.

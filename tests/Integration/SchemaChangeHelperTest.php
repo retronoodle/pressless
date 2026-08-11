@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Pressless\Tests\Integration;
+namespace Stead\Tests\Integration;
 
-use Pressless\Content\Collection;
-use Pressless\Content\CollectionRepository;
-use Pressless\Content\SchemaChangeHelper;
+use Stead\Content\Collection;
+use Stead\Content\CollectionRepository;
+use Stead\Content\SchemaChangeHelper;
 
 /**
  * End-to-end coverage of SchemaChangeHelper against the real schema,

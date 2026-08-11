@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace Pressless\Tests\Unit\Config;
+namespace Stead\Tests\Unit\Config;
 
 use PHPUnit\Framework\TestCase;
-use Pressless\Config\Configuration;
-use Pressless\Config\Dotenv;
-use Pressless\Config\Validator;
-use Pressless\Exception\SafeException;
+use Stead\Config\Configuration;
+use Stead\Config\Dotenv;
+use Stead\Config\Validator;
+use Stead\Exception\SafeException;
 
 final class ConfigurationTest extends TestCase
 {
@@ -16,7 +16,7 @@ final class ConfigurationTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->tmpDir = sys_get_temp_dir() . '/pressless-test-' . bin2hex(random_bytes(4));
+        $this->tmpDir = sys_get_temp_dir() . '/stead-test-' . bin2hex(random_bytes(4));
         mkdir($this->tmpDir, 0775, true);
         mkdir($this->tmpDir . '/var/cache', 0775, true);
         mkdir($this->tmpDir . '/var/log', 0775, true);
@@ -135,7 +135,7 @@ final class ConfigurationTest extends TestCase
             "    cache: var/cache\n" .
             "    log: var/log\n" .
             "  sessions:\n" .
-            "    name: pressless_session\n"
+            "    name: stead_session\n"
         );
         $config = Configuration::fromProjectRoot($this->tmpDir, 'development');
         Validator::validate($config);
@@ -165,10 +165,10 @@ final class ConfigurationTest extends TestCase
             "  database:\n" .
             "    connection: mysql\n" .
             "    host: localhost\n" .
-            "    database: pressless\n" .
+            "    database: stead\n" .
             "    username: ''\n" .
             "  sessions:\n" .
-            "    name: pressless_session\n"
+            "    name: stead_session\n"
         );
         $config = Configuration::fromProjectRoot($this->tmpDir, 'production');
         try {

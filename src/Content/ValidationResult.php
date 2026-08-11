@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Pressless\Content;
+namespace Stead\Content;
 
 /**
  * The result of running {@see EntryValidator::validate()} against a payload.

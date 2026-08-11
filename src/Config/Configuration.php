@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Pressless\Config;
+namespace Stead\Config;
 
-use Pressless\Support\ProjectRoot;
+use Stead\Support\ProjectRoot;
 use Symfony\Component\Yaml\Yaml;
 
 final class Configuration

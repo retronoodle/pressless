@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Pressless\Tests\Fixtures\Content;
+namespace Stead\Tests\Fixtures\Content;
 
-use Pressless\Content\FieldType\FieldType;
+use Stead\Content\FieldType\FieldType;
 
 /**
  * A self-contained {@see FieldType} implementation used by the registry

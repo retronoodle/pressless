@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Pressless\Http\Controller;
+namespace Stead\Http\Controller;
 
-use Pressless\Auth\AuthenticationService;
-use Pressless\Auth\AuthGuard;
-use Pressless\View\Renderer;
+use Stead\Auth\AuthenticationService;
+use Stead\Auth\AuthGuard;
+use Stead\View\Renderer;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Pressless\Auth;
+namespace Stead\Auth;
 
 /**
  * Encodes session data in PHP's native `php` serialize_handler format

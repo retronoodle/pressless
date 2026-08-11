@@ -1,8 +1,8 @@
-# pressless
+# Stead
 
 A PHP CMS for people who want to publish a website without plugin soup, a 2010-era admin, or learning PHP.
 
-WordPress runs ~40% of the web and still ships an admin from a decade and a half ago — banners, settings rabbit holes, a plugin/hook model where every install becomes a unique pile of third-party UI. Pressless is the other bet: opinionated, quiet, modern. Ghost-class admin, Linear-feel polish, zero chrome. Do the common cases well and refuse the rest.
+WordPress runs ~40% of the web and still ships an admin from a decade and a half ago — banners, settings rabbit holes, a plugin/hook model where every install becomes a unique pile of third-party UI. Stead is the other bet: opinionated, quiet, modern. Ghost-class admin, Linear-feel polish, zero chrome. Do the common cases well and refuse the rest.
 
 ## Status
 
@@ -32,7 +32,7 @@ Early days — most of what's below is the destination, not the current state. B
 
 ## Building plugins
 
-WordPress's hook/filter model lets a plugin touch nearly any point in core, in any order, with no isolation — that's what produces plugin soup, not the number of things plugins can do. Pressless instead names a fixed set of capabilities, each with a real contract:
+WordPress's hook/filter model lets a plugin touch nearly any point in core, in any order, with no isolation — that's what produces plugin soup, not the number of things plugins can do. Stead instead names a fixed set of capabilities, each with a real contract:
 
 - **Theme** — Twig templates, full control of entry/collection/homepage markup.
 - **Field type** — a new typed field usable on any collection (color picker, SEO title/description pair, whatever you need).

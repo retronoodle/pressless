@@ -1,4 +1,4 @@
-# Pressless sample seed data
+# Stead sample seed data
 #
 # Idempotently creates a development administrator and empty sample
 # collections the first time `bin/serve --seed` runs.

@@ -2,17 +2,17 @@
 
 declare(strict_types=1);
 
-namespace Pressless\Tests\Integration;
+namespace Stead\Tests\Integration;
 
-use Pressless\Content\Collection;
-use Pressless\Content\CollectionRepository;
-use Pressless\Exception\SafeException;
+use Stead\Content\Collection;
+use Stead\Content\CollectionRepository;
+use Stead\Exception\SafeException;
 
 /**
  * Round-trips Collection value objects through CollectionRepository against
  * a real SQLite schema. The tests are sqlite-only because the column
  * representation of `schema_definition` differs by driver (TEXT vs JSON) and
- * the SQLite implementation is what Pressless uses in CI without MySQL.
+ * the SQLite implementation is what Stead uses in CI without MySQL.
  */
 final class CollectionRepositoryTest extends DatabaseTestCase
 {

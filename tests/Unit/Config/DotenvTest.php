@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Pressless\Tests\Unit\Config;
+namespace Stead\Tests\Unit\Config;
 
 use PHPUnit\Framework\TestCase;
-use Pressless\Config\Dotenv;
+use Stead\Config\Dotenv;
 
 final class DotenvTest extends TestCase
 {

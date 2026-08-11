@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Pressless\Tests\Integration;
+namespace Stead\Tests\Integration;
 
 use PDO;
-use Pressless\Database\Connection;
-use Pressless\Database\Resetter;
+use Stead\Database\Connection;
+use Stead\Database\Resetter;
 
 final class SqliteDatabaseTest extends DatabaseTestCase
 {

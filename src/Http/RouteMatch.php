@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Pressless\Http;
+namespace Stead\Http;
 
 /**
  * The outcome of matching a request against the route table.

@@ -1,4 +1,4 @@
--- Pressless initial schema (MySQL/MariaDB)
+-- Stead initial schema (MySQL/MariaDB)
 
 CREATE TABLE IF NOT EXISTS users (
     id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,

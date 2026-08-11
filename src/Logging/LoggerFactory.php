@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace Pressless\Logging;
+namespace Stead\Logging;
 
 use Monolog\Formatter\LineFormatter;
 use Monolog\Handler\StreamHandler;
 use Monolog\Level;
 use Monolog\Logger;
 use Monolog\LogRecord;
-use Pressless\Config\Configuration;
-use Pressless\Exception\SafeException;
+use Stead\Config\Configuration;
+use Stead\Exception\SafeException;
 
 final class LoggerFactory
 {
@@ -18,7 +18,7 @@ final class LoggerFactory
     {
         $level = self::resolveLevel($config->getString('logging.level', 'info'));
         $logDir = $config->path('paths.log');
-        $logFile = $logDir . '/' . $config->getString('logging.file', 'pressless.log');
+        $logFile = $logDir . '/' . $config->getString('logging.file', 'stead.log');
         $dir = dirname($logFile);
         if (!is_dir($dir)) {
             @mkdir($dir, 0775, true);
@@ -33,7 +33,7 @@ final class LoggerFactory
         );
         $handler->setFormatter($formatter);
 
-        $logger = new Logger('pressless');
+        $logger = new Logger('stead');
         $logger->pushHandler($handler);
         $logger->pushProcessor(self::redactSecrets(...));
 

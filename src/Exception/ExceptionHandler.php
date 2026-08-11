@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Pressless\Exception;
+namespace Stead\Exception;
 
-use Pressless\Config\Configuration;
+use Stead\Config\Configuration;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;

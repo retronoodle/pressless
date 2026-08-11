@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Pressless\Content;
+namespace Stead\Content;
 
 /**
  * Immutable value object carrying one entry's metadata and its typed

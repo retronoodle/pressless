@@ -2,8 +2,8 @@
 
 declare(strict_types=1);
 
-use Pressless\Bootstrap\Application;
-use Pressless\Console\ConsoleBootstrap;
+use Stead\Bootstrap\Application;
+use Stead\Console\ConsoleBootstrap;
 
 require __DIR__ . '/../vendor/autoload.php';
 

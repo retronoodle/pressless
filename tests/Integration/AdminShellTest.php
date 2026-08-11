@@ -2,20 +2,20 @@
 
 declare(strict_types=1);
 
-namespace Pressless\Tests\Integration;
+namespace Stead\Tests\Integration;
 
-use Pressless\Auth\ArraySessionStore;
-use Pressless\Auth\AuthenticationService;
-use Pressless\Auth\PasswordHasher;
-use Pressless\Auth\SessionRepository;
-use Pressless\Auth\UserRepository;
-use Pressless\Bootstrap\Application;
-use Pressless\Config\Configuration;
-use Pressless\Database\Connection;
-use Pressless\Database\Migrator;
-use Pressless\Http\Kernel;
-use Pressless\Http\Routes;
-use Pressless\View\TwigRenderer;
+use Stead\Auth\ArraySessionStore;
+use Stead\Auth\AuthenticationService;
+use Stead\Auth\PasswordHasher;
+use Stead\Auth\SessionRepository;
+use Stead\Auth\UserRepository;
+use Stead\Bootstrap\Application;
+use Stead\Config\Configuration;
+use Stead\Database\Connection;
+use Stead\Database\Migrator;
+use Stead\Http\Kernel;
+use Stead\Http\Routes;
+use Stead\View\TwigRenderer;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpFoundation\Request;
 
@@ -35,7 +35,7 @@ final class AdminShellTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->projectRoot = sys_get_temp_dir() . '/pressless-shell-' . bin2hex(random_bytes(4));
+        $this->projectRoot = sys_get_temp_dir() . '/stead-shell-' . bin2hex(random_bytes(4));
         mkdir($this->projectRoot . '/var/cache', 0775, true);
         mkdir($this->projectRoot . '/var/log', 0775, true);
         mkdir($this->projectRoot . '/database/migrations', 0775, true);
@@ -43,7 +43,7 @@ final class AdminShellTest extends TestCase
             __DIR__ . '/../../database/migrations/20260811000001_initial_schema.sqlite.sql',
             $this->projectRoot . '/database/migrations/20260811000001_initial_schema.sqlite.sql',
         );
-        $this->dbPath = $this->projectRoot . '/var/pressless.sqlite';
+        $this->dbPath = $this->projectRoot . '/var/stead.sqlite';
 
         $this->config = new Configuration(
             $this->projectRoot,
@@ -60,7 +60,7 @@ final class AdminShellTest extends TestCase
                     'cache' => 'var/cache',
                     'log' => 'var/log',
                 ],
-                'sessions' => ['name' => 'pressless_session'],
+                'sessions' => ['name' => 'stead_session'],
             ],
         );
 
@@ -112,7 +112,7 @@ final class AdminShellTest extends TestCase
 
         $this->assertSame(200, $response->getStatusCode());
         $body = (string) $response->getContent();
-        $this->assertStringContainsString('Sign in to Pressless', $body);
+        $this->assertStringContainsString('Sign in to Stead', $body);
         $this->assertStringContainsString('action="/admin/login"', $body);
         $this->assertStringContainsString('name="email"', $body);
         $this->assertStringContainsString('name="password"', $body);
@@ -150,7 +150,7 @@ final class AdminShellTest extends TestCase
 
         $this->assertSame(200, $response->getStatusCode());
         $body = (string) $response->getContent();
-        $this->assertStringContainsString('Pressless admin', $body);
+        $this->assertStringContainsString('Stead admin', $body);
         $this->assertStringContainsString('Create your first collection', $body);
         $this->assertStringContainsString('href="/admin/collections/new"', $body);
         $this->assertStringContainsString('Ada Lovelace', $body);
@@ -323,7 +323,7 @@ final class AdminShellTest extends TestCase
             $this->templatesDir . '/login.twig',
             "{% extends 'layout/base.twig' %}\n"
             . "{% block title %}Sign in{% endblock %}\n"
-            . "{% block body %}<h1>Sign in to Pressless</h1>"
+            . "{% block body %}<h1>Sign in to Stead</h1>"
             . "{% if error %}<p role=\"alert\" class=\"error\">{{ error }}</p>{% endif %}"
             . "<form method=\"post\" action=\"/admin/login\">"
             . "{% if redirect %}<input type=\"hidden\" name=\"redirect\" value=\"{{ redirect }}\">{% endif %}"
@@ -335,8 +335,8 @@ final class AdminShellTest extends TestCase
         file_put_contents(
             $this->templatesDir . '/admin.twig',
             "{% extends 'layout/base.twig' %}\n"
-            . "{% block title %}Pressless admin{% endblock %}\n"
-            . "{% block body %}<h1>Pressless admin</h1>"
+            . "{% block title %}Stead admin{% endblock %}\n"
+            . "{% block body %}<h1>Stead admin</h1>"
             . "<nav class=\"admin-nav\"><ul>"
             . "<li><a href=\"/admin\">Dashboard</a></li>"
             . "<li><a href=\"/admin/collections\">Collections</a></li>"
@@ -383,7 +383,7 @@ final class AdminShellTest extends TestCase
         }
         file_put_contents(
             $layoutDir . '/base.twig',
-            "<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\"><title>{% block title %}Pressless{% endblock %}</title></head><body>{% block body %}{% endblock %}</body></html>\n",
+            "<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\"><title>{% block title %}Stead{% endblock %}</title></head><body>{% block body %}{% endblock %}</body></html>\n",
         );
     }
 

@@ -1,5 +1,5 @@
 {
-    "name": "pressless/pressless",
+    "name": "stead/stead",
     "description": "A PHP CMS for people who want to publish a website without plugin soup.",
     "type": "project",
     "license": "MIT",
@@ -20,12 +20,12 @@
     },
     "autoload": {
         "psr-4": {
-            "Pressless\\": "src/"
+            "Stead\\": "src/"
         }
     },
     "autoload-dev": {
         "psr-4": {
-            "Pressless\\Tests\\": "tests/"
+            "Stead\\Tests\\": "tests/"
         }
     },
     "config": {

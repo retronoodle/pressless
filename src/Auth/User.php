@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Pressless\Auth;
+namespace Stead\Auth;
 
 /**
  * A user record loaded from the `users` table.

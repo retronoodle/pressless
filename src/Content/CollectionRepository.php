@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Pressless\Content;
+namespace Stead\Content;
 
-use Pressless\Database\Connection;
-use Pressless\Exception\SafeException;
+use Stead\Database\Connection;
+use Stead\Exception\SafeException;
 
 /**
  * Reads and writes `collections` rows.

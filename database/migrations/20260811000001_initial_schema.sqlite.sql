@@ -1,4 +1,4 @@
--- Pressless initial schema (SQLite)
+-- Stead initial schema (SQLite)
 
 CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,

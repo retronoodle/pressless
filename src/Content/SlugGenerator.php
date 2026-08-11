@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Pressless\Content;
+namespace Stead\Content;
 
-use Pressless\Database\Connection;
+use Stead\Database\Connection;
 
 /**
  * Produces and de-duplicates entry slugs.

@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace Pressless\Tests\Unit\Console;
+namespace Stead\Tests\Unit\Console;
 
 use PHPUnit\Framework\TestCase;
-use Pressless\Config\Configuration;
-use Pressless\Console\ServePreflight;
-use Pressless\Database\Connection;
-use Pressless\Database\Migrator;
-use Pressless\Exception\SafeException;
+use Stead\Config\Configuration;
+use Stead\Console\ServePreflight;
+use Stead\Database\Connection;
+use Stead\Database\Migrator;
+use Stead\Exception\SafeException;
 
 final class ServePreflightTest extends TestCase
 {
@@ -21,12 +21,12 @@ final class ServePreflightTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->projectRoot = sys_get_temp_dir() . '/pressless-serve-' . bin2hex(random_bytes(4));
+        $this->projectRoot = sys_get_temp_dir() . '/stead-serve-' . bin2hex(random_bytes(4));
         mkdir($this->projectRoot . '/database/migrations', 0775, true);
         foreach (glob(__DIR__ . '/../../../database/migrations/*.sqlite.sql') ?: [] as $src) {
             copy($src, $this->projectRoot . '/database/migrations/' . basename($src));
         }
-        $this->dbPath = $this->projectRoot . '/pressless.sqlite';
+        $this->dbPath = $this->projectRoot . '/stead.sqlite';
 
         $this->config = new Configuration(
             $this->projectRoot,

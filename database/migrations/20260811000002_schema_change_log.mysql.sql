@@ -1,4 +1,4 @@
--- Pressless Phase 2: schema-change bookkeeping table (MySQL/MariaDB)
+-- Stead Phase 2: schema-change bookkeeping table (MySQL/MariaDB)
 
 CREATE TABLE IF NOT EXISTS schema_change_log (
     id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,

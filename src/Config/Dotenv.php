@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Pressless\Config;
+namespace Stead\Config;
 
 final class Dotenv
 {

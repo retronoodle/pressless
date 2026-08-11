@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Pressless\Database;
+namespace Stead\Database;
 
-use Pressless\Config\Configuration;
-use Pressless\Exception\SafeException;
+use Stead\Config\Configuration;
+use Stead\Exception\SafeException;
 
 final class Resetter
 {

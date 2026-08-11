@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Pressless\Auth;
+namespace Stead\Auth;
 
-use Pressless\Config\Configuration;
-use Pressless\Exception\SafeException;
+use Stead\Config\Configuration;
+use Stead\Exception\SafeException;
 
 /**
  * Wraps PHP's native session API with the project's cookie policy and the
@@ -36,7 +36,7 @@ final class NativeSessionStore implements SessionStore
             session_set_save_handler($this->handler, true);
         }
 
-        session_name($this->config->getString('sessions.name', 'pressless_session'));
+        session_name($this->config->getString('sessions.name', 'stead_session'));
         session_set_cookie_params($this->cookieParams());
 
         if (!session_start()) {
@@ -122,7 +122,7 @@ final class NativeSessionStore implements SessionStore
         // Expire the cookie so the browser stops presenting the old identifier.
         if (!headers_sent()) {
             $params = session_get_cookie_params();
-            setcookie(session_name() ?: 'pressless_session', '', [
+            setcookie(session_name() ?: 'stead_session', '', [
                 'expires' => time() - 42000,
                 'path' => $params['path'],
                 'domain' => $params['domain'],

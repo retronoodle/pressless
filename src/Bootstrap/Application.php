@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
-namespace Pressless\Bootstrap;
+namespace Stead\Bootstrap;
 
 use Monolog\Logger;
-use Pressless\Config\Configuration;
-use Pressless\Config\Validator;
-use Pressless\Database\Connection;
-use Pressless\Exception\ExceptionHandler;
-use Pressless\Exception\SafeException;
-use Pressless\Logging\LoggerFactory;
-use Pressless\Support\ProjectRoot;
+use Stead\Config\Configuration;
+use Stead\Config\Validator;
+use Stead\Database\Connection;
+use Stead\Exception\ExceptionHandler;
+use Stead\Exception\SafeException;
+use Stead\Logging\LoggerFactory;
+use Stead\Support\ProjectRoot;
 
 final class Application
 {
@@ -25,7 +25,7 @@ final class Application
         $projectRoot ??= ProjectRoot::resolve();
         $configPath = $projectRoot . '/.env';
         if (is_file($configPath)) {
-            \Pressless\Config\Dotenv::load($configPath);
+            \Stead\Config\Dotenv::load($configPath);
         }
         $environment ??= $_ENV['APP_ENV'] ?? getenv('APP_ENV') ?: 'production';
         if (!in_array($environment, ['production', 'development', 'test'], true)) {

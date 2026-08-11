@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Pressless\Console;
+namespace Stead\Console;
 
-use Pressless\Bootstrap\Application;
+use Stead\Bootstrap\Application;
 use Symfony\Component\Console\Application as ConsoleApplication;
 
 final class ConsoleBootstrap
@@ -16,7 +16,7 @@ final class ConsoleBootstrap
      */
     public static function forServe(Application $app): ConsoleApplication
     {
-        $console = new ConsoleApplication('Pressless', '0.1.0');
+        $console = new ConsoleApplication('Stead', '0.1.0');
         $serve = new ServeCommand($app);
         $console->add($serve);
         $console->setDefaultCommand($serve->getName(), true);
@@ -31,7 +31,7 @@ final class ConsoleBootstrap
      */
     public static function forMigrate(Application $app): ConsoleApplication
     {
-        $console = new ConsoleApplication('Pressless', '0.1.0');
+        $console = new ConsoleApplication('Stead', '0.1.0');
         $migrate = new MigrateCommand($app);
         $console->add($migrate);
         $console->setDefaultCommand($migrate->getName(), true);

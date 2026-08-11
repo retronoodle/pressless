@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Pressless\View;
+namespace Stead\View;
 
-use Pressless\Config\Configuration;
-use Pressless\Exception\SafeException;
+use Stead\Config\Configuration;
+use Stead\Exception\SafeException;
 use Twig\Environment;
 use Twig\Loader\FilesystemLoader;
 

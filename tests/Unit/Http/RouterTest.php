@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace Pressless\Tests\Unit\Http;
+namespace Stead\Tests\Unit\Http;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
-use Pressless\Http\RouteMatch;
-use Pressless\Http\Router;
+use Stead\Http\RouteMatch;
+use Stead\Http\Router;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 

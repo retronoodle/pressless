@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace Pressless\Tests\Unit\Auth;
+namespace Stead\Tests\Unit\Auth;
 
 use PHPUnit\Framework\TestCase;
-use Pressless\Auth\NativeSessionStore;
-use Pressless\Auth\PasswordHasher;
-use Pressless\Config\Configuration;
-use Pressless\Exception\SafeException;
+use Stead\Auth\NativeSessionStore;
+use Stead\Auth\PasswordHasher;
+use Stead\Config\Configuration;
+use Stead\Exception\SafeException;
 
 final class SessionCookieTest extends TestCase
 {
