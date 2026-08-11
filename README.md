@@ -43,7 +43,7 @@ WordPress's hook/filter model lets a plugin touch nearly any point in core, in a
 
 If a real plugin idea can't be expressed by this list, that's a signal for core to add a new *designed* capability — not to open a general hook system.
 
-Distribution is `composer require` or a ZIP upload through the admin. A `bin/plugin` CLI scaffolds, validates, and packages plugins, and a discovery site lets people find and install yours. See [`docs/prd.md`](docs/prd.md) §10 (Phases 15–21) for the full plugin roadmap, and `docs/plugins.md` (coming with Phase 21) for the authoring guide.
+Distribution is `composer require` or a ZIP upload through the admin. A `bin/plugin` CLI scaffolds, validates, and packages plugins, and a discovery site lets people find and install yours. A full authoring guide is planned alongside the plugin discovery site.
 
 ## What it isn't
 
@@ -59,4 +59,4 @@ Distribution is `composer require` or a ZIP upload through the admin. A `bin/plu
 - **Plugin authors** — shipping themes, field types, repositories, or admin extensions through a designed plugin model + discovery site.
 - **Evaluators** — `git clone` → `bin/serve` → browser, sample data with `--seed`.
 
-See [`docs/prd.md`](docs/prd.md) for the full product requirements and phased roadmap.
+Roadmap and full product requirements are tracked internally.
