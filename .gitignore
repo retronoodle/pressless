@@ -3,3 +3,36 @@
 .kilocode/
 .opencode/
 docs/
+
+# Composer
+/vendor/
+composer.lock
+
+# Environment & secrets (see also task 2.5 for .env.example convention)
+.env
+.env.*
+!.env.example
+
+# Runtime paths (cache, logs, twig cache)
+/var/cache/*
+/var/log/*
+!/var/cache/.gitkeep
+!/var/log/.gitkeep
+
+# Local SQLite databases. These hold real password hashes once seeded, so they
+# must never be committed. WAL mode also produces -shm/-wal sidecar files.
+/var/*.sqlite
+/var/*.sqlite-shm
+/var/*.sqlite-wal
+/var/*.db
+
+# Test & static analysis caches
+/.phpunit.cache/
+/.phpunit.result.cache
+/.phpstan.cache/
+
+# IDE & OS noise
+.DS_Store
+.idea/
+.vscode/
+*.swp

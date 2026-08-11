@@ -1,0 +1,12 @@
+<?php
+
+declare(strict_types=1);
+
+use Pressless\Bootstrap\Application;
+use Pressless\Console\ConsoleBootstrap;
+
+require __DIR__ . '/../vendor/autoload.php';
+
+$app = Application::bootstrap();
+$console = ConsoleBootstrap::forMigrate($app);
+exit($console->run());

@@ -1,7 +1,14 @@
-## ADDED Requirements
+# Capability: database-foundations
 
-### Requirement: MySQL/MariaDB connection boundary
-The database layer SHALL provide a small PDO-backed interface for prepared statements, parameter binding, transactions, and consistent exception handling, and SHALL reject unsupported database drivers.
+## Purpose
+
+TBD
+
+## Requirements
+
+### Requirement: Multi-driver connection boundary
+
+The database layer SHALL provide a small PDO-backed interface for prepared statements, parameter binding, transactions, and consistent exception handling, SHALL support MySQL, MariaDB, and SQLite drivers, and SHALL reject other database drivers.
 
 #### Scenario: Parameterized query
 - **WHEN** application code executes a query with user-supplied values through the database interface
@@ -11,12 +18,20 @@ The database layer SHALL provide a small PDO-backed interface for prepared state
 - **WHEN** an operation inside an explicit transaction raises an exception
 - **THEN** the database layer rolls the transaction back and propagates a safe application error
 
+#### Scenario: SQLite foreign-key enforcement
+- **WHEN** the application opens a SQLite connection
+- **THEN** `PRAGMA foreign_keys=ON` is set so foreign-key constraints declared in migrations are honored
+
 ### Requirement: Ordered migration tracking
 The migration runner SHALL discover versioned SQL migrations, apply pending migrations in deterministic order, and record each successful version in a `migrations` table.
 
 #### Scenario: First migration run
 - **WHEN** the migration runner is pointed at an empty supported database
 - **THEN** it creates migration tracking, applies each migration once in version order, and records the applied versions
+
+#### Scenario: Driver-aware migration discovery
+- **WHEN** the migration runner discovers migrations
+- **THEN** it selects the per-driver migration file for the configured driver (MySQL/MariaDB or SQLite) so each track uses idiomatic column types and syntax
 
 #### Scenario: Repeated migration run
 - **WHEN** the migration runner is run against a database whose versions are already recorded

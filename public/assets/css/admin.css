@@ -1,0 +1,151 @@
+/* Pressless admin styles.
+   Minimal hand-rolled baseline; the admin layout expands on this. */
+
+:root {
+    --pressless-ink: #1c1c1c;
+    --pressless-muted: #5f5f5f;
+    --pressless-rule: #e0e0e0;
+    --pressless-error: #8a1c1c;
+    --pressless-bg: #fdfdfc;
+    --pressless-accent: #2f5fbf;
+}
+
+body {
+    margin: 0;
+    padding: 2rem;
+    font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+    color: var(--pressless-ink);
+    background: var(--pressless-bg);
+}
+
+h1 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin: 0 0 1rem;
+}
+
+h2 {
+    font-size: 1.125rem;
+    font-weight: 600;
+    margin: 0 0 0.5rem;
+}
+
+p {
+    margin: 0 0 1rem;
+}
+
+label {
+    display: block;
+    margin-bottom: 0.25rem;
+    color: var(--pressless-muted);
+}
+
+input {
+    width: 100%;
+    max-width: 22rem;
+    padding: 0.5rem;
+    border: 1px solid var(--pressless-rule);
+    border-radius: 3px;
+    font: inherit;
+    box-sizing: border-box;
+}
+
+button {
+    padding: 0.5rem 1rem;
+    border: 1px solid var(--pressless-ink);
+    border-radius: 3px;
+    background: var(--pressless-ink);
+    color: #fff;
+    font: inherit;
+    cursor: pointer;
+}
+
+button:focus-visible,
+input:focus-visible,
+a:focus-visible {
+    outline: 2px solid var(--pressless-accent);
+    outline-offset: 2px;
+}
+
+.error {
+    color: var(--pressless-error);
+}
+
+/* Login --------------------------------------------------------------------- */
+
+.pressless-login .login-shell {
+    max-width: 22rem;
+    margin: 4rem auto 0;
+}
+
+/* Admin shell --------------------------------------------------------------- */
+
+.pressless-admin {
+    padding: 0;
+}
+
+.admin-header {
+    padding: 1.5rem 2rem;
+    border-bottom: 1px solid var(--pressless-rule);
+    background: #fafaf8;
+}
+
+.admin-header h1 {
+    margin: 0 0 1rem;
+}
+
+.admin-nav ul {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.25rem;
+    list-style: none;
+    padding: 0;
+    margin: 0 0 1rem;
+}
+
+.admin-nav a {
+    color: var(--pressless-accent);
+    text-decoration: none;
+}
+
+.admin-nav a[aria-current="page"] {
+    font-weight: 600;
+    color: var(--pressless-ink);
+}
+
+.nav-placeholder {
+    color: var(--pressless-muted);
+}
+
+.admin-account {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.admin-account p {
+    margin: 0;
+}
+
+.admin-account button {
+    background: transparent;
+    color: var(--pressless-ink);
+    border-color: var(--pressless-rule);
+}
+
+.admin-main {
+    padding: 2rem;
+    max-width: 48rem;
+}
+
+.empty-state {
+    padding: 1.5rem;
+    border: 1px dashed var(--pressless-rule);
+    border-radius: 4px;
+    background: #fff;
+}
+
+.empty-state p {
+    color: var(--pressless-muted);
+    margin: 0;
+}

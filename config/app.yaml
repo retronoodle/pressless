@@ -1,0 +1,61 @@
+defaults:
+    app:
+        name: Pressless
+        environment: production
+        debug: false
+        # Opt-in override for `bin/migrate --fresh` and `bin/serve --fresh` outside
+        # a development environment. The reset path drops every known application
+        # table, so it is refused unless this flag is true. Set explicitly per
+        # deployment when the operator understands the consequences.
+        allow_reset: false
+        # Same opt-in for the idempotent sample seeder, which writes a development
+        # administrator and creates empty sample collections.
+        allow_seed: false
+        key: ~
+        url: http://localhost:8000
+    database:
+        connection: mysql
+        host: 127.0.0.1
+        port: 3306
+        database: pressless
+        username: pressless
+        password: ~
+        charset: utf8mb4
+        collation: utf8mb4_unicode_ci
+        prefix: ''
+    paths:
+        project_root: .
+        migrations: database/migrations
+        seed: database/seed
+        templates: templates
+        cache: var/cache
+        log: var/log
+    sessions:
+        name: pressless_session
+        lifetime: 7200
+        cookie_secure: false
+        cookie_httponly: true
+        cookie_samesite: Lax
+    logging:
+        level: info
+        file: pressless.log
+    serve:
+        host: 127.0.0.1
+        port: 8000
+
+development:
+    app:
+        environment: development
+        debug: true
+    database:
+        connection: sqlite
+        database: var/pressless.sqlite
+    logging:
+        level: debug
+
+production:
+    app:
+        environment: production
+        debug: false
+    sessions:
+        cookie_secure: true

@@ -19,7 +19,7 @@ The target runtime is PHP 8.2+ on MySQL or MariaDB, including shared and cPanel-
 - Collection and entry CRUD, field-type implementations, public theme rendering, media uploads, revisions, invitations, or role permissions beyond the initial administrator boundary.
 - A general-purpose plugin or hook system.
 - A production installer wizard, update mechanism, API/headless mode, or multi-site support.
-- Automatic database provisioning, SQLite support, or an ORM.
+- Automatic database provisioning or an ORM.
 - Admin visual polish beyond the initial layout, navigation placeholders, and useful empty states.
 
 ## Decisions
@@ -46,15 +46,31 @@ Alternative considered: PHP-only configuration. It is simple but less approachab
 
 Expose prepared-query, transaction, and connection operations through a small PDO wrapper. Keep domain persistence in explicit repositories or services rather than an ORM. Store ordered SQL migration files and record successful versions in a `migrations` table; the runner applies each pending version once and fails before marking an unsuccessful migration complete.
 
-The initial migration creates users, sessions, collections, entries, entry values, media, and revisions with foreign keys, timestamps, indexes, and nullable extension points needed by later phases. JSON schema data belongs on collections so Phase 2 can add typed fields without replacing the foundation.
+The initial migration creates users, sessions, collections, entries, entry values, media, and revisions with foreign keys, timestamps, indexes, and nullable extension points needed by later phases. JSON schema data belongs on collections so Phase 2 can add typed fields without replacing the foundation. SQL migration files are written for MySQL/MariaDB; SQLite is supported via a parallel per-driver migration file so the production target keeps its native column types while local evaluation works without a server.
 
 Alternative considered: Doctrine or an ORM query builder. It would hide SQL and add a substantial dependency surface, contrary to the stated database architecture.
+
+### Support SQLite alongside MySQL/MariaDB
+
+The connection layer accepts `mysql`, `mariadb`, and `sqlite` drivers, validates the DSN shape per driver, and enables SQLite foreign-key enforcement through `PRAGMA foreign_keys=ON` on each new connection. SQLite is intended for local evaluator paths; MySQL/MariaDB remains the production target. Migrations are stored in a driver-aware form so SQLite-specific syntax (JSON stored as TEXT, no engine/charset clauses, autoincrement via `INTEGER PRIMARY KEY`) does not leak into the MySQL track.
+
+Alternative considered: SQLite-only migrations via a runtime MySQL→SQLite translator. Rejected because it hides syntax differences and complicates the migration contract; per-driver files keep each track explicit and readable.
 
 ### Use a custom route table behind one front controller
 
 Route all dynamic requests through `public/index.php`, construct a normalized HttpFoundation request, match method and path against an explicit route table, and return an HttpFoundation response. Start with the admin routes required for login and the empty shell, plus deterministic 404 and method-not-allowed responses. Keep the matcher isolated so FastRoute can be substituted later if the evaluation warrants it.
 
 Alternative considered: adopt FastRoute immediately. It is a reasonable option, but a small Phase 1 route set benefits from a transparent implementation and avoids making an evaluation decision before measuring the actual need.
+
+**Evaluation outcome (task 4.3): the custom matcher remains the Phase 1 implementation.** Measured against the initial route set, FastRoute was not added as a dependency. The Phase 1 table is four routes (`GET`/`POST /admin/login`, `POST /admin/logout`, `GET /admin`), all static paths with no parameters. The custom matcher is 242 lines across `Route`, `Router`, and `RouteMatch`, and already provides the behavior the specs require: method/path matching, `{name}` parameter extraction, normalized paths, `HEAD` served by the `GET` handler, and a `RouteMatch` status that distinguishes not-found from method-not-allowed with an `Allow` list. FastRoute's principal advantage — regex chunking so large route tables match in near-constant time — has no measurable effect at four static routes, and adopting it would mean expressing the 405 case through its dispatcher constants rather than the project's own result type. The matcher stays isolated behind `Router::match()`, so substituting FastRoute later is a change to one class. Revisit when the table grows past roughly 50 routes or gains variable-heavy public patterns in Phase 3.
+
+### Persist only authenticated sessions
+
+`sessions.user_id` is `NOT NULL` in the Phase 1 schema, so an anonymous pre-login session has no valid row. The database session handler therefore skips the write when the encoded payload carries no user id, and the `sessions` table is a lifecycle record for authenticated sessions only. This keeps the schema unchanged and loses nothing that needs central expiry or revocation, since login regenerates the identifier before the first record is written.
+
+The consequence is that no session state survives across requests before login. The originally requested path is therefore carried to the login page as a validated `redirect` query parameter rather than stashed in the session, and any future pre-login state (a CSRF token, for example) needs either a signed cookie or a nullable `user_id`.
+
+Alternative considered: make `sessions.user_id` nullable so anonymous sessions persist. Rejected for Phase 1 because it would edit an already-applied migration and add rows with no lifecycle value.
 
 ### Use native sessions with database-backed lifecycle records
 
@@ -83,6 +99,7 @@ Alternative considered: browser-only manual verification. It would miss migratio
 ## Risks / Trade-offs
 
 - [Shared hosts vary in PHP extensions and CLI availability] → Validate required extensions during bootstrap/CLI startup, keep dependencies Composer-installable, and provide actionable errors.
+- [SQLite and MySQL differ in JSON, autoincrement, and foreign-key behavior] → Keep migrations in per-driver files, enable SQLite foreign keys per connection, and document JSON storage as TEXT on SQLite vs JSON on MySQL.
 - [Database-backed native sessions add setup and cleanup paths] → Keep the handler small, use parameterized queries and bounded expiry cleanup, and cover login/logout/revocation with integration tests.
 - [A custom router can diverge from established HTTP behavior] → Limit its scope, test method/path/status cases, and isolate the matcher behind a small interface for later replacement.
 - [The initial schema may constrain later content features] → Add explicit foreign keys, indexes, timestamps, and nullable/JSON extension points while deferring content behavior to later capability specs.
@@ -101,4 +118,4 @@ Alternative considered: browser-only manual verification. It would miss migratio
 
 - Which exact YAML parser package best fits the final Composer dependency set while remaining friendly to PHP 8.2 shared hosting?
 - Should the production deployment documentation recommend a dedicated database user with migration-only setup privileges, or is the normal application user sufficient for Phase 1?
-- After the route-matcher evaluation, is the custom matcher adequate for the anticipated public route patterns in Phase 3, or should FastRoute be adopted before then?
+- After the route-matcher evaluation, is the custom matcher adequate for the anticipated public route patterns in Phase 3, or should FastRoute be adopted before then? (Phase 1 answer recorded above: the custom matcher is retained. The Phase 3 question stays open until the public route patterns are known.)

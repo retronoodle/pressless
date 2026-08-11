@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 100" role="img" aria-label="Pressless">
+  <g transform="translate(4,20) scale(0.62)">
+    <path fill="currentColor" fill-rule="evenodd"
+      d="M0,18 H46 V50 H16 V82 H0 Z M18,28 H38 V42 H18 Z" />
+  </g>
+  <text x="35" y="67" fill="currentColor"
+    font-family="ui-monospace, 'SF Mono', 'Roboto Mono', 'IBM Plex Mono', Menlo, monospace"
+    font-size="42" font-weight="600">ressless</text>
+</svg>

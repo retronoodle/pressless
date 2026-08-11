@@ -1,0 +1,33 @@
+{% extends 'layout/base.twig' %}
+
+{% block title %}Sign in to Pressless{% endblock %}
+
+{% block body_class %}pressless pressless-login{% endblock %}
+
+{% block body %}
+<main class="login-shell">
+    <h1>Sign in to Pressless</h1>
+
+    {% if error %}
+        <p role="alert" class="error">{{ error }}</p>
+    {% endif %}
+
+    <form method="post" action="/admin/login" novalidate>
+        {% if redirect %}
+            <input type="hidden" name="redirect" value="{{ redirect }}">
+        {% endif %}
+
+        <p>
+            <label for="email">Email</label>
+            <input type="email" id="email" name="email" value="{{ email|default('') }}" required autofocus autocomplete="username">
+        </p>
+        <p>
+            <label for="password">Password</label>
+            <input type="password" id="password" name="password" required autocomplete="current-password">
+        </p>
+        <p>
+            <button type="submit">Sign in</button>
+        </p>
+    </form>
+</main>
+{% endblock %}

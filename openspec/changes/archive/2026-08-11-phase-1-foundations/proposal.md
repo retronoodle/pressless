@@ -6,7 +6,7 @@ Pressless needs a dependable runtime and persistence baseline before content, th
 
 - Initialize the PHP 8.2+ application with Composer metadata, PSR-4 autoloading, bootstrap flow, and the initial directory layout.
 - Add environment and YAML configuration loading with safe defaults and clear database settings.
-- Add a thin PDO database layer and versioned migration runner for MySQL/MariaDB.
+- Add a thin PDO database layer and versioned migration runner for MySQL/MariaDB, with SQLite supported as an additional driver for local evaluation.
 - Create the initial schema for users, sessions, collections, entries, entry values, media, and revisions.
 - Add front-controller request handling and a thin router for admin routes.
 - Add native session authentication with bcrypt password hashing and a Twig login flow.
@@ -35,5 +35,5 @@ Pressless needs a dependable runtime and persistence baseline before content, th
 
 - Adds the PHP application source tree, Composer dependencies, CLI entry points, Twig templates, styles, migrations, seed data, and automated tests.
 - Establishes database tables and repository-facing contracts used by subsequent content, media, revision, and permissions phases.
-- Introduces local runtime configuration and database connection requirements for MySQL/MariaDB.
+- Introduces local runtime configuration and database connection requirements for MySQL/MariaDB or SQLite.
 - Defines the initial HTTP, authentication, and admin boundaries that future phases must preserve.
