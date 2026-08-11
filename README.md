@@ -4,6 +4,10 @@ A PHP CMS for people who want to publish a website without plugin soup, a 2010-e
 
 WordPress runs ~40% of the web and still ships an admin from a decade and a half ago — banners, settings rabbit holes, a plugin/hook model where every install becomes a unique pile of third-party UI. Pressless is the other bet: opinionated, quiet, modern. Ghost-class admin, Linear-feel polish, zero chrome. Do the common cases well and refuse the rest.
 
+## Status
+
+Early days — most of what's below is the destination, not the current state. Built so far: typed collections/entries (Collections → Fields → Entries, 8 field types), the admin CRUD for them, and session-based auth + admin shell. Not yet built: public site rendering, media library, drafts/revisions, roles & permissions, mail/invites, login rate limiting, backups, the web installer, and the entire plugin system described below.
+
 ## Principles
 
 - **Typed content, not field soup.** Collections → Fields → Entries. Every entry has a schema; no arbitrary custom fields, no brittle queries.
