@@ -12,6 +12,20 @@ docs/
 /vendor/
 composer.lock
 
+# Stead dist artefacts (built by `bin/release`). The release ZIP is meant
+# to be uploaded, not committed.
+/stead-*.zip
+
+# Stray sqlite test artefacts (e.g. left behind by an interrupted
+# `bin/migrate --fresh` or a manually created DB). The real DB lives in
+# /var/, so anything matching `stead-*.{sqlite,sqlite-shm,sqlite-wal}` or
+# `timmah*` is a bug, not part of the project.
+/stead-*.sqlite
+/stead-*.sqlite-shm
+/stead-*.sqlite-wal
+/timmah*
+
+
 # Environment & secrets (see also task 2.5 for .env.example convention)
 .env
 .env.*

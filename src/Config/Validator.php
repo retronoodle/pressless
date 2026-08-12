@@ -19,6 +19,7 @@ final class Validator
         self::validateDatabaseConnection($config);
         self::validatePaths($config);
         self::validateSessions($config);
+        self::validateUpdateChecker($config);
     }
 
     private static function validateDriver(Configuration $config): void
@@ -150,6 +151,43 @@ final class Validator
             throw new SafeException(
                 'Session lifetime must be a positive number of seconds.',
                 ['setting' => 'sessions.lifetime'],
+            );
+        }
+    }
+
+    /**
+     * The update checker settings are optional — an empty endpoint URL
+     * disables update checks entirely. When set, the values still need to
+     * be sane: the endpoint must look like an http(s) URL, the re-check
+     * interval must be positive, and the timeout must be within a
+     * reasonable range so a misconfigured operator can't accidentally
+     * hang their admin dashboard.
+     */
+    private static function validateUpdateChecker(Configuration $config): void
+    {
+        $endpoint = $config->getString('update.endpoint_url');
+        if ($endpoint !== '') {
+            if (!preg_match('#^https?://[^\s]+$#i', $endpoint)) {
+                throw new SafeException(
+                    'Update endpoint URL must start with http:// or https:// and be a full URL.',
+                    ['setting' => 'update.endpoint_url', 'value' => $endpoint],
+                );
+            }
+        }
+
+        $interval = $config->getInt('update.check_interval_hours', 24);
+        if ($interval <= 0) {
+            throw new SafeException(
+                'Update check interval must be a positive number of hours.',
+                ['setting' => 'update.check_interval_hours'],
+            );
+        }
+
+        $timeout = $config->getInt('update.timeout_seconds', 5);
+        if ($timeout <= 0 || $timeout > 60) {
+            throw new SafeException(
+                'Update check timeout must be between 1 and 60 seconds.',
+                ['setting' => 'update.timeout_seconds'],
             );
         }
     }

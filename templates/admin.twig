@@ -30,6 +30,19 @@
 </header>
 
 <main class="admin-main">
+    {% if update_notice is defined and update_notice %}
+        <section class="update-notice" role="status">
+            <h2>Update available</h2>
+            <p>
+                A newer version of Stead is available:
+                <strong>{{ update_notice.latest }}</strong>
+                (you are running {{ update_notice.installed }}).
+            </p>
+            <p>
+                <a class="button" href="/admin/update">View update instructions</a>
+            </p>
+        </section>
+    {% endif %}
     {% if collection_count == 0 %}
         <section class="empty-state">
             <h2>Create your first collection</h2>

@@ -40,6 +40,7 @@ use Stead\Database\Connection;
 use Stead\Http\Cache\CollectionVersionStore;
 use Stead\Http\Cache\PageCache;
 use Stead\Http\Controller\AdminController;
+use Stead\Http\Controller\AdminUpdateController;
 use Stead\Http\Controller\AssetController;
 use Stead\Http\Controller\CollectionAdminController;
 use Stead\Http\Controller\EntryAdminController;
@@ -59,9 +60,12 @@ use Stead\Media\GdImageTransformer;
 use Stead\Media\LocalStorage;
 use Stead\Media\MediaRepository;
 use Stead\Media\TransformCache;
+use Stead\Update\UpdateChecker;
 use Stead\View\Renderer;
 use Stead\View\SimpleRenderer;
 use Stead\View\TwigRenderer;
+use Psr\Log\LoggerInterface;
+use Psr\Log\NullLogger;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -105,6 +109,7 @@ final class Routes
             $connection,
             $config,
             $loginThrottle,
+            $app->logger(),
         );
     }
 
@@ -122,10 +127,12 @@ final class Routes
         Connection $connection,
         Configuration $config,
         ?LoginThrottle $loginThrottle = null,
+        ?LoggerInterface $logger = null,
     ): Router {
         $guard = new AuthGuard($auth);
         $loginThrottle ??= new LoginThrottle(new LoginAttemptRepository($connection), $config);
         $login = new LoginController($auth, $renderer, $loginThrottle);
+        $logger ??= new NullLogger();
 
         $collections = new CollectionRepository($connection);
         $schemaValidator = new CollectionSchemaValidator($fieldTypes);
@@ -148,7 +155,10 @@ final class Routes
 
         $users = new UserRepository($connection, new PasswordHasher());
 
-        $admin = new AdminController($renderer, $collections, $entryRepository, $authorization);
+        $updateChecker = UpdateChecker::fromConfig($config, $logger);
+
+        $admin = new AdminController($renderer, $collections, $entryRepository, $authorization, $updateChecker);
+        $adminUpdateController = new AdminUpdateController($renderer, $updateChecker);
 
         $collectionsController = new CollectionAdminController(
             $renderer,
@@ -217,6 +227,8 @@ final class Routes
         $router->post(AuthGuard::LOGIN_PATH, $login->login(...), 'login.submit');
         $router->post('/admin/logout', $login->logout(...), 'logout');
         $router->get(AuthGuard::DEFAULT_TARGET, $guard->protect($admin->index(...)), 'admin.index');
+        // Phase release-update-pipeline: admin update instructions page.
+        $router->get('/admin/update', $guard->protect($adminUpdateController->show(...)), 'admin.update');
 
         // Phase 2 Section 8 — collection schema management (admin-only; the
         // permission editor covers per-collection entry actions, not schema).
@@ -316,6 +328,7 @@ final class Routes
             $connection,
             $config,
             $loginThrottle,
+            $app->logger(),
         );
     }
 

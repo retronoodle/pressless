@@ -9,6 +9,8 @@ use Stead\Auth\User;
 use Stead\Content\Collection;
 use Stead\Content\CollectionRepository;
 use Stead\Content\EntryRepository;
+use Stead\Update\UpdateChecker;
+use Stead\Update\UpdateCheckResult;
 use Stead\View\Renderer;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -20,6 +22,10 @@ use Symfony\Component\HttpFoundation\Response;
  * request attribute before this handler runs. The dashboard view reports
  * collection and entry counts so the empty-state CTA appears only when the
  * site is genuinely empty.
+ *
+ * On each request, the update checker is consulted (cached, so no
+ * network call on every page load). When a newer release is available the
+ * dashboard surfaces a banner that links to the manual-update page.
  */
 final class AdminController
 {
@@ -28,6 +34,7 @@ final class AdminController
         private readonly CollectionRepository $collections,
         private readonly EntryRepository $entries,
         private readonly AuthorizationService $authorization,
+        private readonly UpdateChecker $updateChecker,
     ) {
     }
 
@@ -43,6 +50,8 @@ final class AdminController
             : [];
         $collections = $this->visibleCollections($visibleSlugs);
 
+        $updateResult = $this->safeUpdateCheck();
+
         return new Response(
             $this->renderer->render('admin', [
                 'user_name' => $user instanceof User ? $user->name : '',
@@ -50,10 +59,49 @@ final class AdminController
                 'collection_count' => count($collections),
                 'entry_count' => $this->entries->count(),
                 'visible_collections' => $collections,
+                'update_notice' => $this->buildUpdateNotice($updateResult),
             ]),
             Response::HTTP_OK,
             ['Content-Type' => 'text/html; charset=utf-8'],
         );
+    }
+
+    /**
+     * Runs the update check behind a try/catch so an unexpected failure
+     * in update-checking code never breaks the admin dashboard. This is
+     * a second line of defence on top of UpdateChecker's own fail-closed
+     * behaviour — the controller layer is the last thing standing
+     * between a misbehaving update path and an admin-facing 500.
+     */
+    private function safeUpdateCheck(): ?UpdateCheckResult
+    {
+        try {
+            return $this->updateChecker->check();
+        } catch (\Throwable $e) {
+            return null;
+        }
+    }
+
+    /**
+     * @return array{available: bool, latest: string, installed: string, url: string}|null
+     */
+    private function buildUpdateNotice(?UpdateCheckResult $result): ?array
+    {
+        if ($result === null || !$result->hasUpdate()) {
+            return null;
+        }
+        $downloadUrl = $result->downloadUrl ?? '';
+        if ($downloadUrl === '') {
+            // Has-update but no URL → don't show a banner that points
+            // nowhere. Treat as no update from the UI's perspective.
+            return null;
+        }
+        return [
+            'available' => true,
+            'latest' => (string) $result->latestVersion,
+            'installed' => $result->installedVersion,
+            'url' => $downloadUrl,
+        ];
     }
 
     /**

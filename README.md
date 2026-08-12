@@ -24,6 +24,8 @@ Early days — most of what's below is the destination, not the current state.
 - **SMTP mail:** configurable transport with admin UI + test send
 - **Invites:** single-use hashed tokens with expiry; public acceptance flow creates the user with the invited role
 - **Web installer:** multi-step wizard at `/install/*` reachable only when no `installed.lock` exists, so a downloaded release ZIP becomes a working site through the browser alone — no terminal required
+- **Release pipeline:** `bin/release` builds a version-stamped, dev-stripped, production-only dist ZIP; a tagged-push CI workflow builds and publishes it automatically
+- **Update checker:** installed sites compare their `VERSION` file against the latest published release (cached, fails closed on any endpoint error) and surface an admin dashboard banner with manual update instructions
 
 **Not yet built**
 - Backups
@@ -102,6 +104,12 @@ For non-technical users — a cPanel/shared-hosting audience — installing Stea
 5. **Sign in at `/admin/login`** with the credentials from step 4. From there, create a collection and start publishing.
 
 If the installer is reachable but no DB connection succeeds, the most common cause is filesystem permissions on the project root — the wizard surfaces the exact path that couldn't be written. Once `installed.lock` exists, `/install/*` redirects to `/admin` and the only way back in is to delete that file (which is the correct behavior: the installer is destructive to in-progress state).
+
+## Releasing and updating
+
+Maintainers build a dist ZIP with `bin/release <version>` (e.g. `bin/release 1.2.3`) — it installs production-only dependencies, strips dev/test files (`tests/`, `.git/`, `openspec/`, `phpunit.xml`, `phpstan.neon`, `.env`), stamps a `VERSION` file, and zips the result. Pushing a `vX.Y.Z` tag runs the same build in CI and publishes the ZIP to the project website's release endpoint automatically.
+
+Installed sites read their own `VERSION` file and periodically check that endpoint for a newer release (interval configurable via `UPDATE_CHECK_INTERVAL_HOURS`; leave `UPDATE_ENDPOINT_URL` empty to disable checks entirely). If the endpoint is unreachable or errors, the checker fails closed — no admin-facing error, just no update notice. When a newer version is available, admins see a banner on `/admin` linking to `/admin/update` for manual download-and-extract instructions; v1 has no one-click apply.
 
 ### Trying it locally against real MySQL
 

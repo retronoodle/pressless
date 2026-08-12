@@ -71,6 +71,23 @@ defaults:
         window_seconds: 900
         lockout_base_seconds: 60
         lockout_max_seconds: 3600
+    update:
+        # URL of the project website's release endpoint. The endpoint is
+        # expected to respond to GET with a JSON body of shape:
+        #   {"latest": "<version>", "url": "<download-url>"}
+        # Leave empty to disable update checks entirely (the admin UI will
+        # silently not show any update notice). See src/Update/.
+        endpoint_url: ''
+        # How often the update checker re-queries the endpoint, in hours.
+        # Within this window the cached result is reused without making a
+        # network call. The check piggybacks on admin page loads, not a
+        # background process, so the value matters more for politeness
+        # toward the website than for CPU.
+        check_interval_hours: 24
+        # Hard timeout for the endpoint HTTP call, in seconds. The checker
+        # fails closed on timeout (treated as "no update", logged, no
+        # admin-facing error).
+        timeout_seconds: 5
 
 development:
     app:

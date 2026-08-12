@@ -1,0 +1,73 @@
+{% extends 'layout/base.twig' %}
+
+{% block title %}Update Stead - Stead admin{% endblock %}
+
+{% block body_class %}stead stead-admin stead-update{% endblock %}
+
+{% block body %}
+<header class="admin-header">
+    <h1>Stead admin</h1>
+    <nav class="admin-nav" aria-label="Admin sections">
+        <ul>
+            <li><a href="/admin" aria-current="page">Dashboard</a></li>
+            <li><a href="/admin/collections">Collections</a></li>
+            <li><a href="/admin/media">Media</a></li>
+            <li><a href="/admin/users">Users</a></li>
+            <li><a href="/admin/permissions">Permissions</a></li>
+            <li><a href="/admin/mail-settings">Mail</a></li>
+            <li><a href="/admin/invites">Invites</a></li>
+        </ul>
+    </nav>
+    <div class="admin-account">
+        <p>Signed in as <strong>{{ user_name }}</strong> ({{ user_role }}).</p>
+        <form method="post" action="/admin/logout">
+            <button type="submit">Sign out</button>
+        </form>
+    </div>
+</header>
+
+<main class="admin-main">
+    <section class="update-instructions">
+        <h2>Update Stead</h2>
+
+        {% if available %}
+            <p>
+                You are running <strong>{{ installed_version }}</strong>.
+                Version <strong>{{ latest_version }}</strong> is available.
+            </p>
+            <p>
+                <a class="button" href="{{ download_url }}">Download Stead {{ latest_version }}</a>
+            </p>
+
+            <h3>How to update</h3>
+            <ol class="update-steps">
+                <li>Download the new release ZIP using the link above.</li>
+                <li>Back up your <code>.env</code>, <code>storage/</code>, and database. The release ZIP does not include any of these.</li>
+                <li>Extract the contents of the ZIP <strong>over the top of your existing install</strong>, replacing files when prompted.</li>
+                <li>
+                    From the project root, run
+                    <code>php bin/migrate</code>
+                    to apply any pending database migrations shipped with the new release.
+                </li>
+                <li>
+                    Confirm the new version is live: the banner on the
+                    <a href="/admin">dashboard</a>
+                    should clear within one update-check interval
+                    ({{ installed_version }} &rarr; {{ latest_version }}), and the
+                    <code>VERSION</code> file at the project root should now read
+                    <code>{{ latest_version }}</code>.
+                </li>
+            </ol>
+
+            <p class="update-note">
+                Stead does not apply updates automatically. This is a deliberate
+                choice in v1 (see the project proposal, &sect;11 open question)
+                so an admin always reviews and backs up before changes land.
+            </p>
+        {% else %}
+            <p>No update is currently available. This page will show instructions when a newer version is published.</p>
+            <p><a href="/admin">&larr; Back to dashboard</a></p>
+        {% endif %}
+    </section>
+</main>
+{% endblock %}

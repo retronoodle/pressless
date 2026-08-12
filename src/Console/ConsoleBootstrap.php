@@ -38,4 +38,23 @@ final class ConsoleBootstrap
 
         return $console;
     }
+
+    /**
+     * Builds the console for `bin/release`. The `release` command is the default
+     * and the only exposed command, so a `bin/release` invocation cannot ever
+     * accidentally start the development server or run migrations.
+     *
+     * The release command itself does not need the database; the bootstrap
+     * is still run so a missing/misconfigured project surfaces early instead
+     * of half-way through `composer install`.
+     */
+    public static function forRelease(Application $app): ConsoleApplication
+    {
+        $console = new ConsoleApplication('Stead', '0.1.0');
+        $release = new ReleaseCommand($app);
+        $console->add($release);
+        $console->setDefaultCommand($release->getName(), true);
+
+        return $console;
+    }
 }

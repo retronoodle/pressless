@@ -1,0 +1,12 @@
+<?php
+
+declare(strict_types=1);
+
+use Stead\Bootstrap\Application;
+use Stead\Console\ConsoleBootstrap;
+
+require __DIR__ . '/../vendor/autoload.php';
+
+$app = Application::bootstrap();
+$console = ConsoleBootstrap::forRelease($app);
+exit($console->run());
