@@ -1,5 +1,7 @@
 {% extends 'layout/base.twig' %}
 
+{% import 'admin/_state.twig' as state %}
+
 {% block title %}Stead admin{% endblock %}
 
 {% block body_class %}stead stead-admin{% endblock %}
@@ -44,13 +46,7 @@
         </section>
     {% endif %}
     {% if collection_count == 0 %}
-        <section class="empty-state">
-            <h2>Create your first collection</h2>
-            <p>Collections define the shape of your content. Each one is a list
-                of fields (text, dates, numbers, and so on) and a list of
-                entries that hold values for those fields.</p>
-            <p><a class="button" href="/admin/collections/new">Create your first collection</a></p>
-        </section>
+        {{ state.empty('Create your first collection', 'Collections define the shape of your content. Each one is a list of fields (text, dates, numbers, and so on) and a list of entries that hold values for those fields.', '/admin/collections/new', 'Create your first collection') }}
     {% else %}
         <section class="dashboard-summary">
             <h2>Dashboard</h2>
@@ -61,5 +57,59 @@
             <p><a href="/admin/collections">Manage collections</a></p>
         </section>
     {% endif %}
+
+    <section class="recent-activity">
+        <h2>Recent activity</h2>
+
+        {% set has_revisions = recent_revisions is defined and recent_revisions|length > 0 %}
+        {% set has_logins = recent_logins is defined and recent_logins|length > 0 %}
+
+        {% if not has_revisions and not has_logins %}
+            {{ state.empty('No activity yet.', 'Edits and successful logins will appear here as they happen.') }}
+        {% else %}
+            {% if has_revisions %}
+                <section class="recent-edits">
+                    <h3>Recent edits</h3>
+                    <ul class="recent-list">
+                        {% for r in recent_revisions %}
+                            <li>
+                                <span class="recent-when">{{ r.created_at|e }}</span>
+                                &middot;
+                                {% if r.collection_slug is defined and r.entry_slug is defined and r.collection_slug and r.entry_slug %}
+                                    <a href="/admin/collections/{{ r.collection_slug|e }}/entries/{{ r.entry_id|e }}/edit">{{ r.entry_title|default('Untitled')|e }}</a>
+                                {% else %}
+                                    {{ r.entry_title|default('Untitled')|e }}
+                                {% endif %}
+                                {% if r.collection_name is defined and r.collection_name %}
+                                    <small>in {{ r.collection_name|e }}</small>
+                                {% endif %}
+                                {% if r.author_name is defined and r.author_name %}
+                                    <small>by {{ r.author_name|e }}</small>
+                                {% endif %}
+                            </li>
+                        {% endfor %}
+                    </ul>
+                </section>
+            {% endif %}
+
+            {% if has_logins %}
+                <section class="recent-logins">
+                    <h3>Recent logins</h3>
+                    <ul class="recent-list">
+                        {% for l in recent_logins %}
+                            <li>
+                                <span class="recent-when">{{ l.created_at|e }}</span>
+                                &middot;
+                                <code>{{ l.email|e }}</code>
+                                {% if l.ip_address is defined and l.ip_address %}
+                                    <small>from {{ l.ip_address|e }}</small>
+                                {% endif %}
+                            </li>
+                        {% endfor %}
+                    </ul>
+                </section>
+            {% endif %}
+        {% endif %}
+    </section>
 </main>
 {% endblock %}

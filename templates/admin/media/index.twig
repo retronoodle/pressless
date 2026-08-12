@@ -1,5 +1,7 @@
 {% extends 'layout/base.twig' %}
 
+{% import 'admin/_state.twig' as state %}
+
 {% block title %}Media - Stead admin{% endblock %}
 
 {% block body_class %}stead stead-admin stead-media{% endblock %}
@@ -59,10 +61,7 @@
     </section>
 
     {% if items is empty %}
-        <section class="empty-state">
-            <h3>No files yet</h3>
-            <p>Uploaded files will appear here.</p>
-        </section>
+        {{ state.empty('No files yet', 'Uploaded files will appear here.') }}
     {% else %}
         <table class="media-table">
             <thead>

@@ -1,5 +1,7 @@
 {% extends 'layout/base.twig' %}
 
+{% import 'admin/_state.twig' as state %}
+
 {% block title %}Users - Stead admin{% endblock %}
 
 {% block body_class %}stead stead-admin stead-users{% endblock %}
@@ -31,9 +33,7 @@
     </section>
 
     {% if users is empty %}
-        <section class="empty-state">
-            <h3>No users yet</h3>
-        </section>
+        {{ state.empty('No users yet', 'Invite the first user to get started.', new_user_url, 'Invite user') }}
     {% else %}
         <table class="users-table">
             <thead>

@@ -154,6 +154,8 @@ final class EntryAdminControllerTest extends TestCase
         $this->assertStringContainsString('<code>hello</code>', $body);
         $this->assertStringContainsString('Hello, world', $body);
         $this->assertStringContainsString('New entry', $body);
+        $this->assertStringContainsString('data-shortcut="mod+shift+n"', $body);
+        $this->assertStringContainsString('/assets/js/admin/keyboard-shortcuts.js', $body);
     }
 
     public function testCreateAssignsAutoSlugAndRedirectsToEdit(): void
@@ -181,6 +183,22 @@ final class EntryAdminControllerTest extends TestCase
             ['s' => 'posts'],
         );
         $this->assertSame('hello-world', $row['slug']);
+    }
+
+    public function testEntryFormIncludesKeyboardShortcutAttributesAndScript(): void
+    {
+        $this->signIn();
+        $collectionId = $this->seedCollection('posts', [
+            ['key' => 'title', 'type' => 'text', 'label' => 'Title', 'required' => true],
+        ]);
+        $entryId = $this->seedEntry($collectionId, 'hello', 'Hello', '');
+
+        $response = $this->kernel->handle(Request::create('/admin/collections/posts/entries/' . $entryId . '/edit'));
+        $body = (string) $response->getContent();
+
+        $this->assertStringContainsString('data-shortcut="mod+s"', $body);
+        $this->assertStringContainsString('data-shortcut="mod+shift+l"', $body);
+        $this->assertStringContainsString('/assets/js/admin/keyboard-shortcuts.js', $body);
     }
 
     public function testCreateReRenderOnValidationFailurePreservesValues(): void

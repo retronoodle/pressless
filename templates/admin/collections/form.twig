@@ -105,9 +105,13 @@
         </fieldset>
 
         <p>
-            <button type="submit">Save collection</button>
+            <button type="submit" data-shortcut="mod+s">Save collection</button>
             <a href="{{ cancel_url|e }}">Cancel</a>
         </p>
     </form>
 </main>
+
+{% block admin_scripts %}
+<script defer src="/assets/js/admin/keyboard-shortcuts.js"></script>
+{% endblock %}
 {% endblock %}

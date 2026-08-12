@@ -1,5 +1,7 @@
 {% extends 'layout/base.twig' %}
 
+{% import 'admin/_state.twig' as state %}
+
 {% block title %}Collections - Stead admin{% endblock %}
 
 {% block body_class %}stead stead-admin stead-collections{% endblock %}
@@ -38,10 +40,7 @@
     </section>
 
     {% if collections is empty %}
-        <section class="empty-state">
-            <h3>No collections yet</h3>
-            <p>Create your first collection to start defining content.</p>
-        </section>
+        {{ state.empty('No collections yet', 'Create your first collection to start defining content.', is_admin ? '/admin/collections/new' : null, is_admin ? 'Create collection' : null) }}
     {% else %}
         <table class="collections-table">
             <thead>

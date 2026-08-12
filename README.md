@@ -30,6 +30,7 @@ Early days — most of what's below is the destination, not the current state.
 - **Site settings:** admin UI at `/admin/settings` for site name, timezone, and date format, single-row storage with sane defaults before first save
 - **Entry SEO:** `meta_title`, `meta_description`, and an `og_image` media picker on every entry's edit form, persisted alongside the entry regardless of collection
 - **Redirects:** `redirects` table with an admin UI at `/admin/redirects` for manual old-path → new-path entries; entry slug changes auto-create a redirect from the old public path to the new one, and public entry requests that would 404 check redirects first, responding with a 301
+- **Admin UX polish:** dashboard "recent activity" (recent entry edits + recent logins), a formalized type/spacing scale applied across all admin templates, motion-respecting transitions, consistent empty/loading/error states on admin list and form views, and a keyboard shortcut layer (save, publish, list/edit navigation) with a lazy-loading convention for admin JS
 
 **Not yet built**
 - Plugin system (described below)

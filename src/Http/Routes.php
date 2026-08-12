@@ -148,6 +148,7 @@ final class Routes
         $schemaChanges = new SchemaChangeHelper($connection);
         $slugs = new SlugGenerator($connection);
         $revisionRepository = new RevisionRepository($connection);
+        $loginAttempts = new LoginAttemptRepository($connection);
         $redirectRepository = new RedirectRepository($connection);
         $entryRepository = new EntryRepository(
             $connection,
@@ -191,7 +192,15 @@ final class Routes
             $backupRunner,
         );
 
-        $admin = new AdminController($renderer, $collections, $entryRepository, $authorization, $updateChecker);
+        $admin = new AdminController(
+            $renderer,
+            $collections,
+            $entryRepository,
+            $authorization,
+            $updateChecker,
+            $revisionRepository,
+            $loginAttempts,
+        );
         $adminUpdateController = new AdminUpdateController(
             $renderer,
             $updateChecker,

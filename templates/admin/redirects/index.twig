@@ -1,5 +1,7 @@
 {% extends 'layout/base.twig' %}
 
+{% import 'admin/_state.twig' as state %}
+
 {% block title %}Redirects - Stead admin{% endblock %}
 
 {% block body_class %}stead stead-admin stead-redirects{% endblock %}
@@ -91,7 +93,7 @@
             </tbody>
         </table>
     {% else %}
-        <p class="empty-state">No redirects configured yet.</p>
+        {{ state.empty('No redirects configured yet.', 'Use the form above to add a path-to-path redirect.') }}
     {% endif %}
 </main>
 {% endblock %}

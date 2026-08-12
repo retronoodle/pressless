@@ -22,6 +22,16 @@ final class DevServerRouterTest extends TestCase
         );
     }
 
+    public function testServesTheAdminKeyboardShortcutsScript(): void
+    {
+        $this->assertTrue(
+            DevServerRouter::shouldServeStatic(
+                $this->publicDir(),
+                '/assets/js/admin/keyboard-shortcuts.js',
+            ),
+        );
+    }
+
     public function testServesAnExistingAssetWithQueryString(): void
     {
         $this->assertTrue(

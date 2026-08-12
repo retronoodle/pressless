@@ -33,7 +33,7 @@
     <section class="active-collection">
         <p>Now editing <strong>{{ collection.name|e }}</strong> (<code>{{ collection.slug|e }}</code>)
             &middot;
-            <a href="/admin/collections/{{ collection.slug|e }}">Back to entries</a>
+            <a href="/admin/collections/{{ collection.slug|e }}" data-shortcut="mod+shift+l">Back to entries</a>
         </p>
     </section>
 
@@ -103,7 +103,7 @@
         </fieldset>
 
         <p>
-            <button type="submit">Save entry</button>
+            <button type="submit" data-shortcut="mod+s">Save entry</button>
             <a href="{{ cancel_url|e }}">Cancel</a>
         </p>
     </form>
@@ -120,7 +120,7 @@
             {% else %}
                 {% if publish_url %}
                     <form method="post" action="{{ publish_url }}">
-                        <button type="submit">Publish</button>
+                        <button type="submit" data-shortcut="mod+enter">Publish</button>
                     </form>
                 {% endif %}
             {% endif %}
@@ -135,4 +135,8 @@
         </section>
     {% endif %}
 </main>
+
+{% block admin_scripts %}
+<script defer src="/assets/js/admin/keyboard-shortcuts.js"></script>
+{% endblock %}
 {% endblock %}

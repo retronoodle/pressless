@@ -1,5 +1,7 @@
 {% extends 'layout/base.twig' %}
 
+{% import 'admin/_state.twig' as state %}
+
 {% block title %}Entries - {{ collection.name|e }} - Stead admin{% endblock %}
 
 {% block body_class %}stead stead-admin stead-entries{% endblock %}
@@ -43,16 +45,13 @@
             {% endif %}
             {% if can_edit %}
                 &middot;
-                <a href="/admin/collections/{{ collection.slug|e }}/entries/new">New entry</a>
+                <a href="/admin/collections/{{ collection.slug|e }}/entries/new" data-shortcut="mod+shift+n">New entry</a>
             {% endif %}
         </p>
     </section>
 
     {% if entries is empty %}
-        <section class="empty-state">
-            <h3>No entries yet</h3>
-            <p>Add the first entry to start filling this collection.</p>
-        </section>
+        {{ state.empty('No entries yet', 'Add the first entry to start filling this collection.', can_edit ? ('/admin/collections/' ~ collection.slug|e ~ '/entries/new') : null, can_edit ? 'Create entry' : null) }}
     {% else %}
         <table class="entries-table">
             <thead>
@@ -80,4 +79,8 @@
         </table>
     {% endif %}
 </main>
+{% endblock %}
+
+{% block admin_scripts %}
+<script defer src="/assets/js/admin/keyboard-shortcuts.js"></script>
 {% endblock %}

@@ -1,0 +1,31 @@
+{# Reusable empty/loading/error state markup for admin list and form views.
+
+   Usage:
+     {% import 'admin/_state.twig' as state %}
+     {{ state.empty('No entries yet', 'Add the first entry to start filling this collection.') }}
+     {{ state.loading() }}
+     {{ state.error('Could not load users.', 'Try refreshing the page.') }}
+#}
+
+{% macro empty(title, body, action_url, action_label) %}
+    <section class="empty-state">
+        {% if title is defined and title %}<h3>{{ title|e }}</h3>{% endif %}
+        {% if body is defined and body %}<p>{{ body|e }}</p>{% endif %}
+        {% if action_url is defined and action_url and action_label is defined and action_label %}
+            <p><a class="button" href="{{ action_url|e }}">{{ action_label|e }}</a></p>
+        {% endif %}
+    </section>
+{% endmacro %}
+
+{% macro loading(body) %}
+    <section class="loading-state" role="status" aria-live="polite">
+        {% if body is defined and body %}<p>{{ body|e }}</p>{% endif %}
+    </section>
+{% endmacro %}
+
+{% macro error(title, body) %}
+    <section class="error-state" role="alert">
+        {% if title is defined and title %}<h3>{{ title|e }}</h3>{% endif %}
+        {% if body is defined and body %}<p>{{ body|e }}</p>{% endif %}
+    </section>
+{% endmacro %}

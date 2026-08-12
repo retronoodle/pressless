@@ -8,42 +8,60 @@
     --stead-error: #8a1c1c;
     --stead-bg: #fdfdfc;
     --stead-accent: #2f5fbf;
+
+    /* Spacing scale: 1 = 0.25rem (4px) up to 6 = 2rem (32px) */
+    --stead-space-1: 0.25rem;
+    --stead-space-2: 0.5rem;
+    --stead-space-3: 0.75rem;
+    --stead-space-4: 1rem;
+    --stead-space-5: 1.5rem;
+    --stead-space-6: 2rem;
+
+    /* Type scale */
+    --stead-text-sm: 0.875rem;
+    --stead-text-base: 1rem;
+    --stead-text-lg: 1.125rem;
+    --stead-text-xl: 1.25rem;
+    --stead-text-2xl: 1.5rem;
+
+    --stead-transition-fast: 120ms ease;
+    --stead-transition-base: 180ms ease;
 }
 
 body {
     margin: 0;
-    padding: 2rem;
+    padding: var(--stead-space-6);
     font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
     color: var(--stead-ink);
     background: var(--stead-bg);
 }
 
 h1 {
-    font-size: 1.5rem;
+    font-size: var(--stead-text-2xl);
     font-weight: 600;
-    margin: 0 0 1rem;
+    margin: 0 0 var(--stead-space-4);
 }
 
 h2 {
-    font-size: 1.125rem;
+    font-size: var(--stead-text-lg);
     font-weight: 600;
-    margin: 0 0 0.5rem;
+    margin: 0 0 var(--stead-space-2);
 }
 
 p {
-    margin: 0 0 1rem;
+    margin: 0 0 var(--stead-space-4);
 }
 
 label {
     display: block;
-    margin-bottom: 0.25rem;
+    margin-bottom: var(--stead-space-1);
     color: var(--stead-muted);
 }
 
 input {
     width: 100%;
     max-width: 22rem;
-    padding: 0.5rem;
+    padding: var(--stead-space-2);
     border: 1px solid var(--stead-rule);
     border-radius: 3px;
     font: inherit;
@@ -51,7 +69,7 @@ input {
 }
 
 button {
-    padding: 0.5rem 1rem;
+    padding: var(--stead-space-2) var(--stead-space-4);
     border: 1px solid var(--stead-ink);
     border-radius: 3px;
     background: var(--stead-ink);
@@ -65,6 +83,76 @@ input:focus-visible,
 a:focus-visible {
     outline: 2px solid var(--stead-accent);
     outline-offset: 2px;
+}
+
+/* Motion ------------------------------------------------------------------- */
+
+button,
+a,
+.admin-nav a,
+input,
+.panel {
+    transition:
+        background-color var(--stead-transition-fast),
+        color var(--stead-transition-fast),
+        border-color var(--stead-transition-fast),
+        opacity var(--stead-transition-base),
+        transform var(--stead-transition-base);
+}
+
+button:hover {
+    background: #2a2a2a;
+    border-color: var(--stead-ink);
+}
+
+.admin-nav a:hover {
+    color: var(--stead-ink);
+}
+
+.admin-account button:hover {
+    background: var(--stead-rule);
+}
+
+.panel {
+    overflow: hidden;
+}
+
+.panel[hidden] {
+    display: block;
+    opacity: 0;
+    height: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+    border-width: 0;
+    transform: translateY(-4px);
+    pointer-events: none;
+}
+
+.panel:not([hidden]) {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    button,
+    a,
+    .admin-nav a,
+    input,
+    .panel {
+        transition: none;
+    }
+
+    button:hover,
+    .admin-nav a:hover,
+    .admin-account button:hover {
+        background: revert;
+        border-color: revert;
+        color: revert;
+    }
+
+    .panel[hidden] {
+        transform: none;
+    }
 }
 
 .error {
@@ -85,22 +173,22 @@ a:focus-visible {
 }
 
 .admin-header {
-    padding: 1.5rem 2rem;
+    padding: var(--stead-space-5) var(--stead-space-6);
     border-bottom: 1px solid var(--stead-rule);
     background: #fafaf8;
 }
 
 .admin-header h1 {
-    margin: 0 0 1rem;
+    margin: 0 0 var(--stead-space-4);
 }
 
 .admin-nav ul {
     display: flex;
     flex-wrap: wrap;
-    gap: 1.25rem;
+    gap: var(--stead-space-5);
     list-style: none;
     padding: 0;
-    margin: 0 0 1rem;
+    margin: 0 0 var(--stead-space-4);
 }
 
 .admin-nav a {
@@ -120,7 +208,7 @@ a:focus-visible {
 .admin-account {
     display: flex;
     align-items: center;
-    gap: 1rem;
+    gap: var(--stead-space-4);
 }
 
 .admin-account p {
@@ -134,18 +222,133 @@ a:focus-visible {
 }
 
 .admin-main {
-    padding: 2rem;
+    padding: var(--stead-space-6);
     max-width: 48rem;
 }
 
-.empty-state {
-    padding: 1.5rem;
+.empty-state,
+.loading-state,
+.error-state {
+    padding: var(--stead-space-5);
     border: 1px dashed var(--stead-rule);
     border-radius: 4px;
     background: #fff;
 }
 
-.empty-state p {
+.empty-state p,
+.loading-state p,
+.error-state p {
     color: var(--stead-muted);
     margin: 0;
+}
+
+.empty-state h2,
+.empty-state h3,
+.loading-state h2,
+.loading-state h3,
+.error-state h2,
+.error-state h3 {
+    margin-top: 0;
+}
+
+.loading-state {
+    border-style: dotted;
+    color: var(--stead-muted);
+}
+
+.loading-state::before {
+    content: "Loading\2026";
+    display: block;
+    color: var(--stead-muted);
+    font-size: var(--stead-text-sm);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: var(--stead-space-2);
+}
+
+.error-state {
+    border-color: var(--stead-error);
+    border-style: solid;
+    background: #fff8f8;
+}
+
+.error-state::before {
+    content: "Error";
+    display: block;
+    color: var(--stead-error);
+    font-size: var(--stead-text-sm);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: var(--stead-space-2);
+}
+
+.error-state p {
+    color: var(--stead-error);
+}
+
+.form-errors,
+.form-flash {
+    padding: var(--stead-space-4);
+    border: 1px solid var(--stead-error);
+    border-radius: 4px;
+    background: #fff8f8;
+    margin-bottom: var(--stead-space-4);
+}
+
+.form-errors h3,
+.form-flash h3 {
+    margin: 0 0 var(--stead-space-2);
+    color: var(--stead-error);
+    font-size: var(--stead-text-base);
+}
+
+.form-errors ul {
+    margin: 0;
+    padding-left: var(--stead-space-5);
+    color: var(--stead-error);
+}
+
+.form-flash {
+    border-color: var(--stead-rule);
+    background: #fff;
+}
+
+.form-flash p {
+    margin: 0;
+    color: var(--stead-muted);
+}
+
+/* Recent activity dashboard feed ------------------------------------------- */
+
+.recent-activity {
+    margin-top: var(--stead-space-6);
+}
+
+.recent-activity h2 {
+    margin: 0 0 var(--stead-space-4);
+}
+
+.recent-activity section + section {
+    margin-top: var(--stead-space-5);
+}
+
+.recent-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.recent-list li {
+    padding: var(--stead-space-2) 0;
+    border-top: 1px solid var(--stead-rule);
+    color: var(--stead-ink);
+}
+
+.recent-list li:first-child {
+    border-top: 0;
+}
+
+.recent-when {
+    color: var(--stead-muted);
+    font-variant-numeric: tabular-nums;
 }

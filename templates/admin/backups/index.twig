@@ -1,5 +1,7 @@
 {% extends 'layout/base.twig' %}
 
+{% import 'admin/_state.twig' as state %}
+
 {% block title %}Backups - Stead admin{% endblock %}
 
 {% block body_class %}stead stead-admin stead-backups{% endblock %}
@@ -44,9 +46,7 @@
     {% endif %}
 
     {% if error %}
-        <section class="form-errors">
-            <p>{{ error|e }}</p>
-        </section>
+        {{ state.error(null, error) }}
     {% endif %}
 
     <section class="backups-run">
@@ -121,7 +121,7 @@
     <section class="backups-history">
         <h3>History</h3>
         {% if history|length == 0 %}
-            <p>No backups yet. Trigger one above to seed the history.</p>
+            {{ state.empty('No backups yet.', 'Trigger one above to seed the history.') }}
         {% else %}
             <table class="backups-table">
                 <thead>

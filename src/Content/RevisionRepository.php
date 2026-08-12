@@ -85,6 +85,50 @@ final class RevisionRepository
     }
 
     /**
+     * Returns the most recent revisions across all entries, joined with the
+     * entry title, the parent collection slug/name, and the editor's display
+     * name. Used by the admin dashboard's recent-activity feed.
+     *
+     * Each row carries: `id`, `entry_id`, `entry_title`, `entry_slug`,
+     * `collection_slug`, `collection_name`, `author_id`, `author_name`,
+     * `created_at`, and `payload` (decoded to a map).
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function listRecent(int $limit): array
+    {
+        if ($limit < 1) {
+            return [];
+        }
+
+        $rows = $this->connection->fetchAll(
+            'SELECT r.id, r.entry_id, r.author_id, r.payload, r.created_at,
+                    u.name AS author_name,
+                    e.title AS entry_title, e.slug AS entry_slug,
+                    c.slug AS collection_slug, c.name AS collection_name
+               FROM revisions r
+               LEFT JOIN entries e ON e.id = r.entry_id
+               LEFT JOIN collections c ON c.id = e.collection_id
+               LEFT JOIN users u ON u.id = r.author_id
+              ORDER BY r.created_at DESC, r.id DESC
+              LIMIT :limit',
+            ['limit' => $limit],
+        );
+
+        $out = [];
+        foreach ($rows as $row) {
+            $payload = $row['payload'] ?? '{}';
+            if (!is_string($payload)) {
+                $payload = '{}';
+            }
+            $decoded = json_decode($payload, true);
+            $row['payload'] = is_array($decoded) ? $decoded : [];
+            $out[] = $row;
+        }
+        return $out;
+    }
+
+    /**
      * Returns one revision with its decoded payload, or null if missing.
      *
      * @return array<string, mixed>|null

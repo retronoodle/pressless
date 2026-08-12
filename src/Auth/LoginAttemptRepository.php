@@ -150,6 +150,32 @@ final class LoginAttemptRepository
         return $stamp === false ? null : $stamp;
     }
 
+    /**
+     * Returns the most recent successful logins across all users, newest
+     * first, capped at `$limit`. Each row carries `id`, `email`,
+     * `ip_address`, and `created_at`. Used by the admin dashboard's
+     * recent-activity feed.
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function listRecentSuccesses(int $limit): array
+    {
+        if ($limit < 1) {
+            return [];
+        }
+
+        $rows = $this->connection->fetchAll(
+            'SELECT id, email, ip_address, created_at
+               FROM login_attempts
+              WHERE succeeded = 1
+              ORDER BY created_at DESC, id DESC
+              LIMIT :limit',
+            ['limit' => $limit],
+        );
+
+        return $rows;
+    }
+
     private function pruneOlderThan(int $cutoff): void
     {
         $this->connection->execute(

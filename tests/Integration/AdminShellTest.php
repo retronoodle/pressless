@@ -192,6 +192,57 @@ final class AdminShellTest extends TestCase
         $this->assertStringNotContainsString('nav-placeholder', $body);
     }
 
+    public function testDashboardShowsRecentActivityWhenRevisionsAndLoginsExist(): void
+    {
+        $admin = $this->users->create('ada@example.com', 'Ada Lovelace', self::PASSWORD, User::ROLE_ADMIN, true);
+
+        $collectionId = $this->seedCollection('posts', [
+            ['key' => 'title', 'type' => 'text', 'label' => 'Title'],
+        ]);
+        $entryId = $this->seedEntry($collectionId, 'hello', 'Hello world');
+
+        $this->seedRevision($entryId, $admin->id, 'Hello world');
+
+        $this->connection->execute(
+            'INSERT INTO login_attempts (email, ip_address, succeeded, cleared_at, created_at)
+             VALUES (:email, :ip, 1, NULL, :ts)',
+            [
+                'email' => 'ada@example.com',
+                'ip' => '127.0.0.1',
+                'ts' => gmdate('Y-m-d H:i:s'),
+            ],
+        );
+
+        $this->store->start();
+        $this->authService->attempt('ada@example.com', self::PASSWORD);
+
+        $response = $this->kernel->handle(Request::create('/admin'));
+
+        $this->assertSame(200, $response->getStatusCode());
+        $body = (string) $response->getContent();
+        $this->assertStringContainsString('Recent activity', $body);
+        $this->assertStringContainsString('Recent edits', $body);
+        $this->assertStringContainsString('Hello world', $body);
+        $this->assertStringContainsString('ada@example.com', $body);
+        $this->assertStringContainsString('Recent logins', $body);
+    }
+
+    public function testDashboardShowsRecentActivityEmptyStateWhenNothingHasHappened(): void
+    {
+        $this->users->create('ada@example.com', 'Ada Lovelace', self::PASSWORD, User::ROLE_ADMIN, true);
+        $this->store->start();
+        $this->authService->attempt('ada@example.com', self::PASSWORD);
+
+        $response = $this->kernel->handle(Request::create('/admin'));
+
+        $this->assertSame(200, $response->getStatusCode());
+        $body = (string) $response->getContent();
+        $this->assertStringContainsString('Recent activity', $body);
+        $this->assertStringContainsString('No activity yet.', $body);
+        $this->assertStringNotContainsString('Recent edits', $body);
+        $this->assertStringNotContainsString('Recent logins', $body);
+    }
+
     public function testActiveCollectionNameIsSurfacedOnTheEntryList(): void
     {
         $this->users->create('ada@example.com', 'Ada Lovelace', self::PASSWORD, User::ROLE_ADMIN, true);
@@ -289,6 +340,22 @@ final class AdminShellTest extends TestCase
         )['id'];
     }
 
+    private function seedRevision(int $entryId, ?int $authorId, string $title): int
+    {
+        $now = gmdate('Y-m-d H:i:s');
+        $this->connection->execute(
+            'INSERT INTO revisions (entry_id, author_id, payload, created_at)
+             VALUES (:eid, :aid, :payload, :ts)',
+            [
+                'eid' => $entryId,
+                'aid' => $authorId,
+                'payload' => json_encode(['title' => $title, 'values' => []]),
+                'ts' => $now,
+            ],
+        );
+        return (int) $this->connection->fetchOne('SELECT id FROM revisions ORDER BY id DESC LIMIT 1')['id'];
+    }
+
     public function testSuccessfulLoginRedirectsToTheShell(): void
     {
         $this->users->create('ada@example.com', 'Ada Lovelace', self::PASSWORD, User::ROLE_ADMIN, true);
@@ -335,6 +402,7 @@ final class AdminShellTest extends TestCase
         file_put_contents(
             $this->templatesDir . '/admin.twig',
             "{% extends 'layout/base.twig' %}\n"
+            . "{% import 'admin/_state.twig' as state %}\n"
             . "{% block title %}Stead admin{% endblock %}\n"
             . "{% block body %}<h1>Stead admin</h1>"
             . "<nav class=\"admin-nav\"><ul>"
@@ -349,11 +417,23 @@ final class AdminShellTest extends TestCase
             . "<strong>{{ entry_count }}</strong> entr{{ entry_count == 1 ? 'y' : 'ies' }}.</p>"
             . "</section>"
             . "{% else %}"
-            . "<section class=\"empty-state\">"
-            . "<h2>Create your first collection</h2>"
-            . "<p><a href=\"/admin/collections/new\">Create your first collection</a></p>"
-            . "</section>"
+            . "{{ state.empty('Create your first collection', null, '/admin/collections/new', 'Create your first collection') }}"
             . "{% endif %}"
+            . "<section class=\"recent-activity\">"
+            . "<h2>Recent activity</h2>"
+            . "{% set has_revisions = recent_revisions is defined and recent_revisions|length > 0 %}"
+            . "{% set has_logins = recent_logins is defined and recent_logins|length > 0 %}"
+            . "{% if not has_revisions and not has_logins %}"
+            . "{{ state.empty('No activity yet.', null) }}"
+            . "{% else %}"
+            . "{% if has_revisions %}<section class=\"recent-edits\"><h3>Recent edits</h3><ul>"
+            . "{% for r in recent_revisions %}<li>{{ r.entry_title|default('Untitled') }}</li>{% endfor %}"
+            . "</ul></section>{% endif %}"
+            . "{% if has_logins %}<section class=\"recent-logins\"><h3>Recent logins</h3><ul>"
+            . "{% for l in recent_logins %}<li>{{ l.email }}</li>{% endfor %}"
+            . "</ul></section>{% endif %}"
+            . "{% endif %}"
+            . "</section>"
             . "<form method=\"post\" action=\"/admin/logout\"><button type=\"submit\">Sign out</button></form>"
             . "{% endblock %}\n",
         );
@@ -362,6 +442,21 @@ final class AdminShellTest extends TestCase
         if (!is_dir($entriesDir)) {
             mkdir($entriesDir, 0775, true);
         }
+        file_put_contents(
+            $this->templatesDir . '/admin/_state.twig',
+            "{% macro empty(title, body, action_url, action_label) %}"
+            . "<section class=\"empty-state\">"
+            . "{% if title is defined and title %}<h3>{{ title|e }}</h3>{% endif %}"
+            . "{% if body is defined and body %}<p>{{ body|e }}</p>{% endif %}"
+            . "{% if action_url is defined and action_url %}<p><a class=\"button\" href=\"{{ action_url|e }}\">{{ action_label|default('')|e }}</a></p>{% endif %}"
+            . "</section>"
+            . "{% endmacro %}\n"
+            . "{% macro error(title, body) %}<section class=\"error-state\">"
+            . "{% if title is defined and title %}<h3>{{ title|e }}</h3>{% endif %}"
+            . "{% if body is defined and body %}<p>{{ body|e }}</p>{% endif %}"
+            . "</section>{% endmacro %}\n"
+            . "{% macro loading(body) %}<section class=\"loading-state\">{% if body is defined and body %}<p>{{ body|e }}</p>{% endif %}</section>{% endmacro %}\n",
+        );
         file_put_contents(
             $entriesDir . '/index.twig',
             "{% extends 'layout/base.twig' %}\n"
@@ -383,7 +478,7 @@ final class AdminShellTest extends TestCase
         }
         file_put_contents(
             $layoutDir . '/base.twig',
-            "<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\"><title>{% block title %}Stead{% endblock %}</title></head><body>{% block body %}{% endblock %}</body></html>\n",
+            "<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\"><title>{% block title %}Stead{% endblock %}</title></head><body>{% block body %}{% endblock %}{% block admin_scripts %}{% endblock %}</body></html>\n",
         );
     }
 

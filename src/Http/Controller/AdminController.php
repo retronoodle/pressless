@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace Stead\Http\Controller;
 
 use Stead\Auth\AuthorizationService;
+use Stead\Auth\LoginAttemptRepository;
 use Stead\Auth\User;
 use Stead\Content\Collection;
 use Stead\Content\CollectionRepository;
 use Stead\Content\EntryRepository;
+use Stead\Content\RevisionRepository;
 use Stead\Update\UpdateChecker;
 use Stead\Update\UpdateCheckResult;
 use Stead\View\Renderer;
@@ -29,12 +31,16 @@ use Symfony\Component\HttpFoundation\Response;
  */
 final class AdminController
 {
+    private const RECENT_ACTIVITY_LIMIT = 5;
+
     public function __construct(
         private readonly Renderer $renderer,
         private readonly CollectionRepository $collections,
         private readonly EntryRepository $entries,
         private readonly AuthorizationService $authorization,
         private readonly UpdateChecker $updateChecker,
+        private readonly RevisionRepository $revisions,
+        private readonly LoginAttemptRepository $loginAttempts,
     ) {
     }
 
@@ -60,6 +66,8 @@ final class AdminController
                 'entry_count' => $this->entries->count(),
                 'visible_collections' => $collections,
                 'update_notice' => $this->buildUpdateNotice($updateResult),
+                'recent_revisions' => $this->safeRecentRevisions(),
+                'recent_logins' => $this->safeRecentLogins(),
             ]),
             Response::HTTP_OK,
             ['Content-Type' => 'text/html; charset=utf-8'],
@@ -79,6 +87,30 @@ final class AdminController
             return $this->updateChecker->check();
         } catch (\Throwable $e) {
             return null;
+        }
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    private function safeRecentRevisions(): array
+    {
+        try {
+            return $this->revisions->listRecent(self::RECENT_ACTIVITY_LIMIT);
+        } catch (\Throwable $e) {
+            return [];
+        }
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    private function safeRecentLogins(): array
+    {
+        try {
+            return $this->loginAttempts->listRecentSuccesses(self::RECENT_ACTIVITY_LIMIT);
+        } catch (\Throwable $e) {
+            return [];
         }
     }
 
