@@ -56,12 +56,13 @@ final class SqliteDatabaseTest extends DatabaseTestCase
     public function testMigrationIdempotence(): void
     {
         $first = $this->migrator->migrate();
-        $this->assertCount(4, $first['applied']);
+        $expectedCount = count($this->migrator->discover());
+        $this->assertCount($expectedCount, $first['applied']);
         $this->assertCount(0, $first['skipped']);
 
         $second = $this->migrator->migrate();
         $this->assertCount(0, $second['applied']);
-        $this->assertCount(4, $second['skipped']);
+        $this->assertCount($expectedCount, $second['skipped']);
     }
 
     public function testFailedMigrationDoesNotRecordVersion(): void

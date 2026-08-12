@@ -1,0 +1,13 @@
+{% extends 'layout/base.twig' %}
+
+{% block title %}Invite link invalid - Stead{% endblock %}
+
+{% block body_class %}stead stead-invite stead-invite-invalid{% endblock %}
+
+{% block body %}
+<main class="invite-shell">
+    <h1>Invite link invalid</h1>
+    <p>{{ message|e }}</p>
+    <p><a href="/admin/login">Go to sign-in</a></p>
+</main>
+{% endblock %}

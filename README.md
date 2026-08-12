@@ -6,7 +6,7 @@ WordPress runs ~40% of the web and still ships an admin from a decade and a half
 
 ## Status
 
-Early days — most of what's below is the destination, not the current state. Built so far: typed collections/entries (Collections → Fields → Entries, 8 field types), the admin CRUD for them, drafts with explicit publish/unpublish (entries default to draft; public routes filter to published), per-entry revision history with restore (configurable retention), session-based auth + admin shell, roles & permissions (fixed admin/editor/author roles with per-collection, per-action grants and author ownership scoping on edit/delete/publish, plus admin UI at `/admin/users` for user list, role assignment, and permission editing), public site rendering (theme-aware Twig templates, a starter theme, paginated collection/entry pages), a file-based page cache for public routes keyed by collection version with auto-invalidation on entry changes, a `/assets/{path}` route serving static files from the active theme's `assets/` directory, and a media library (uploads with mime/size validation, on-demand GD image transforms, served over a traversal-guarded route). Not yet built: mail/invites, login rate limiting, backups, the web installer, and the entire plugin system described below.
+Early days — most of what's below is the destination, not the current state. Built so far: typed collections/entries (Collections → Fields → Entries, 8 field types), the admin CRUD for them, drafts with explicit publish/unpublish (entries default to draft; public routes filter to published), per-entry revision history with restore (configurable retention), session-based auth + admin shell, roles & permissions (fixed admin/editor/author roles with per-collection, per-action grants and author ownership scoping on edit/delete/publish, plus admin UI at `/admin/users` for user list, role assignment, and permission editing), public site rendering (theme-aware Twig templates, a starter theme, paginated collection/entry pages), a file-based page cache for public routes keyed by collection version with auto-invalidation on entry changes, a `/assets/{path}` route serving static files from the active theme's `assets/` directory, a media library (uploads with mime/size validation, on-demand GD image transforms, served over a traversal-guarded route), and SMTP mail + invites (configurable SMTP transport with admin UI + test send, single-use hashed invite tokens with expiry, public acceptance flow that creates the user with the invited role). Not yet built: login rate limiting, backups, the web installer, and the entire plugin system described below.
 
 ## Principles
 
@@ -23,7 +23,8 @@ Early days — most of what's below is the destination, not the current state. B
 - **Calm admin.** Ghost-inspired UX with drafts, publish/unpublish, and revision history.
 - **Media library.** Uploads with image transforms, used through a media field type.
 - **Roles & permissions.** Admin/editor/author roles, scoped per collection.
-- **Reliable outbound mail.** SMTP-first, not PHP's `mail()` — used for invites and notifications.
+- **Reliable outbound mail.** SMTP-first, not PHP's `mail()` — admin-configurable with a test send.
+- **Invites.** Admins invite by email + role; single-use hashed tokens, public acceptance flow.
 - **Login security.** Rate limiting and lockout after repeated failed attempts.
 - **Backups built in.** Scheduled DB + media backups to a configurable target, with a restore flow.
 - **Plugins.** Themes, field types, repositories, and admin extensions ship as plugins through a designed plugin model — not an open hook soup.

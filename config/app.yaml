@@ -51,6 +51,11 @@ defaults:
         # existing entry writes a pre-save snapshot; once this many are on
         # record, the oldest are pruned inside the same save transaction.
         revision_retention_limit: 20
+    mail:
+        # Default From address used when one isn't carried on the message.
+        # Override via MAIL_FROM_EMAIL / MAIL_FROM_NAME in `.env`.
+        from_email: admin@localhost
+        from_name: Stead
     logging:
         level: info
         file: stead.log

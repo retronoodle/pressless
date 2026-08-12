@@ -41,12 +41,18 @@ use Stead\Http\Controller\AdminController;
 use Stead\Http\Controller\AssetController;
 use Stead\Http\Controller\CollectionAdminController;
 use Stead\Http\Controller\EntryAdminController;
+use Stead\Http\Controller\InviteAcceptController;
+use Stead\Http\Controller\InviteAdminController;
 use Stead\Http\Controller\LoginController;
+use Stead\Http\Controller\MailSettingsAdminController;
 use Stead\Http\Controller\MediaAdminController;
 use Stead\Http\Controller\MediaServeController;
 use Stead\Http\Controller\PermissionAdminController;
 use Stead\Http\Controller\PublicController;
 use Stead\Http\Controller\UserAdminController;
+use Stead\Invites\InviteRepository;
+use Stead\Mail\MailSettingsRepository;
+use Stead\Mail\SmtpTransport;
 use Stead\Media\GdImageTransformer;
 use Stead\Media\LocalStorage;
 use Stead\Media\MediaRepository;
@@ -54,7 +60,9 @@ use Stead\Media\TransformCache;
 use Stead\View\Renderer;
 use Stead\View\SimpleRenderer;
 use Stead\View\TwigRenderer;
+use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Response;
 
 /**
  * The route table and its explicit service wiring.
@@ -171,6 +179,31 @@ final class Routes
             $permissions,
         );
 
+        $mailSettings = new MailSettingsRepository($connection);
+        $smtpTransport = new SmtpTransport($mailSettings);
+        $mailSettingsAdminController = new MailSettingsAdminController(
+            $renderer,
+            $mailSettings,
+            $smtpTransport,
+            $config,
+        );
+
+        $inviteRepository = new InviteRepository($connection);
+        $inviteAdminController = new InviteAdminController(
+            $renderer,
+            $inviteRepository,
+            $users,
+            $smtpTransport,
+            $mailSettings,
+            $config,
+        );
+        $inviteAcceptController = new InviteAcceptController(
+            $renderer,
+            $inviteRepository,
+            $users,
+            $auth,
+        );
+
         $router = new Router();
 
         // Phase 1 — auth + dashboard.
@@ -216,6 +249,21 @@ final class Routes
         $router->post('/admin/users/{id}/role', $guard->protect($collectionAuth->requireAdmin($userAdminController->updateRole(...))), 'users.role.update');
         $router->get('/admin/permissions', $guard->protect($collectionAuth->requireAdmin($permissionAdminController->index(...))), 'permissions.index');
         $router->post('/admin/permissions', $guard->protect($collectionAuth->requireAdmin($permissionAdminController->update(...))), 'permissions.update');
+
+        // Phase 8 — mail settings + invite flow (admin-only).
+        $router->get('/admin/mail-settings', $guard->protect($collectionAuth->requireAdmin($mailSettingsAdminController->index(...))), 'mail-settings.index');
+        $router->post('/admin/mail-settings', $guard->protect($collectionAuth->requireAdmin($mailSettingsAdminController->save(...))), 'mail-settings.save');
+        $router->post('/admin/mail-settings/test-send', $guard->protect($collectionAuth->requireAdmin($mailSettingsAdminController->testSend(...))), 'mail-settings.test-send');
+
+        $router->get('/admin/invites', $guard->protect($collectionAuth->requireAdmin(static function (): RedirectResponse {
+            return new RedirectResponse('/admin/invites/new', Response::HTTP_SEE_OTHER);
+        })), 'invites.index');
+        $router->get('/admin/invites/new', $guard->protect($collectionAuth->requireAdmin($inviteAdminController->create(...))), 'invites.create');
+        $router->post('/admin/invites/new', $guard->protect($collectionAuth->requireAdmin($inviteAdminController->store(...))), 'invites.store');
+
+        // Public invite-acceptance — must NOT be behind the admin guard.
+        $router->get('/invite/accept/{token}', $inviteAcceptController->show(...), 'invites.accept');
+        $router->post('/invite/accept/{token}', $inviteAcceptController->submit(...), 'invites.accept.submit');
 
         // Phase 4 — static assets from the active theme's `assets/` directory.
         // Mounted ahead of the public collection pattern so a literal `/assets/*`

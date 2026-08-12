@@ -1,0 +1,91 @@
+{% extends 'layout/base.twig' %}
+
+{% block title %}Mail settings - Stead admin{% endblock %}
+
+{% block body_class %}stead stead-admin stead-mail-settings{% endblock %}
+
+{% block body %}
+<header class="admin-header">
+    <h1>Stead admin</h1>
+    <nav class="admin-nav" aria-label="Admin sections">
+        <ul>
+            <li><a href="/admin">Dashboard</a></li>
+            <li><a href="/admin/collections">Collections</a></li>
+            <li><a href="/admin/media">Media</a></li>
+            <li><a href="/admin/users">Users</a></li>
+            <li><a href="/admin/permissions">Permissions</a></li>
+            <li><a href="/admin/mail-settings" aria-current="page">Mail</a></li>
+            <li><a href="/admin/invites">Invites</a></li>
+        </ul>
+    </nav>
+    <div class="admin-account">
+        <p>Signed in as <strong>{{ user_name }}</strong> ({{ user_role }}).</p>
+        <form method="post" action="/admin/logout">
+            <button type="submit">Sign out</button>
+        </form>
+    </div>
+</header>
+
+<main class="admin-main">
+    <section class="mail-settings-header">
+        <h2>Mail settings</h2>
+        <p>Configure SMTP for outbound email. Used for invites and any future transactional mail.</p>
+    </section>
+
+    {% if flash %}
+        <section class="form-flash">
+            <p>{{ flash|e }}</p>
+        </section>
+    {% endif %}
+
+    {% if errors|length > 0 %}
+        <section class="form-errors">
+            <h3>Please correct the following:</h3>
+            <ul>
+                {% for field, messages in errors %}
+                    {% for message in messages %}
+                        <li><strong>{{ field|e }}:</strong> {{ message|e }}</li>
+                    {% endfor %}
+                {% endfor %}
+            </ul>
+        </section>
+    {% endif %}
+
+    <form method="post" action="{{ action_url }}" class="mail-settings-form">
+        <label>
+            <span>Host</span>
+            <input type="text" name="host" value="{{ values.host|e }}" required placeholder="smtp.example.com">
+        </label>
+        <label>
+            <span>Port</span>
+            <input type="number" name="port" value="{{ values.port }}" required min="1" max="65535">
+        </label>
+        <label>
+            <span>Encryption</span>
+            <select name="encryption">
+                {% for mode in encryptions %}
+                    <option value="{{ mode|e }}" {% if values.encryption == mode %}selected{% endif %}>{{ mode|e }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <label>
+            <span>Username</span>
+            <input type="text" name="username" value="{{ values.username|e }}" autocomplete="off">
+        </label>
+        <label>
+            <span>Password</span>
+            <input type="password" name="password" value="" autocomplete="new-password">
+            <small>Leave blank to keep the stored password.</small>
+        </label>
+        <p><button type="submit">Save mail settings</button></p>
+    </form>
+
+    <section class="mail-test-send">
+        <h3>Send a test email</h3>
+        <p>Sends a short message to your own address so you can confirm delivery.</p>
+        <form method="post" action="{{ test_send_url }}">
+            <button type="submit">Send test email</button>
+        </form>
+    </section>
+</main>
+{% endblock %}

@@ -1,0 +1,41 @@
+{% extends 'layout/base.twig' %}
+
+{% block title %}Accept your invite - Stead{% endblock %}
+
+{% block body_class %}stead stead-invite stead-invite-accept{% endblock %}
+
+{% block body %}
+<main class="invite-shell">
+    <h1>You're invited</h1>
+    <p>You've been invited to join the Stead site as a <strong>{{ role_name|e }}</strong>.</p>
+    <p>Set your name and password to finish setting up your account.</p>
+
+    <p><code>{{ email|e }}</code></p>
+
+    {% if errors|length > 0 %}
+        <section class="form-errors">
+            <ul>
+                {% for field, messages in errors %}
+                    {% for message in messages %}
+                        <li><strong>{{ field|e }}:</strong> {{ message|e }}</li>
+                    {% endfor %}
+                {% endfor %}
+            </ul>
+        </section>
+    {% endif %}
+
+    <form method="post" action="{{ action_url }}" novalidate>
+        <p>
+            <label for="name">Name</label>
+            <input type="text" id="name" name="name" value="{{ values.name|default('')|e }}" required autofocus>
+        </p>
+        <p>
+            <label for="password">Password</label>
+            <input type="password" id="password" name="password" required minlength="8" autocomplete="new-password">
+        </p>
+        <p>
+            <button type="submit">Create account</button>
+        </p>
+    </form>
+</main>
+{% endblock %}

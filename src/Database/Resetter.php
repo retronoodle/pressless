@@ -11,6 +11,7 @@ final class Resetter
 {
     /** @var list<string> */
     private const TABLES_IN_DROP_ORDER = [
+        'invites',
         'revisions',
         'entry_values',
         'entries',
@@ -19,6 +20,9 @@ final class Resetter
         'collections',
         'sessions',
         'users',
+        'mail_settings',
+        'permissions',
+        'roles',
         'migrations',
     ];
 

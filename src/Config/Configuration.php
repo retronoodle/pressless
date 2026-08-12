@@ -46,6 +46,8 @@ final class Configuration
         'SESSION_COOKIE_SAMESITE' => 'sessions.cookie_samesite',
         'LOGGING_LEVEL' => 'logging.level',
         'LOGGING_FILE' => 'logging.file',
+        'MAIL_FROM_EMAIL' => 'mail.from_email',
+        'MAIL_FROM_NAME' => 'mail.from_name',
         'SERVE_HOST' => 'serve.host',
         'SERVE_PORT' => 'serve.port',
     ];
