@@ -103,13 +103,37 @@ final class ConnectionTester
         if (is_string($portRaw) && !preg_match('/^-?\d+$/', $portRaw)) {
             $portRaw = 3306;
         }
+        $driver = strtolower(trim((string) ($input['driver'] ?? 'mysql')));
+        $database = trim((string) ($input['database'] ?? ''));
+        if ($driver === 'sqlite' && $database !== '' && $database !== ':memory:') {
+            $database = $this->sqlitePathFor($database);
+        }
         return [
-            'driver' => strtolower(trim((string) ($input['driver'] ?? 'mysql'))),
+            'driver' => $driver,
             'host' => trim((string) ($input['host'] ?? '127.0.0.1')),
             'port' => (int) $portRaw,
-            'database' => trim((string) ($input['database'] ?? '')),
+            'database' => $database,
             'username' => trim((string) ($input['username'] ?? '')),
             'password' => (string) ($input['password'] ?? ''),
         ];
+    }
+
+    /**
+     * Turns a user-supplied SQLite database name into a safe filename under
+     * the app's writable var/ directory, so installer users only ever pick a
+     * name and never see (or need to know) where the file actually lives.
+     */
+    private function sqlitePathFor(string $name): string
+    {
+        $name = basename($name);
+        $name = preg_replace('/[^A-Za-z0-9._-]+/', '-', $name) ?? '';
+        $name = trim($name, '.-_');
+        if ($name === '') {
+            $name = 'database';
+        }
+        if (!str_ends_with($name, '.sqlite')) {
+            $name .= '.sqlite';
+        }
+        return 'var/' . $name;
     }
 }

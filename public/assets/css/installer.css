@@ -111,6 +111,10 @@ body.stead-installer {
     font-size: 0.95rem;
 }
 
+.installer-form label[hidden] {
+    display: none;
+}
+
 .installer-form input,
 .installer-form select {
     font: inherit;

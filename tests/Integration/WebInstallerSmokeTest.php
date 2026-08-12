@@ -290,15 +290,14 @@ final class WebInstallerSmokeTest extends TestCase
                 ],
             ];
         }
-        $dbPath = $this->projectRoot . '/stead.sqlite';
         return [
             'driver' => 'sqlite',
-            'database' => $dbPath,
+            'database' => 'var/stead.sqlite',
             'form' => [
                 'driver' => 'sqlite',
                 'host' => '',
                 'port' => '0',
-                'database' => $dbPath,
+                'database' => 'stead',
                 'username' => '',
                 'password' => '',
             ],
@@ -326,23 +325,30 @@ final class WebInstallerSmokeTest extends TestCase
 
     public function testBadDatabaseCredentialsDoNotWriteEnvOrLock(): void
     {
-        $session = new ArrayInstallerSession();
-        $controller = $this->makeController($session);
-        $kernel = InstallerKernel::create($controller);
+        $varDir = $this->projectRoot . '/var';
+        chmod($varDir, 0500);
 
-        $badSubmit = $kernel->handle(Request::create('/install/database', 'POST', [
-            'driver' => 'sqlite',
-            'host' => '',
-            'port' => '0',
-            'database' => '/this/path/does/not/exist/stead.sqlite',
-            'username' => '',
-            'password' => '',
-        ]));
+        try {
+            $session = new ArrayInstallerSession();
+            $controller = $this->makeController($session);
+            $kernel = InstallerKernel::create($controller);
 
-        $this->assertSame(400, $badSubmit->getStatusCode());
-        $this->assertStringContainsString('SQLite', (string) $badSubmit->getContent());
-        $this->assertFileDoesNotExist($this->projectRoot . '/.env');
-        $this->assertFileDoesNotExist($this->projectRoot . '/installed.lock');
+            $badSubmit = $kernel->handle(Request::create('/install/database', 'POST', [
+                'driver' => 'sqlite',
+                'host' => '',
+                'port' => '0',
+                'database' => 'stead',
+                'username' => '',
+                'password' => '',
+            ]));
+
+            $this->assertSame(400, $badSubmit->getStatusCode());
+            $this->assertStringContainsString('SQLite', (string) $badSubmit->getContent());
+            $this->assertFileDoesNotExist($this->projectRoot . '/.env');
+            $this->assertFileDoesNotExist($this->projectRoot . '/installed.lock');
+        } finally {
+            chmod($varDir, 0775);
+        }
     }
 
     public function testReachingInstallerAfterLockRedirectsToAdmin(): void
