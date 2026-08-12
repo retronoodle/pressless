@@ -62,6 +62,15 @@ defaults:
     serve:
         host: 127.0.0.1
         port: 8000
+    login:
+        # Login attempt throttling. See src/Auth/LoginThrottle.
+        # After max_attempts failures within window_seconds, further attempts
+        # for the matching email or IP are rejected. Repeated lockouts
+        # escalate via exponential backoff, capped at lockout_max_seconds.
+        max_attempts: 5
+        window_seconds: 900
+        lockout_base_seconds: 60
+        lockout_max_seconds: 3600
 
 development:
     app:

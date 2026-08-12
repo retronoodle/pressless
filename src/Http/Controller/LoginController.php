@@ -6,6 +6,7 @@ namespace Stead\Http\Controller;
 
 use Stead\Auth\AuthenticationService;
 use Stead\Auth\AuthGuard;
+use Stead\Auth\LoginThrottle;
 use Stead\View\Renderer;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -18,13 +19,16 @@ final class LoginController
 {
     /**
      * A single message for every failure mode, so the response never reveals
-     * whether an address exists or an account is inactive.
+     * whether an address exists, an account is inactive, or the identifier is
+     * locked out. The lockout case must read identically to the credential
+     * case so an attacker can't distinguish them.
      */
     private const GENERIC_ERROR = 'Those credentials do not match our records.';
 
     public function __construct(
         private readonly AuthenticationService $auth,
         private readonly Renderer $renderer,
+        private readonly LoginThrottle $throttle,
     ) {
     }
 
@@ -62,11 +66,21 @@ final class LoginController
             return $this->render(Response::HTTP_UNAUTHORIZED, self::GENERIC_ERROR, $email, $redirect);
         }
 
+        $ipAddress = (string) $request->getClientIp();
+
+        if ($this->throttle->isLocked($email, $ipAddress)) {
+            return $this->render(Response::HTTP_UNAUTHORIZED, self::GENERIC_ERROR, $email, $redirect);
+        }
+
         $user = $this->auth->attempt($email, $password, $request);
 
         if ($user === null) {
+            $this->throttle->recordFailure($email, $ipAddress);
+
             return $this->render(Response::HTTP_UNAUTHORIZED, self::GENERIC_ERROR, $email, $redirect);
         }
+
+        $this->throttle->recordSuccess($email);
 
         return new RedirectResponse(AuthGuard::resolveTarget($redirect === '' ? null : $redirect));
     }

@@ -6,7 +6,28 @@ WordPress runs ~40% of the web and still ships an admin from a decade and a half
 
 ## Status
 
-Early days — most of what's below is the destination, not the current state. Built so far: typed collections/entries (Collections → Fields → Entries, 8 field types), the admin CRUD for them, drafts with explicit publish/unpublish (entries default to draft; public routes filter to published), per-entry revision history with restore (configurable retention), session-based auth + admin shell, roles & permissions (fixed admin/editor/author roles with per-collection, per-action grants and author ownership scoping on edit/delete/publish, plus admin UI at `/admin/users` for user list, role assignment, and permission editing), public site rendering (theme-aware Twig templates, a starter theme, paginated collection/entry pages), a file-based page cache for public routes keyed by collection version with auto-invalidation on entry changes, a `/assets/{path}` route serving static files from the active theme's `assets/` directory, a media library (uploads with mime/size validation, on-demand GD image transforms, served over a traversal-guarded route), and SMTP mail + invites (configurable SMTP transport with admin UI + test send, single-use hashed invite tokens with expiry, public acceptance flow that creates the user with the invited role). Not yet built: login rate limiting, backups, the web installer, and the entire plugin system described below.
+Early days — most of what's below is the destination, not the current state.
+
+**Built**
+- **Typed content:** Collections → Fields → Entries, 8 core field types
+  - Admin CRUD for collections/entries
+- **Drafts:** explicit publish/unpublish (entries default to draft; public routes filter to published)
+- **Revisions:** per-entry history with restore, configurable retention
+- **Auth & admin shell:** session-based
+- **Roles & permissions:** fixed admin/editor/author roles with per-collection, per-action grants and author ownership scoping on edit/delete/publish
+  - Admin UI at `/admin/users` for user list, role assignment, and permission editing
+- **Login security:** rate limiting and lockout after repeated failed attempts
+- **Public rendering:** theme-aware Twig templates, a starter theme, paginated collection/entry pages
+- **Page cache:** file-based for public routes, keyed by collection version, with auto-invalidation on entry changes
+- **Asset route:** `/assets/{path}` serving static files from the active theme's `assets/` directory
+- **Media library:** uploads with mime/size validation, on-demand GD image transforms, served over a traversal-guarded route
+- **SMTP mail:** configurable transport with admin UI + test send
+- **Invites:** single-use hashed tokens with expiry; public acceptance flow creates the user with the invited role
+
+**Not yet built**
+- Backups
+- Web installer
+- Plugin system (described below)
 
 ## Principles
 

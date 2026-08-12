@@ -8,6 +8,8 @@ use Stead\Auth\ArraySessionStore;
 use Stead\Auth\AuthenticationService;
 use Stead\Auth\AuthGuard;
 use Stead\Auth\DatabaseSessionHandler;
+use Stead\Auth\LoginAttemptRepository;
+use Stead\Auth\LoginThrottle;
 use Stead\Auth\PasswordHasher;
 use Stead\Auth\SessionPayload;
 use Stead\Auth\SessionRepository;
@@ -299,7 +301,9 @@ final class AuthenticationTest extends DatabaseTestCase
 
     private function controller(): LoginController
     {
-        return new LoginController($this->auth, new SimpleRenderer());
+        $throttle = new LoginThrottle(new LoginAttemptRepository($this->connection), $this->config);
+
+        return new LoginController($this->auth, new SimpleRenderer(), $throttle);
     }
 
     public function testSuccessfulLoginRedirectsToTheAdminShell(): void

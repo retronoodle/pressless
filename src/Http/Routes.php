@@ -9,6 +9,8 @@ use Stead\Auth\AuthenticationService;
 use Stead\Auth\AuthGuard;
 use Stead\Auth\CollectionAuthorization;
 use Stead\Auth\DatabaseSessionHandler;
+use Stead\Auth\LoginAttemptRepository;
+use Stead\Auth\LoginThrottle;
 use Stead\Auth\NativeSessionStore;
 use Stead\Auth\PasswordHasher;
 use Stead\Auth\PermissionRepository;
@@ -94,6 +96,7 @@ final class Routes
 
         $store = new NativeSessionStore($config, $handler);
         $auth = new AuthenticationService($users, $sessions, $hasher, $store, $lifetime);
+        $loginThrottle = new LoginThrottle(new LoginAttemptRepository($connection), $config);
 
         return self::register(
             $auth,
@@ -101,6 +104,7 @@ final class Routes
             self::buildFieldTypeRegistry(new MediaRepository($connection)),
             $connection,
             $config,
+            $loginThrottle,
         );
     }
 
@@ -117,9 +121,11 @@ final class Routes
         FieldTypeRegistry $fieldTypes,
         Connection $connection,
         Configuration $config,
+        ?LoginThrottle $loginThrottle = null,
     ): Router {
         $guard = new AuthGuard($auth);
-        $login = new LoginController($auth, $renderer);
+        $loginThrottle ??= new LoginThrottle(new LoginAttemptRepository($connection), $config);
+        $login = new LoginController($auth, $renderer, $loginThrottle);
 
         $collections = new CollectionRepository($connection);
         $schemaValidator = new CollectionSchemaValidator($fieldTypes);
@@ -301,6 +307,7 @@ final class Routes
         $hasher = new PasswordHasher();
         $users = new UserRepository($connection, $hasher);
         $auth = new AuthenticationService($users, $sessions, $hasher, $store, $lifetime);
+        $loginThrottle = new LoginThrottle(new LoginAttemptRepository($connection), $config);
 
         return self::register(
             $auth,
@@ -308,6 +315,7 @@ final class Routes
             self::buildFieldTypeRegistry(new MediaRepository($connection)),
             $connection,
             $config,
+            $loginThrottle,
         );
     }
 

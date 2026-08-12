@@ -20,6 +20,7 @@ final class Resetter
         'collections',
         'sessions',
         'users',
+        'login_attempts',
         'mail_settings',
         'permissions',
         'roles',
