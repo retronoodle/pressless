@@ -23,10 +23,10 @@ Early days — most of what's below is the destination, not the current state.
 - **Media library:** uploads with mime/size validation, on-demand GD image transforms, served over a traversal-guarded route
 - **SMTP mail:** configurable transport with admin UI + test send
 - **Invites:** single-use hashed tokens with expiry; public acceptance flow creates the user with the invited role
+- **Web installer:** multi-step wizard at `/install/*` reachable only when no `installed.lock` exists, so a downloaded release ZIP becomes a working site through the browser alone — no terminal required
 
 **Not yet built**
 - Backups
-- Web installer
 - Plugin system (described below)
 
 ## Principles
@@ -86,3 +86,30 @@ Distribution is `composer require` or a ZIP upload through the admin. A `bin/plu
 - **Evaluators** — `git clone` → `bin/serve` → browser, sample data with `--seed`.
 
 Roadmap and full product requirements are tracked internally.
+
+## Installing Stead (release ZIP)
+
+For non-technical users — a cPanel/shared-hosting audience — installing Stead is a five-minute browser exercise. No terminal, no `git`, no hand-edited config files.
+
+1. **Upload the release ZIP** to your hosting account and unzip it into the document root for the domain you want Stead to serve (often `public_html/`).
+2. **Make sure the project root is writable by the web server.** Stead writes `.env` and `installed.lock` at the project root during the wizard, so the user the web server runs as needs write permission on the directory the ZIP was extracted into. On shared hosts, that's usually handled by uploading as the same user the web server uses, or running `chmod -R u+rwX` once after extraction.
+3. **Visit the site in a browser.** If the document root points at the `public/` directory, go straight to `https://your-domain/`. If it points at the project root, go to `https://your-domain/public/`.
+4. **Walk through the wizard.** It has four short steps:
+   - **Database connection** — pick MySQL/MariaDB/SQLite and supply credentials. Stead opens a real connection and runs a trivial query before saving anything, so bad credentials are caught here with a clear, actionable error.
+   - **First administrator** — email, display name, and password (same requirements as the rest of the auth system).
+   - **Sample data** — opt in or out. Either choice ends at the admin login.
+   - **Finish** — Stead writes `.env`, runs migrations, creates the administrator, and drops an `installed.lock` file. The installer becomes permanently unreachable after this step.
+5. **Sign in at `/admin/login`** with the credentials from step 4. From there, create a collection and start publishing.
+
+If the installer is reachable but no DB connection succeeds, the most common cause is filesystem permissions on the project root — the wizard surfaces the exact path that couldn't be written. Once `installed.lock` exists, `/install/*` redirects to `/admin` and the only way back in is to delete that file (which is the correct behavior: the installer is destructive to in-progress state).
+
+### Trying it locally against real MySQL
+
+A `docker-compose.yml` at the repo root brings up PHP + MySQL + nginx on a single host network for prod-parity exercising of the installer against real MySQL (instead of only the dev-mode SQLite path):
+
+```
+docker compose up -d
+open http://localhost:8080
+```
+
+The MySQL service is provisioned with a `stead` database and `stead` user. Those are the credentials to enter on the installer's database step.

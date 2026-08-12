@@ -1,0 +1,16 @@
+.git
+.idea
+.vscode
+.claude
+.kilo
+.kilocode
+.opencode
+.phpunit.cache
+.phpunit.result.cache
+node_modules
+vendor
+var/cache
+var/log
+storage/media
+openspec
+docs

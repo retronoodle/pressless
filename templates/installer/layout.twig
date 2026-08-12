@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}Install Stead{% endblock %}</title>
+    <link rel="stylesheet" href="/assets/css/installer.css">
+</head>
+<body class="stead stead-installer">
+{% block body %}
+<main class="installer-shell">
+    <header class="installer-header">
+        <h1>Install Stead</h1>
+        {% if step is defined and steps is defined %}
+        <ol class="installer-steps" aria-label="Installer progress">
+            {% for key in steps %}
+                {% set state = '' %}
+                {% if key == step %}
+                    {% set state = 'is-current' %}
+                {% elseif step_index is defined and loop.index0 < step_index %}
+                    {% set state = 'is-done' %}
+                {% endif %}
+                <li class="installer-step {{ state }}">
+                    <span class="installer-step-number">{{ loop.index }}</span>
+                    <span class="installer-step-label">
+                        {{ ({
+                            'welcome': 'Welcome',
+                            'database': 'Database',
+                            'admin': 'Administrator',
+                            'sample-data': 'Sample data',
+                            'complete': 'Finish'
+                        })[key]|default(key) }}
+                    </span>
+                </li>
+            {% endfor %}
+        </ol>
+        {% endif %}
+    </header>
+
+    <section class="installer-content">
+        {% block content %}{% endblock %}
+    </section>
+</main>
+{% endblock %}
+</body>
+</html>

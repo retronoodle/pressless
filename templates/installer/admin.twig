@@ -1,0 +1,47 @@
+{% extends 'layout.twig' %}
+
+{% block title %}Administrator - Install Stead{% endblock %}
+
+{% block content %}
+<section class="installer-step-page">
+    <h2>Create the first administrator</h2>
+    <p>This account is created at the very end of the wizard, once the database is reachable.</p>
+
+    {% if errors|length > 0 %}
+        <section class="installer-errors" role="alert">
+            <h3>Please correct the following:</h3>
+            <ul>
+                {% for field, message in errors %}
+                    <li><strong>{{ field|e }}:</strong> {{ message|e }}</li>
+                {% endfor %}
+            </ul>
+        </section>
+    {% endif %}
+
+    <form method="post" action="/install/admin" class="installer-form" novalidate>
+        <label>
+            <span>Email</span>
+            <input type="email" name="email" value="{{ values.email|e }}" required autofocus autocomplete="username">
+            {% if errors.email is defined %}<small class="installer-field-error">{{ errors.email|e }}</small>{% endif %}
+        </label>
+        <label>
+            <span>Display name</span>
+            <input type="text" name="name" value="{{ values.name|e }}" required>
+            {% if errors.name is defined %}<small class="installer-field-error">{{ errors.name|e }}</small>{% endif %}
+        </label>
+        <label>
+            <span>Password</span>
+            <input type="password" name="password" value="" required minlength="8" autocomplete="new-password">
+            {% if errors.password is defined %}<small class="installer-field-error">{{ errors.password|e }}</small>{% endif %}
+        </label>
+        <label>
+            <span>Confirm password</span>
+            <input type="password" name="confirm" value="" required minlength="8" autocomplete="new-password">
+            {% if errors.confirm is defined %}<small class="installer-field-error">{{ errors.confirm|e }}</small>{% endif %}
+        </label>
+        <p class="installer-form-actions">
+            <button type="submit">Continue</button>
+        </p>
+    </form>
+</section>
+{% endblock %}

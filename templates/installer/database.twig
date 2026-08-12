@@ -1,0 +1,49 @@
+{% extends 'layout.twig' %}
+
+{% block title %}Database - Install Stead{% endblock %}
+
+{% block content %}
+<section class="installer-step-page">
+    <h2>Database connection</h2>
+    <p>Stead needs to reach a database before any settings are written. Pick a driver and supply its credentials; nothing is saved until the next step succeeds.</p>
+
+    {% if error %}
+        <p role="alert" class="installer-error">{{ error|e }}</p>
+    {% endif %}
+
+    <form method="post" action="/install/database" class="installer-form" novalidate>
+        <label>
+            <span>Driver</span>
+            <select name="driver" required>
+                {% set currentDriver = values.driver|default('mysql') %}
+                <option value="mysql" {% if currentDriver == 'mysql' %}selected{% endif %}>MySQL</option>
+                <option value="mariadb" {% if currentDriver == 'mariadb' %}selected{% endif %}>MariaDB</option>
+                <option value="sqlite" {% if currentDriver == 'sqlite' %}selected{% endif %}>SQLite</option>
+            </select>
+        </label>
+        <label>
+            <span>Host</span>
+            <input type="text" name="host" value="{{ values.host|e }}" required>
+        </label>
+        <label>
+            <span>Port</span>
+            <input type="number" name="port" value="{{ values.port|e }}" min="1" max="65535" required>
+        </label>
+        <label>
+            <span>Database name</span>
+            <input type="text" name="database" value="{{ values.database|e }}" required>
+        </label>
+        <label>
+            <span>Username</span>
+            <input type="text" name="username" value="{{ values.username|e }}" required>
+        </label>
+        <label>
+            <span>Password</span>
+            <input type="password" name="password" value="" autocomplete="new-password">
+        </label>
+        <p class="installer-form-actions">
+            <button type="submit">Test connection &amp; continue</button>
+        </p>
+    </form>
+</section>
+{% endblock %}

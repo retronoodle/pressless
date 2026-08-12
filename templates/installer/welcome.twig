@@ -1,0 +1,18 @@
+{% extends 'layout.twig' %}
+
+{% block title %}Welcome - Install Stead{% endblock %}
+
+{% block content %}
+<section class="installer-step-page">
+    <h2>Welcome</h2>
+    <p>This wizard will guide you through installing Stead on this server.</p>
+    <p>You'll need:</p>
+    <ul>
+        <li>Database credentials (MySQL, MariaDB, or SQLite)</li>
+        <li>An email and password for the first administrator account</li>
+        <li>Write permission on the project root (for the <code>.env</code> file and <code>installed.lock</code>)</li>
+    </ul>
+    <p>Sample content can be loaded at the end of the wizard so you have something to look at right away — both choices end at the same admin login.</p>
+    <p><a class="button" href="/install/database">Get started</a></p>
+</section>
+{% endblock %}

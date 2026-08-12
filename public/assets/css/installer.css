@@ -1,0 +1,221 @@
+/* Stead installer styles. Shares the same baseline variables as admin.css
+   so the installer feels like the same product, but lays out as a focused
+   single-column wizard instead of the full admin shell. */
+
+:root {
+    --stead-ink: #1c1c1c;
+    --stead-muted: #5f5f5f;
+    --stead-rule: #e0e0e0;
+    --stead-error: #8a1c1c;
+    --stead-bg: #fdfdfc;
+    --stead-accent: #2f5fbf;
+}
+
+body.stead-installer {
+    margin: 0;
+    padding: 0;
+    background: var(--stead-bg);
+    color: var(--stead-ink);
+    font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+.installer-shell {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 3rem 1.5rem 4rem;
+}
+
+.installer-header h1 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin: 0 0 1.5rem;
+}
+
+.installer-steps {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 2.5rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    counter-reset: installer;
+}
+
+.installer-step {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.4rem 0.75rem;
+    border: 1px solid var(--stead-rule);
+    border-radius: 999px;
+    background: #fff;
+    color: var(--stead-muted);
+    font-size: 0.9rem;
+}
+
+.installer-step-number {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.5rem;
+    height: 1.5rem;
+    border-radius: 50%;
+    background: var(--stead-rule);
+    color: var(--stead-ink);
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+.installer-step.is-current {
+    border-color: var(--stead-accent);
+    color: var(--stead-ink);
+}
+
+.installer-step.is-current .installer-step-number {
+    background: var(--stead-accent);
+    color: #fff;
+}
+
+.installer-step.is-done .installer-step-number {
+    background: var(--stead-ink);
+    color: #fff;
+}
+
+.installer-content {
+    background: #fff;
+    border: 1px solid var(--stead-rule);
+    border-radius: 8px;
+    padding: 2rem;
+}
+
+.installer-step-page h2 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin: 0 0 1rem;
+}
+
+.installer-step-page p,
+.installer-step-page ul {
+    margin: 0 0 1rem;
+}
+
+.installer-form {
+    display: grid;
+    gap: 1rem;
+    margin-top: 1.5rem;
+}
+
+.installer-form label {
+    display: grid;
+    gap: 0.4rem;
+    font-size: 0.95rem;
+}
+
+.installer-form input,
+.installer-form select {
+    font: inherit;
+    padding: 0.5rem 0.6rem;
+    border: 1px solid var(--stead-rule);
+    border-radius: 4px;
+    background: #fff;
+    color: var(--stead-ink);
+}
+
+.installer-form input:focus,
+.installer-form select:focus {
+    outline: 2px solid var(--stead-accent);
+    outline-offset: 1px;
+}
+
+.installer-form-actions {
+    margin: 0;
+}
+
+.installer-form button {
+    background: var(--stead-accent);
+    color: #fff;
+    border: 0;
+    border-radius: 4px;
+    padding: 0.6rem 1.2rem;
+    font: inherit;
+    cursor: pointer;
+}
+
+.installer-form button:hover,
+.installer-form button:focus {
+    filter: brightness(1.05);
+}
+
+.installer-error,
+.installer-errors {
+    background: #fbeeee;
+    border: 1px solid var(--stead-error);
+    color: var(--stead-error);
+    padding: 0.75rem 1rem;
+    border-radius: 4px;
+    margin: 0 0 1rem;
+}
+
+.installer-errors h3 {
+    margin: 0 0 0.5rem;
+    font-size: 1rem;
+}
+
+.installer-errors ul {
+    margin: 0;
+    padding-left: 1.25rem;
+}
+
+.installer-field-error {
+    color: var(--stead-error);
+    font-size: 0.85rem;
+}
+
+.installer-choice {
+    border: 0;
+    padding: 0;
+    margin: 0;
+    display: grid;
+    gap: 0.5rem;
+}
+
+.installer-choice legend {
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+}
+
+.installer-choice label {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.6rem 0.8rem;
+    border: 1px solid var(--stead-rule);
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.installer-choice label:hover {
+    border-color: var(--stead-accent);
+}
+
+a.button {
+    display: inline-block;
+    background: var(--stead-accent);
+    color: #fff;
+    border-radius: 4px;
+    padding: 0.6rem 1.2rem;
+    text-decoration: none;
+}
+
+a.button:hover,
+a.button:focus {
+    filter: brightness(1.05);
+}
+
+code {
+    background: #f4f4f4;
+    padding: 0.1rem 0.3rem;
+    border-radius: 3px;
+    font-size: 0.95em;
+}
