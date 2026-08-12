@@ -53,6 +53,16 @@ final class Configuration
         'UPDATE_ENDPOINT_URL' => 'update.endpoint_url',
         'UPDATE_CHECK_INTERVAL_HOURS' => 'update.check_interval_hours',
         'UPDATE_TIMEOUT_SECONDS' => 'update.timeout_seconds',
+        'BACKUPS_TARGET' => 'backups.target',
+        'BACKUPS_LOCAL_PATH' => 'backups.local_path',
+        'BACKUPS_S3_ENDPOINT' => 'backups.s3.endpoint',
+        'BACKUPS_S3_BUCKET' => 'backups.s3.bucket',
+        'BACKUPS_S3_REGION' => 'backups.s3.region',
+        'BACKUPS_S3_KEY' => 'backups.s3.key',
+        'BACKUPS_S3_SECRET' => 'backups.s3.secret',
+        'BACKUPS_S3_ADDRESSING_STYLE' => 'backups.s3.addressing_style',
+        'BACKUPS_RETENTION_COUNT' => 'backups.retention_count',
+        'BACKUPS_FREQUENCY_HOURS' => 'backups.frequency_hours',
     ];
 
     /**

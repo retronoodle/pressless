@@ -30,11 +30,34 @@
     <section class="update-instructions">
         <h2>Update Stead</h2>
 
-        {% if available %}
+        {% if pre_update_backup_error %}
+            <section class="form-errors">
+                <h3>Pre-update backup failed</h3>
+                <p>
+                    Stead could not create a safety backup before showing the update
+                    instructions, so the update steps are blocked. Without a backup,
+                    there is no rollback path if the update fails.
+                </p>
+                <p><strong>Error:</strong> {{ pre_update_backup_error|e }}</p>
+                <p>
+                    Check the <a href="/admin/backups">backup history</a> and resolve
+                    the failure (free disk space, valid credentials, reachable storage
+                    target) before retrying. Once a backup completes successfully,
+                    revisit this page.
+                </p>
+                <p><a href="/admin">&larr; Back to dashboard</a></p>
+            </section>
+        {% elseif available %}
             <p>
                 You are running <strong>{{ installed_version }}</strong>.
                 Version <strong>{{ latest_version }}</strong> is available.
             </p>
+            {% if pre_update_backup_id %}
+                <p class="update-backup">
+                    A safety backup was created: <a href="/admin/backups">backup #{{ pre_update_backup_id }}</a>.
+                    If anything goes wrong during the update, restore from this backup to recover.
+                </p>
+            {% endif %}
             <p>
                 <a class="button" href="{{ download_url }}">Download Stead {{ latest_version }}</a>
             </p>
@@ -42,7 +65,8 @@
             <h3>How to update</h3>
             <ol class="update-steps">
                 <li>Download the new release ZIP using the link above.</li>
-                <li>Back up your <code>.env</code>, <code>storage/</code>, and database. The release ZIP does not include any of these.</li>
+                <li>Confirm a pre-update backup is on record (linked above). If not, revisit this page so one is created before proceeding.</li>
+                <li>Back up your <code>.env</code>, <code>storage/</code>, and database manually if you have not already. The release ZIP does not include any of these.</li>
                 <li>Extract the contents of the ZIP <strong>over the top of your existing install</strong>, replacing files when prompted.</li>
                 <li>
                     From the project root, run

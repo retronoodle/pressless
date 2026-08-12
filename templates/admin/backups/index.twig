@@ -1,0 +1,169 @@
+{% extends 'layout/base.twig' %}
+
+{% block title %}Backups - Stead admin{% endblock %}
+
+{% block body_class %}stead stead-admin stead-backups{% endblock %}
+
+{% block body %}
+<header class="admin-header">
+    <h1>Stead admin</h1>
+    <nav class="admin-nav" aria-label="Admin sections">
+        <ul>
+            <li><a href="/admin">Dashboard</a></li>
+            <li><a href="/admin/collections">Collections</a></li>
+            <li><a href="/admin/media">Media</a></li>
+            <li><a href="/admin/users">Users</a></li>
+            <li><a href="/admin/permissions">Permissions</a></li>
+            <li><a href="/admin/mail-settings">Mail</a></li>
+            <li><a href="/admin/invites">Invites</a></li>
+            <li><a href="/admin/backups" aria-current="page">Backups</a></li>
+        </ul>
+    </nav>
+    <div class="admin-account">
+        <p>Signed in as <strong>{{ user_name }}</strong> ({{ user_role }}).</p>
+        <form method="post" action="/admin/logout">
+            <button type="submit">Sign out</button>
+        </form>
+    </div>
+</header>
+
+<main class="admin-main">
+    <section class="backups-header">
+        <h2>Backups</h2>
+        <p>
+            Backups bundle a database snapshot and a copy of the media directory into a
+            single archive. Manual runs trigger immediately; scheduled runs require a
+            cron entry on the host.
+        </p>
+    </section>
+
+    {% if flash %}
+        <section class="form-flash">
+            <p>{{ flash|e }}</p>
+        </section>
+    {% endif %}
+
+    {% if error %}
+        <section class="form-errors">
+            <p>{{ error|e }}</p>
+        </section>
+    {% endif %}
+
+    <section class="backups-run">
+        <h3>Run a backup now</h3>
+        <form method="post" action="{{ run_url }}">
+            <button type="submit">Create backup</button>
+        </form>
+    </section>
+
+    <section class="backups-settings">
+        <h3>Settings</h3>
+        <dl class="backups-settings-summary">
+            <dt>Storage target</dt>
+            <dd><code>{{ settings.target }}</code></dd>
+            <dt>Retention count</dt>
+            <dd>{{ settings.retention_count }} most-recent successful backups</dd>
+            <dt>Frequency</dt>
+            <dd>
+                {% if settings.frequency_hours > 0 %}
+                    {{ settings.frequency_hours }} hours between scheduled runs
+                {% else %}
+                    Scheduling disabled
+                {% endif %}
+            </dd>
+            {% if settings.target == 's3' %}
+                <dt>S3 endpoint</dt>
+                <dd><code>{{ settings.s3_endpoint }}</code></dd>
+                <dt>S3 bucket</dt>
+                <dd><code>{{ settings.s3_bucket }}</code></dd>
+                <dt>S3 region</dt>
+                <dd><code>{{ settings.s3_region }}</code></dd>
+            {% endif %}
+        </dl>
+
+        <details class="backups-settings-edit">
+            <summary>Edit configuration</summary>
+            <form method="post" action="{{ action_url }}" class="backups-settings-form">
+                <p>
+                    <small>
+                        Editing these fields changes <code>config/app.yaml</code>. S3 credentials
+                        live in <code>.env</code> as <code>BACKUPS_S3_KEY</code> and
+                        <code>BACKUPS_S3_SECRET</code> — never commit them.
+                    </small>
+                </p>
+                <label>
+                    <span>Storage target</span>
+                    <select name="target">
+                        {% for t in targets %}
+                            <option value="{{ t }}" {% if settings.target == t %}selected{% endif %}>{{ t }}</option>
+                        {% endfor %}
+                    </select>
+                </label>
+                <label>
+                    <span>Retention count</span>
+                    <input type="number" name="retention_count" min="1" max="999" value="{{ settings.retention_count }}">
+                </label>
+                <label>
+                    <span>Frequency (hours; 0 to disable scheduling)</span>
+                    <input type="number" name="frequency_hours" min="0" max="8760" value="{{ settings.frequency_hours }}">
+                </label>
+                <p><button type="submit" name="settings_action" value="save">Save settings</button></p>
+            </form>
+        </details>
+
+        <details class="backups-settings-cron">
+            <summary>Cron entry (operator)</summary>
+            <p>Scheduled runs are triggered by an external cron entry on the host. Add the following line to the server's crontab to invoke the scheduled backup every minute; <code>bin/backup --scheduled</code> will only run if the configured frequency has elapsed:</p>
+            <pre><code>* * * * * php /path/to/stead/bin/backup --scheduled &gt;&gt; /path/to/stead/var/log/stead.log 2&gt;&amp;1</code></pre>
+        </details>
+    </section>
+
+    <section class="backups-history">
+        <h3>History</h3>
+        {% if history|length == 0 %}
+            <p>No backups yet. Trigger one above to seed the history.</p>
+        {% else %}
+            <table class="backups-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Status</th>
+                        <th>Target</th>
+                        <th>Size</th>
+                        <th>Trigger</th>
+                        <th>Created</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in history %}
+                        <tr>
+                            <td>#{{ row.id }}</td>
+                            <td>
+                                {% if row.status == 'success' %}
+                                    <span class="status status-success">success</span>
+                                {% else %}
+                                    <span class="status status-failed">{{ row.status }}</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ row.target }}</td>
+                            <td>{{ row.size_human }}</td>
+                            <td>{{ row.triggered_by }}</td>
+                            <td>{{ row.created_at }}</td>
+                            <td>
+                                {% if row.restorable %}
+                                    <a href="/admin/backups/restore/{{ row.id }}/confirm" class="backups-restore-link">Restore&hellip;</a>
+                                {% else %}
+                                    {% if row.error_message %}
+                                        <small title="{{ row.error_message|e }}">failed</small>
+                                    {% endif %}
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% endif %}
+    </section>
+</main>
+{% endblock %}

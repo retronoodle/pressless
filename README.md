@@ -26,9 +26,9 @@ Early days — most of what's below is the destination, not the current state.
 - **Web installer:** multi-step wizard at `/install/*` reachable only when no `installed.lock` exists, so a downloaded release ZIP becomes a working site through the browser alone — no terminal required
 - **Release pipeline:** `bin/release` builds a version-stamped, dev-stripped, production-only dist ZIP; a tagged-push CI workflow builds and publishes it automatically
 - **Update checker:** installed sites compare their `VERSION` file against the latest published release (cached, fails closed on any endpoint error) and surface an admin dashboard banner with manual update instructions
+- **Backups & restore:** `bin/backup` dumps the database (`mysqldump`, PDO fallback, or a SQLite file copy) and the media directory into a single archive, written to a local path or an S3-compatible target; scheduled via cron + `--scheduled`, with configurable retention pruning, an admin UI for settings/history, and a restore flow (CLI + admin UI, both requiring explicit confirmation). A backup is triggered automatically before the update-instructions page is shown, so a failed update has a rollback path.
 
 **Not yet built**
-- Backups
 - Plugin system (described below)
 
 ## Principles
@@ -110,6 +110,18 @@ If the installer is reachable but no DB connection succeeds, the most common cau
 Maintainers build a dist ZIP with `bin/release <version>` (e.g. `bin/release 1.2.3`) — it installs production-only dependencies, strips dev/test files (`tests/`, `.git/`, `openspec/`, `phpunit.xml`, `phpstan.neon`, `.env`), stamps a `VERSION` file, and zips the result. Pushing a `vX.Y.Z` tag runs the same build in CI and publishes the ZIP to the project website's release endpoint automatically.
 
 Installed sites read their own `VERSION` file and periodically check that endpoint for a newer release (interval configurable via `UPDATE_CHECK_INTERVAL_HOURS`; leave `UPDATE_ENDPOINT_URL` empty to disable checks entirely). If the endpoint is unreachable or errors, the checker fails closed — no admin-facing error, just no update notice. When a newer version is available, admins see a banner on `/admin` linking to `/admin/update` for manual download-and-extract instructions; v1 has no one-click apply.
+
+## Backups and restore
+
+`bin/backup` creates a single archive (DB dump + media directory + manifest) and writes it to the configured storage target (`config/app.yaml`'s `backups:` section — local path by default, or an S3-compatible bucket via `BACKUPS_S3_*` env vars). Runs are tracked in a `backups` table and manageable from `/admin/backups` (settings, history, manual run, restore).
+
+```
+bin/backup                 # manual run
+bin/backup --scheduled     # run only if the configured frequency has elapsed
+bin/backup:restore <id>    # restore DB + media from a backup, with a confirmation prompt (--yes to skip)
+```
+
+Scheduling relies on an external cron entry rather than a background worker — add something like `* * * * * php bin/backup --scheduled` to the host's crontab; the admin UI's settings page shows the exact line to use. Restoring from the admin UI requires a separate confirmation step before it touches the database or media directory, same as the CLI. A backup also runs automatically right before the update-instructions page is shown, so a failed update has a rollback point.
 
 ### Trying it locally against real MySQL
 

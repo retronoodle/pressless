@@ -1,24 +1,4 @@
-# Capability: update-notifications
-
-## Purpose
-
-TBD
-
-## Requirements
-
-### Requirement: Admin update-available notice
-
-The system SHALL show an admin-visible notice when the update checker reports a newer version than the one currently installed.
-
-#### Scenario: Newer version available
-
-- **WHEN** an admin loads a page and the cached update check shows a newer version than installed
-- **THEN** the admin UI displays a notice stating a newer version is available, including the latest version number
-
-#### Scenario: No update available
-
-- **WHEN** the cached update check shows the installed version is current (or the check failed)
-- **THEN** the admin UI SHALL NOT display an update notice
+## MODIFIED Requirements
 
 ### Requirement: Manual update instructions
 

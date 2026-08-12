@@ -17,6 +17,10 @@ use Stead\Auth\PermissionRepository;
 use Stead\Auth\SessionRepository;
 use Stead\Auth\SessionStore;
 use Stead\Auth\UserRepository;
+use Stead\Backups\BackupRepository;
+use Stead\Backups\BackupRunner;
+use Stead\Backups\Dump\DumperFactory;
+use Stead\Backups\Storage\StorageTargetFactory;
 use Stead\Bootstrap\Application;
 use Stead\Config\Configuration;
 use Stead\Content\CollectionRepository;
@@ -42,6 +46,7 @@ use Stead\Http\Cache\PageCache;
 use Stead\Http\Controller\AdminController;
 use Stead\Http\Controller\AdminUpdateController;
 use Stead\Http\Controller\AssetController;
+use Stead\Http\Controller\BackupAdminController;
 use Stead\Http\Controller\CollectionAdminController;
 use Stead\Http\Controller\EntryAdminController;
 use Stead\Http\Controller\InviteAcceptController;
@@ -157,8 +162,32 @@ final class Routes
 
         $updateChecker = UpdateChecker::fromConfig($config, $logger);
 
+        $backupRepository = new BackupRepository($connection);
+        $backupRunner = new BackupRunner(
+            $config,
+            $backupRepository,
+            new StorageTargetFactory($config),
+            new DumperFactory($connection, $config),
+            self::resolveMediaRoot($config),
+            $logger,
+        );
+        $backupAdminController = new BackupAdminController(
+            $renderer,
+            $config,
+            $connection,
+            $backupRepository,
+            $backupRunner,
+        );
+
         $admin = new AdminController($renderer, $collections, $entryRepository, $authorization, $updateChecker);
-        $adminUpdateController = new AdminUpdateController($renderer, $updateChecker);
+        $adminUpdateController = new AdminUpdateController(
+            $renderer,
+            $updateChecker,
+            $config,
+            $connection,
+            $backupRunner,
+            $backupRepository,
+        );
 
         $collectionsController = new CollectionAdminController(
             $renderer,
@@ -283,6 +312,13 @@ final class Routes
         $router->get('/invite/accept/{token}', $inviteAcceptController->show(...), 'invites.accept');
         $router->post('/invite/accept/{token}', $inviteAcceptController->submit(...), 'invites.accept.submit');
 
+        // Phase 12 — backups (admin-only).
+        $router->get('/admin/backups', $guard->protect($collectionAuth->requireAdmin($backupAdminController->index(...))), 'backups.index');
+        $router->post('/admin/backups', $guard->protect($collectionAuth->requireAdmin($backupAdminController->save(...))), 'backups.save');
+        $router->post('/admin/backups/run', $guard->protect($collectionAuth->requireAdmin($backupAdminController->run(...))), 'backups.run');
+        $router->get('/admin/backups/restore/{id}/confirm', $guard->protect($collectionAuth->requireAdmin($backupAdminController->confirmRestore(...))), 'backups.restore.confirm');
+        $router->post('/admin/backups/restore', $guard->protect($collectionAuth->requireAdmin($backupAdminController->restore(...))), 'backups.restore');
+
         // Phase 4 — static assets from the active theme's `assets/` directory.
         // Mounted ahead of the public collection pattern so a literal `/assets/*`
         // prefix always wins, even if a collection is named `assets`.
@@ -356,5 +392,23 @@ final class Routes
     public static function buildFieldTypeRegistry(?MediaRepository $media = null): FieldTypeRegistry
     {
         return new FieldTypeRegistry(self::buildBuiltinFieldTypes($media));
+    }
+
+    /**
+     * Resolves the configured media storage root to an absolute path.
+     * Used by services that need to read/write the media directory
+     * without going through the {@see LocalStorage} abstraction (e.g.
+     * the backup runner, which copies the entire directory rather than
+     * addressing individual files).
+     */
+    public static function resolveMediaRoot(Configuration $config): string
+    {
+        $relative = $config->getString('paths.storage', 'storage/media');
+        if ($relative === '') {
+            $relative = 'storage/media';
+        }
+        $absolute = $config->projectRoot() . '/' . ltrim($relative, '/');
+        $real = realpath($absolute);
+        return $real !== false ? $real : $absolute;
     }
 }

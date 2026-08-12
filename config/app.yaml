@@ -88,6 +88,35 @@ defaults:
         # fails closed on timeout (treated as "no update", logged, no
         # admin-facing error).
         timeout_seconds: 5
+    backups:
+        # Storage target for backups: "local" (filesystem, default) or
+        # "s3" (S3-compatible remote bucket).
+        target: local
+        # For target=local: directory backups are written to. Must be
+        # outside the public web root. Default lives in var/backups.
+        local_path: var/backups
+        # For target=s3: connection details. Endpoint, bucket, region,
+        # key, and secret are sourced via BACKUPS_S3_* env vars so
+        # credentials never live in version-controlled YAML.
+        s3:
+            endpoint: ''
+            bucket: ''
+            region: us-east-1
+            key: ''
+            secret: ''
+            # Optional: "virtual-host" (bucket.example.com) or "path"
+            # (example.com/bucket). Most S3-compatible providers want
+            # "path" with custom endpoints (MinIO default), while AWS
+            # itself works with either.
+            addressing_style: path
+        # Number of most-recent successful backups to keep per target.
+        # Older backups are pruned automatically after each successful run.
+        retention_count: 7
+        # How often (in hours) a scheduled backup is allowed to run.
+        # The operator's cron entry drives timing; bin/backup --scheduled
+        # compares this to the last successful backup's timestamp.
+        # 24 = at most one backup per day; set to 0 to disable scheduling.
+        frequency_hours: 24
 
 development:
     app:

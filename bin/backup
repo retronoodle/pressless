@@ -1,0 +1,14 @@
+<?php
+
+declare(strict_types=1);
+
+use Stead\Backups\BackupRunner;
+use Stead\Backups\BackupTrigger;
+use Stead\Bootstrap\Application;
+use Stead\Console\ConsoleBootstrap;
+
+require __DIR__ . '/../vendor/autoload.php';
+
+$app = Application::bootstrap();
+$console = ConsoleBootstrap::forBackup($app);
+exit($console->run());

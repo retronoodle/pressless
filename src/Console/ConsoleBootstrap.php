@@ -57,4 +57,21 @@ final class ConsoleBootstrap
 
         return $console;
     }
+
+    /**
+     * Builds the console for `bin/backup`. Both the manual `backup`
+     * command and the `backup:restore` subcommand are exposed so a
+     * `bin/backup` invocation cannot accidentally start the development
+     * server or run migrations.
+     */
+    public static function forBackup(Application $app): ConsoleApplication
+    {
+        $console = new ConsoleApplication('Stead', '0.1.0');
+        $backup = new BackupCommand($app);
+        $console->add($backup);
+        $console->add(new RestoreCommand($app));
+        $console->setDefaultCommand($backup->getName());
+
+        return $console;
+    }
 }

@@ -24,6 +24,7 @@ final class Resetter
         'mail_settings',
         'permissions',
         'roles',
+        'backups',
         'migrations',
     ];
 
