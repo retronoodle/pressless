@@ -21,11 +21,11 @@
                 <option value="sqlite" {% if currentDriver == 'sqlite' %}selected{% endif %}>SQLite</option>
             </select>
         </label>
-        <label>
+        <label data-db-field="host">
             <span>Host</span>
             <input type="text" name="host" value="{{ values.host|e }}" required>
         </label>
-        <label>
+        <label data-db-field="port">
             <span>Port</span>
             <input type="number" name="port" value="{{ values.port|e }}" min="1" max="65535" required>
         </label>
@@ -33,11 +33,11 @@
             <span>Database name</span>
             <input type="text" name="database" value="{{ values.database|e }}" required>
         </label>
-        <label>
+        <label data-db-field="username">
             <span>Username</span>
             <input type="text" name="username" value="{{ values.username|e }}" required>
         </label>
-        <label>
+        <label data-db-field="password">
             <span>Password</span>
             <input type="password" name="password" value="" autocomplete="new-password">
         </label>
@@ -46,4 +46,27 @@
         </p>
     </form>
 </section>
+<script>
+(function () {
+    var form = document.querySelector('.installer-form');
+    if (!form) return;
+    var driverSelect = form.querySelector('select[name="driver"]');
+    var fields = form.querySelectorAll('[data-db-field]');
+
+    function sync() {
+        var isSqlite = driverSelect.value === 'sqlite';
+        fields.forEach(function (label) {
+            var input = label.querySelector('input');
+            label.hidden = isSqlite;
+            if (input) {
+                input.required = !isSqlite;
+                input.disabled = isSqlite;
+            }
+        });
+    }
+
+    driverSelect.addEventListener('change', sync);
+    sync();
+})();
+</script>
 {% endblock %}
