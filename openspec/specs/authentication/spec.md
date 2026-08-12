@@ -29,7 +29,7 @@ The system SHALL authenticate an active user from a login request, establish a n
 - **THEN** authentication fails, no authenticated session is created, and the login response gives a generic error
 
 ### Requirement: Protected admin access
-The system SHALL require an authenticated session for every protected admin route and SHALL preserve the originally requested path when redirecting an unauthenticated browser to login where safe.
+The system SHALL require an authenticated session for every protected admin route and SHALL preserve the originally requested path when redirecting an unauthenticated browser to login where safe. Beyond authentication, collection-scoped and entry-scoped admin routes SHALL additionally require authorization per the `roles-permissions` capability; an authenticated user who is not authorized for the requested action SHALL receive a 403 response rather than the unauthenticated redirect.
 
 #### Scenario: Unauthenticated admin request
 - **WHEN** a browser requests `/admin` without a valid session
@@ -38,6 +38,10 @@ The system SHALL require an authenticated session for every protected admin rout
 #### Scenario: Expired session
 - **WHEN** a session record is expired, revoked, or cannot be loaded
 - **THEN** the request is treated as unauthenticated and the stale session is not used
+
+#### Scenario: Authenticated but not authorized
+- **WHEN** an authenticated user without the required role or collection permission requests a protected admin route
+- **THEN** the response is 403 and no protected data for that route is returned
 
 ### Requirement: Logout and session invalidation
 The system SHALL support logout that invalidates the current session record, clears the native session, and prevents the same session from accessing protected routes afterward.

@@ -4,11 +4,14 @@ declare(strict_types=1);
 
 namespace Stead\Http;
 
+use Stead\Auth\AuthorizationService;
 use Stead\Auth\AuthenticationService;
 use Stead\Auth\AuthGuard;
+use Stead\Auth\CollectionAuthorization;
 use Stead\Auth\DatabaseSessionHandler;
 use Stead\Auth\NativeSessionStore;
 use Stead\Auth\PasswordHasher;
+use Stead\Auth\PermissionRepository;
 use Stead\Auth\SessionRepository;
 use Stead\Auth\SessionStore;
 use Stead\Auth\UserRepository;
@@ -41,7 +44,9 @@ use Stead\Http\Controller\EntryAdminController;
 use Stead\Http\Controller\LoginController;
 use Stead\Http\Controller\MediaAdminController;
 use Stead\Http\Controller\MediaServeController;
+use Stead\Http\Controller\PermissionAdminController;
 use Stead\Http\Controller\PublicController;
+use Stead\Http\Controller\UserAdminController;
 use Stead\Media\GdImageTransformer;
 use Stead\Media\LocalStorage;
 use Stead\Media\MediaRepository;
@@ -123,7 +128,13 @@ final class Routes
         $transformer = new GdImageTransformer();
         $transforms = new TransformCache($storage, $transformer);
 
-        $admin = new AdminController($renderer, $collections, $entryRepository);
+        $permissions = new PermissionRepository($connection);
+        $authorization = new AuthorizationService($collections, $permissions);
+        $collectionAuth = new CollectionAuthorization($authorization);
+
+        $users = new UserRepository($connection, new PasswordHasher());
+
+        $admin = new AdminController($renderer, $collections, $entryRepository, $authorization);
 
         $collectionsController = new CollectionAdminController(
             $renderer,
@@ -132,6 +143,7 @@ final class Routes
             $schemaValidator,
             $schemaChanges,
             $fieldTypes,
+            $authorization,
         );
         $entriesController = new EntryAdminController(
             $renderer,
@@ -142,6 +154,7 @@ final class Routes
             $slugs,
             $versions,
             $revisionRepository,
+            $authorization,
         );
 
         $mediaAdminController = new MediaAdminController($renderer, $mediaRepository, $storage, $config);
@@ -149,6 +162,14 @@ final class Routes
 
         $publicController = new PublicController($renderer, $collections, $entryRepository, $pageCache, $versions);
         $assetController = new AssetController($config);
+
+        $userAdminController = new UserAdminController($renderer, $users);
+        $permissionAdminController = new PermissionAdminController(
+            $renderer,
+            $users,
+            $collections,
+            $permissions,
+        );
 
         $router = new Router();
 
@@ -158,31 +179,43 @@ final class Routes
         $router->post('/admin/logout', $login->logout(...), 'logout');
         $router->get(AuthGuard::DEFAULT_TARGET, $guard->protect($admin->index(...)), 'admin.index');
 
-        // Phase 2 Section 8 — collection admin (literal routes must register
-        // before their `{slug}` counterparts so "new" is not captured as a
-        // slug).
+        // Phase 2 Section 8 — collection schema management (admin-only; the
+        // permission editor covers per-collection entry actions, not schema).
         $router->get('/admin/collections', $guard->protect($collectionsController->index(...)), 'collections.index');
-        $router->get('/admin/collections/new', $guard->protect($collectionsController->create(...)), 'collections.create');
-        $router->post('/admin/collections/new', $guard->protect($collectionsController->store(...)), 'collections.store');
-        $router->get('/admin/collections/{slug}/edit', $guard->protect($collectionsController->edit(...)), 'collections.edit');
-        $router->post('/admin/collections/{slug}/edit', $guard->protect($collectionsController->update(...)), 'collections.update');
-        $router->post('/admin/collections/{slug}/delete', $guard->protect($collectionsController->destroy(...)), 'collections.destroy');
+        $router->get('/admin/collections/new', $guard->protect($collectionAuth->requireAdmin($collectionsController->create(...))), 'collections.create');
+        $router->post('/admin/collections/new', $guard->protect($collectionAuth->requireAdmin($collectionsController->store(...))), 'collections.store');
+        $router->get('/admin/collections/{slug}/edit', $guard->protect($collectionAuth->requireAdmin($collectionsController->edit(...))), 'collections.edit');
+        $router->post('/admin/collections/{slug}/edit', $guard->protect($collectionAuth->requireAdmin($collectionsController->update(...))), 'collections.update');
+        $router->post('/admin/collections/{slug}/delete', $guard->protect($collectionAuth->requireAdmin($collectionsController->destroy(...))), 'collections.destroy');
 
-        // Phase 2 Section 9 — entry admin.
-        $router->get('/admin/collections/{slug}', $guard->protect($entriesController->index(...)), 'entries.index');
-        $router->get('/admin/collections/{slug}/entries/new', $guard->protect($entriesController->create(...)), 'entries.create');
-        $router->post('/admin/collections/{slug}/entries/new', $guard->protect($entriesController->store(...)), 'entries.store');
-        $router->get('/admin/collections/{slug}/entries/{id}/edit', $guard->protect($entriesController->edit(...)), 'entries.edit');
-        $router->post('/admin/collections/{slug}/entries/{id}/edit', $guard->protect($entriesController->update(...)), 'entries.update');
-        $router->post('/admin/collections/{slug}/entries/{id}/delete', $guard->protect($entriesController->destroy(...)), 'entries.destroy');
-        $router->post('/admin/collections/{slug}/entries/{id}/publish', $guard->protect($entriesController->publish(...)), 'entries.publish');
-        $router->post('/admin/collections/{slug}/entries/{id}/unpublish', $guard->protect($entriesController->unpublish(...)), 'entries.unpublish');
-        $router->get('/admin/collections/{slug}/entries/{id}/revisions', $guard->protect($entriesController->revisions(...)), 'entries.revisions');
-        $router->post('/admin/collections/{slug}/entries/{id}/revisions/{revisionId}/restore', $guard->protect($entriesController->restore(...)), 'entries.restore');
+        // Phase 2 Section 9 — entry admin. Collection-scoped entry routes
+        // are gated by CollectionAuthorization; the entry controllers add
+        // entry-level ownership checks inline so authors can't edit other
+        // authors' entries.
+        $router->get('/admin/collections/{slug}', $guard->protect($collectionAuth->requireAction(PermissionRepository::ACTION_VIEW, $entriesController->index(...))), 'entries.index');
+        $router->get('/admin/collections/{slug}/entries/new', $guard->protect($collectionAuth->requireAction(PermissionRepository::ACTION_CREATE, $entriesController->create(...))), 'entries.create');
+        $router->post('/admin/collections/{slug}/entries/new', $guard->protect($collectionAuth->requireAction(PermissionRepository::ACTION_CREATE, $entriesController->store(...))), 'entries.store');
+        $router->get('/admin/collections/{slug}/entries/{id}/edit', $guard->protect($collectionAuth->requireAction(PermissionRepository::ACTION_EDIT, $entriesController->edit(...))), 'entries.edit');
+        $router->post('/admin/collections/{slug}/entries/{id}/edit', $guard->protect($collectionAuth->requireAction(PermissionRepository::ACTION_EDIT, $entriesController->update(...))), 'entries.update');
+        $router->post('/admin/collections/{slug}/entries/{id}/delete', $guard->protect($collectionAuth->requireAction(PermissionRepository::ACTION_DELETE, $entriesController->destroy(...))), 'entries.destroy');
+        $router->post('/admin/collections/{slug}/entries/{id}/publish', $guard->protect($collectionAuth->requireAction(PermissionRepository::ACTION_PUBLISH, $entriesController->publish(...))), 'entries.publish');
+        $router->post('/admin/collections/{slug}/entries/{id}/unpublish', $guard->protect($collectionAuth->requireAction(PermissionRepository::ACTION_PUBLISH, $entriesController->unpublish(...))), 'entries.unpublish');
+        $router->get('/admin/collections/{slug}/entries/{id}/revisions', $guard->protect($collectionAuth->requireAction(PermissionRepository::ACTION_VIEW, $entriesController->revisions(...))), 'entries.revisions');
+        $router->post('/admin/collections/{slug}/entries/{id}/revisions/{revisionId}/restore', $guard->protect($collectionAuth->requireAction(PermissionRepository::ACTION_EDIT, $entriesController->restore(...))), 'entries.restore');
 
-        // Phase 5 — media library admin.
+        // Phase 5 — media library admin (any authenticated user; per-collection
+        // scoping is deferred per the design doc).
         $router->get('/admin/media', $guard->protect($mediaAdminController->index(...)), 'media.index');
         $router->post('/admin/media', $guard->protect($mediaAdminController->upload(...)), 'media.upload');
+
+        // Phase 7 — user management + permission editor (admin-only).
+        $router->get('/admin/users', $guard->protect($collectionAuth->requireAdmin($userAdminController->index(...))), 'users.index');
+        $router->get('/admin/users/new', $guard->protect($collectionAuth->requireAdmin($userAdminController->create(...))), 'users.create');
+        $router->post('/admin/users/new', $guard->protect($collectionAuth->requireAdmin($userAdminController->store(...))), 'users.store');
+        $router->get('/admin/users/{id}/role', $guard->protect($collectionAuth->requireAdmin($userAdminController->editRole(...))), 'users.role');
+        $router->post('/admin/users/{id}/role', $guard->protect($collectionAuth->requireAdmin($userAdminController->updateRole(...))), 'users.role.update');
+        $router->get('/admin/permissions', $guard->protect($collectionAuth->requireAdmin($permissionAdminController->index(...))), 'permissions.index');
+        $router->post('/admin/permissions', $guard->protect($collectionAuth->requireAdmin($permissionAdminController->update(...))), 'permissions.update');
 
         // Phase 4 — static assets from the active theme's `assets/` directory.
         // Mounted ahead of the public collection pattern so a literal `/assets/*`

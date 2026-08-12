@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Stead\Http\Controller;
 
+use Stead\Auth\AuthorizationService;
 use Stead\Auth\User;
 use Stead\Content\Collection;
 use Stead\Content\CollectionRepository;
@@ -24,7 +25,9 @@ use Symfony\Component\HttpFoundation\Response;
  * The controller does no validation or persistence of its own. Schema
  * validation delegates to {@see CollectionSchemaValidator}, persistence to
  * {@see CollectionRepository}, and `entry_values` cleanup to
- * {@see SchemaChangeHelper}.
+ * {@see SchemaChangeHelper}. Schema management is admin-only; the route
+ * layer enforces this for create/edit/delete, while the index view also
+ * filters to the collections the current user can see.
  */
 final class CollectionAdminController
 {
@@ -35,6 +38,7 @@ final class CollectionAdminController
         private readonly CollectionSchemaValidator $schemaValidator,
         private readonly SchemaChangeHelper $schemaChanges,
         private readonly FieldTypeRegistry $fieldTypes,
+        private readonly AuthorizationService $authorization,
     ) {
     }
 
@@ -45,8 +49,14 @@ final class CollectionAdminController
     {
         $user = $request->attributes->get('user');
 
+        $visibleSlugs = $user instanceof User
+            ? $this->authorization->grantedCollectionSlugs($user)
+            : [];
         $rows = [];
         foreach ($this->collections->all() as $collection) {
+            if (!in_array($collection->slug(), $visibleSlugs, true)) {
+                continue;
+            }
             $rows[] = [
                 'slug' => $collection->slug(),
                 'name' => $collection->name(),
@@ -54,8 +64,12 @@ final class CollectionAdminController
             ];
         }
 
+        $isAdmin = $user instanceof User && $user->isAdmin();
+
         return $this->html($this->renderer->render('admin/collections/index', [
             'user_name' => $user instanceof User ? $user->name : '',
+            'user_role' => $user instanceof User ? $user->roleName : '',
+            'is_admin' => $isAdmin,
             'collections' => $rows,
         ]));
     }

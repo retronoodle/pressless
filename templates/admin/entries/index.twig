@@ -12,8 +12,13 @@
             <li><a href="/admin">Dashboard</a></li>
             <li><a href="/admin/collections">Collections</a></li>
             <li><a href="/admin/media">Media</a></li>
-            <li><span class="nav-placeholder" aria-disabled="true">Users</span></li>
-            <li><span class="nav-placeholder" aria-disabled="true">Settings</span></li>
+            {% if user_role == 'admin' %}
+                <li><a href="/admin/users">Users</a></li>
+                <li><a href="/admin/permissions">Permissions</a></li>
+            {% else %}
+                <li><span class="nav-placeholder" aria-disabled="true">Users</span></li>
+                <li><span class="nav-placeholder" aria-disabled="true">Settings</span></li>
+            {% endif %}
         </ul>
     </nav>
     <div class="admin-account">
@@ -32,10 +37,14 @@
         <h2>{{ collection.name|e }} entries</h2>
         <p>
             <a href="/admin/collections">All collections</a>
-            &middot;
-            <a href="/admin/collections/{{ collection.slug|e }}/edit">Edit collection</a>
-            &middot;
-            <a href="/admin/collections/{{ collection.slug|e }}/entries/new">New entry</a>
+            {% if user_role == 'admin' %}
+                &middot;
+                <a href="/admin/collections/{{ collection.slug|e }}/edit">Edit collection</a>
+            {% endif %}
+            {% if can_edit %}
+                &middot;
+                <a href="/admin/collections/{{ collection.slug|e }}/entries/new">New entry</a>
+            {% endif %}
         </p>
     </section>
 
@@ -61,7 +70,9 @@
                         <td><span class="status status-{{ entry.status|e }}">{{ entry.status|e }}</span></td>
                         <td>{{ entry.preview|e }}</td>
                         <td>
-                            <a href="/admin/collections/{{ collection.slug|e }}/entries/{{ entry.id }}/edit">Edit</a>
+                            {% if can_edit and (not ownership_scoped or entry.author_id == user_id) %}
+                                <a href="/admin/collections/{{ collection.slug|e }}/entries/{{ entry.id }}/edit">Edit</a>
+                            {% endif %}
                         </td>
                     </tr>
                 {% endfor %}

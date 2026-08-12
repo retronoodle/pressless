@@ -36,10 +36,9 @@ abstract class DatabaseTestCase extends TestCase
         mkdir($tmp . '/var/log', 0775, true);
         mkdir($tmp . '/config', 0775, true);
         mkdir($tmp . '/database/migrations', 0775, true);
-        copy(
-            __DIR__ . '/../../database/migrations/20260811000001_initial_schema.sqlite.sql',
-            $tmp . '/database/migrations/20260811000001_initial_schema.sqlite.sql',
-        );
+        foreach (glob(__DIR__ . '/../../database/migrations/*.sqlite.sql') ?: [] as $src) {
+            copy($src, $tmp . '/database/migrations/' . basename($src));
+        }
 
         $driver = static::driver();
         $database = $driver === 'sqlite' ? ':memory:' : 'stead_test';

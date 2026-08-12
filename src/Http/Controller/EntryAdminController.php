@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Stead\Http\Controller;
 
+use Stead\Auth\AuthorizationService;
+use Stead\Auth\PermissionRepository;
 use Stead\Auth\User;
 use Stead\Content\Collection;
 use Stead\Content\CollectionRepository;
@@ -25,7 +27,10 @@ use Symfony\Component\HttpFoundation\Response;
  *
  * Validation lives in {@see EntryValidator}, persistence in
  * {@see EntryRepository}; this class only orchestrates them and renders the
- * resulting forms.
+ * resulting forms. The collection-level wrapper guarantees the user has the
+ * matching permission; mutating entry actions additionally call
+ * {@see AuthorizationService::canEntry()} so the `author` role's ownership
+ * scoping is enforced (an author can only edit their own entries).
  */
 final class EntryAdminController
 {
@@ -38,6 +43,7 @@ final class EntryAdminController
         private readonly SlugGenerator $slugs,
         private readonly CollectionVersionStore $versions,
         private readonly RevisionRepository $revisions,
+        private readonly AuthorizationService $authorization,
     ) {
     }
 
@@ -61,13 +67,20 @@ final class EntryAdminController
                 'slug' => $entry->slug(),
                 'status' => $entry->status(),
                 'preview' => $this->preview($entry, $previewKey),
+                'author_id' => $entry->authorId(),
             ];
         }
 
         return $this->html($this->renderer->render('admin/entries/index', [
             'user_name' => $user instanceof User ? $user->name : '',
+            'user_role' => $user instanceof User ? $user->roleName : '',
+            'user_id' => $user instanceof User ? $user->id : 0,
             'collection' => $collection,
             'entries' => $rows,
+            'can_edit' => $this->canAct($user, $collection, PermissionRepository::ACTION_EDIT),
+            'can_delete' => $this->canAct($user, $collection, PermissionRepository::ACTION_DELETE),
+            'can_publish' => $this->canAct($user, $collection, PermissionRepository::ACTION_PUBLISH),
+            'ownership_scoped' => $user instanceof User && $user->roleName === User::ROLE_AUTHOR,
         ]));
     }
 
@@ -165,6 +178,16 @@ final class EntryAdminController
             return new Response('', Response::HTTP_NOT_FOUND);
         }
 
+        $user = $request->attributes->get('user');
+        if (!$this->authorization->canEntry(
+            $user instanceof User ? $user : null,
+            $slug,
+            PermissionRepository::ACTION_EDIT,
+            $entry,
+        )) {
+            return new Response('', Response::HTTP_FORBIDDEN);
+        }
+
         return $this->renderForm(
             $request,
             $collection,
@@ -191,6 +214,16 @@ final class EntryAdminController
         $existing = $this->findOwnedEntry($collection, $id);
         if ($existing === null) {
             return new Response('', Response::HTTP_NOT_FOUND);
+        }
+
+        $user = $request->attributes->get('user');
+        if (!$this->authorization->canEntry(
+            $user instanceof User ? $user : null,
+            $slug,
+            PermissionRepository::ACTION_EDIT,
+            $existing,
+        )) {
+            return new Response('', Response::HTTP_FORBIDDEN);
         }
 
         $payload = $this->extractPayload($request);
@@ -247,6 +280,16 @@ final class EntryAdminController
             return new Response('', Response::HTTP_NOT_FOUND);
         }
 
+        $user = $request->attributes->get('user');
+        if (!$this->authorization->canEntry(
+            $user instanceof User ? $user : null,
+            $slug,
+            PermissionRepository::ACTION_DELETE,
+            $entry,
+        )) {
+            return new Response('', Response::HTTP_FORBIDDEN);
+        }
+
         $this->entries->delete($entry->id());
         $this->versions->bump($collection->id());
 
@@ -272,6 +315,16 @@ final class EntryAdminController
             return new Response('', Response::HTTP_NOT_FOUND);
         }
 
+        $user = $request->attributes->get('user');
+        if (!$this->authorization->canEntry(
+            $user instanceof User ? $user : null,
+            $slug,
+            PermissionRepository::ACTION_PUBLISH,
+            $entry,
+        )) {
+            return new Response('', Response::HTTP_FORBIDDEN);
+        }
+
         $this->entries->publish($entry->id());
         $this->versions->bump($collection->id());
 
@@ -295,6 +348,16 @@ final class EntryAdminController
         $entry = $this->findOwnedEntry($collection, $id);
         if ($entry === null) {
             return new Response('', Response::HTTP_NOT_FOUND);
+        }
+
+        $user = $request->attributes->get('user');
+        if (!$this->authorization->canEntry(
+            $user instanceof User ? $user : null,
+            $slug,
+            PermissionRepository::ACTION_PUBLISH,
+            $entry,
+        )) {
+            return new Response('', Response::HTTP_FORBIDDEN);
         }
 
         $this->entries->unpublish($entry->id());
@@ -327,6 +390,7 @@ final class EntryAdminController
 
         return $this->html($this->renderer->render('admin/entries/revisions', [
             'user_name' => $user instanceof User ? $user->name : '',
+            'user_role' => $user instanceof User ? $user->roleName : '',
             'collection' => $collection,
             'entry' => $entry,
             'revisions' => $revisions,
@@ -353,6 +417,16 @@ final class EntryAdminController
         $revision = $this->revisions->find($revisionId);
         if ($revision === null || (int) ($revision['entry_id'] ?? 0) !== $entry->id()) {
             return new Response('', Response::HTTP_NOT_FOUND);
+        }
+
+        $user = $request->attributes->get('user');
+        if (!$this->authorization->canEntry(
+            $user instanceof User ? $user : null,
+            $slug,
+            PermissionRepository::ACTION_EDIT,
+            $entry,
+        )) {
+            return new Response('', Response::HTTP_FORBIDDEN);
         }
 
         $payload = is_array($revision['payload'] ?? null) ? $revision['payload'] : [];
@@ -420,8 +494,13 @@ final class EntryAdminController
             }
         }
 
+        $canEdit = $this->canAct($user, $collection, PermissionRepository::ACTION_EDIT);
+        $canDelete = $this->canAct($user, $collection, PermissionRepository::ACTION_DELETE);
+        $canPublish = $this->canAct($user, $collection, PermissionRepository::ACTION_PUBLISH);
+
         return $this->html($this->renderer->render('admin/entries/form', [
             'user_name' => $user instanceof User ? $user->name : '',
+            'user_role' => $user instanceof User ? $user->roleName : '',
             'collection' => $collection,
             'entry' => $entry,
             'fields' => $collection->fields(),
@@ -435,11 +514,14 @@ final class EntryAdminController
             'form_title' => $isEdit
                 ? sprintf('Edit entry #%d in %s', $entry->id(), $collection->name())
                 : sprintf('New entry in %s', $collection->name()),
-            'publish_url' => $isEdit && $entry->id() !== 0
+            'publish_url' => $isEdit && $entry->id() !== 0 && $canPublish
                 ? '/admin/collections/' . rawurlencode($collection->slug()) . '/entries/' . $entry->id() . '/publish'
                 : null,
-            'unpublish_url' => $isEdit && $entry->id() !== 0
+            'unpublish_url' => $isEdit && $entry->id() !== 0 && $canPublish
                 ? '/admin/collections/' . rawurlencode($collection->slug()) . '/entries/' . $entry->id() . '/unpublish'
+                : null,
+            'delete_url' => $isEdit && $entry->id() !== 0 && $canDelete
+                ? '/admin/collections/' . rawurlencode($collection->slug()) . '/entries/' . $entry->id() . '/delete'
                 : null,
             'revisions_url' => $isEdit && $entry->id() !== 0
                 ? '/admin/collections/' . rawurlencode($collection->slug()) . '/entries/' . $entry->id() . '/revisions'
@@ -484,6 +566,14 @@ final class EntryAdminController
             return null;
         }
         return $user->id > 0 ? $user->id : null;
+    }
+
+    private function canAct(?User $user, Collection $collection, string $action): bool
+    {
+        if (!$user instanceof User) {
+            return false;
+        }
+        return $this->authorization->can($user, $collection->slug(), $action);
     }
 
     private function preview(Entry $entry, string $previewKey): string

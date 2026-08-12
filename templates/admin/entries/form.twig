@@ -12,8 +12,13 @@
             <li><a href="/admin">Dashboard</a></li>
             <li><a href="/admin/collections">Collections</a></li>
             <li><a href="/admin/media">Media</a></li>
-            <li><span class="nav-placeholder" aria-disabled="true">Users</span></li>
-            <li><span class="nav-placeholder" aria-disabled="true">Settings</span></li>
+            {% if user_role == 'admin' %}
+                <li><a href="/admin/users">Users</a></li>
+                <li><a href="/admin/permissions">Permissions</a></li>
+            {% else %}
+                <li><span class="nav-placeholder" aria-disabled="true">Users</span></li>
+                <li><span class="nav-placeholder" aria-disabled="true">Settings</span></li>
+            {% endif %}
         </ul>
     </nav>
     <div class="admin-account">
@@ -84,12 +89,21 @@
         <section class="entry-actions">
             <h3>Lifecycle</h3>
             {% if entry.isPublished() %}
-                <form method="post" action="{{ unpublish_url }}">
-                    <button type="submit">Unpublish</button>
-                </form>
+                {% if unpublish_url %}
+                    <form method="post" action="{{ unpublish_url }}">
+                        <button type="submit">Unpublish</button>
+                    </form>
+                {% endif %}
             {% else %}
-                <form method="post" action="{{ publish_url }}">
-                    <button type="submit">Publish</button>
+                {% if publish_url %}
+                    <form method="post" action="{{ publish_url }}">
+                        <button type="submit">Publish</button>
+                    </form>
+                {% endif %}
+            {% endif %}
+            {% if delete_url %}
+                <form method="post" action="{{ delete_url }}">
+                    <button type="submit">Delete</button>
                 </form>
             {% endif %}
             <p>

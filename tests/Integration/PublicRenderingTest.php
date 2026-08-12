@@ -9,6 +9,7 @@ use Stead\Auth\AuthenticationService;
 use Stead\Auth\PasswordHasher;
 use Stead\Auth\SessionRepository;
 use Stead\Auth\UserRepository;
+use Stead\Auth\User;
 use Stead\Bootstrap\Application;
 use Stead\Config\Configuration;
 use Stead\Database\Connection;
@@ -90,7 +91,7 @@ final class PublicRenderingTest extends TestCase
         $router = Routes::createWithStore($app, $this->store, new TwigRenderer($this->config));
         $this->kernel = new Kernel($app, $router);
 
-        $users->create('ada@example.com', 'Ada Lovelace', self::PASSWORD, true, true);
+        $users->create('ada@example.com', 'Ada Lovelace', self::PASSWORD, User::ROLE_ADMIN, true);
         $this->store->start();
         $auth->attempt('ada@example.com', self::PASSWORD);
     }

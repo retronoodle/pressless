@@ -9,6 +9,7 @@ use Stead\Auth\AuthenticationService;
 use Stead\Auth\PasswordHasher;
 use Stead\Auth\SessionRepository;
 use Stead\Auth\UserRepository;
+use Stead\Auth\User;
 use Stead\Bootstrap\Application;
 use Stead\Config\Configuration;
 use Stead\Database\Connection;
@@ -112,7 +113,7 @@ final class EntryAdminControllerTest extends TestCase
 
     private function signIn(): void
     {
-        $this->users->create('ada@example.com', 'Ada Lovelace', self::PASSWORD, true, true);
+        $this->users->create('ada@example.com', 'Ada Lovelace', self::PASSWORD, User::ROLE_ADMIN, true);
         $this->store->start();
         $this->authService->attempt('ada@example.com', self::PASSWORD);
     }

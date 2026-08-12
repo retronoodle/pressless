@@ -114,7 +114,7 @@ final class Seeder
             $adminPassword = null;
         } else {
             $tempPassword = self::generatePassword();
-            $users->create(self::ADMIN_EMAIL, self::ADMIN_NAME, $tempPassword, true, true);
+            $users->create(self::ADMIN_EMAIL, self::ADMIN_NAME, $tempPassword, User::ROLE_ADMIN, true);
             $adminEmail = self::ADMIN_EMAIL;
             $adminPassword = $tempPassword;
         }
@@ -148,7 +148,10 @@ final class Seeder
     private function findUser(string $email): ?User
     {
         $row = $this->connection->fetchOne(
-            'SELECT id, email, name, password_hash, is_active, is_admin FROM users WHERE email = :email',
+            'SELECT u.id, u.email, u.name, u.password_hash, u.is_active, u.role_id, r.name AS role_name
+               FROM users u
+               LEFT JOIN roles r ON r.id = u.role_id
+              WHERE u.email = :email',
             ['email' => UserRepository::normalizeEmail($email)],
         );
 

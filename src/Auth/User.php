@@ -9,16 +9,23 @@ namespace Stead\Auth;
  *
  * The password hash is held so the authentication service can verify and
  * transparently rehash it; it is never exposed through serialization.
+ * Authorization data (role, role name) is carried alongside identity so
+ * route handlers can answer "is this user allowed?" without an extra join.
  */
 final class User implements \JsonSerializable
 {
+    public const ROLE_ADMIN = 'admin';
+    public const ROLE_EDITOR = 'editor';
+    public const ROLE_AUTHOR = 'author';
+
     public function __construct(
         public readonly int $id,
         public readonly string $email,
         public readonly string $name,
         public readonly string $passwordHash,
         public readonly bool $isActive,
-        public readonly bool $isAdmin,
+        public readonly int $roleId,
+        public readonly string $roleName,
     ) {
     }
 
@@ -33,8 +40,14 @@ final class User implements \JsonSerializable
             (string) ($row['name'] ?? ''),
             (string) ($row['password_hash'] ?? ''),
             (bool) ($row['is_active'] ?? false),
-            (bool) ($row['is_admin'] ?? false),
+            (int) ($row['role_id'] ?? 0),
+            (string) ($row['role_name'] ?? ''),
         );
+    }
+
+    public function isAdmin(): bool
+    {
+        return $this->roleName === self::ROLE_ADMIN;
     }
 
     /**
@@ -47,7 +60,8 @@ final class User implements \JsonSerializable
             'email' => $this->email,
             'name' => $this->name,
             'is_active' => $this->isActive,
-            'is_admin' => $this->isAdmin,
+            'role_id' => $this->roleId,
+            'role_name' => $this->roleName,
         ];
     }
 

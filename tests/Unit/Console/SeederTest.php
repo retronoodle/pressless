@@ -90,7 +90,8 @@ final class SeederTest extends TestCase
 
         $user = $this->findUser('admin@example.com');
         $this->assertInstanceOf(User::class, $user);
-        $this->assertTrue($user->isAdmin);
+        $this->assertTrue($user->isAdmin());
+        $this->assertSame(User::ROLE_ADMIN, $user->roleName);
         $this->assertTrue($user->isActive);
 
         $this->assertSame(2, $this->collectionCount());
@@ -237,7 +238,10 @@ final class SeederTest extends TestCase
     private function findUser(string $email): ?User
     {
         $row = $this->connection->fetchOne(
-            'SELECT id, email, name, password_hash, is_active, is_admin FROM users WHERE email = :email',
+            'SELECT u.id, u.email, u.name, u.password_hash, u.is_active, u.role_id, r.name AS role_name
+               FROM users u
+               LEFT JOIN roles r ON r.id = u.role_id
+              WHERE u.email = :email',
             ['email' => $email],
         );
         return $row === null ? null : User::fromRow($row);

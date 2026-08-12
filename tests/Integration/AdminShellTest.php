@@ -9,6 +9,7 @@ use Stead\Auth\AuthenticationService;
 use Stead\Auth\PasswordHasher;
 use Stead\Auth\SessionRepository;
 use Stead\Auth\UserRepository;
+use Stead\Auth\User;
 use Stead\Bootstrap\Application;
 use Stead\Config\Configuration;
 use Stead\Database\Connection;
@@ -39,10 +40,9 @@ final class AdminShellTest extends TestCase
         mkdir($this->projectRoot . '/var/cache', 0775, true);
         mkdir($this->projectRoot . '/var/log', 0775, true);
         mkdir($this->projectRoot . '/database/migrations', 0775, true);
-        copy(
-            __DIR__ . '/../../database/migrations/20260811000001_initial_schema.sqlite.sql',
-            $this->projectRoot . '/database/migrations/20260811000001_initial_schema.sqlite.sql',
-        );
+        foreach (glob(__DIR__ . '/../../database/migrations/*.sqlite.sql') ?: [] as $src) {
+            copy($src, $this->projectRoot . '/database/migrations/' . basename($src));
+        }
         $this->dbPath = $this->projectRoot . '/var/stead.sqlite';
 
         $this->config = new Configuration(
@@ -142,7 +142,7 @@ final class AdminShellTest extends TestCase
 
     public function testAuthenticatedAdminShellRendersTheEmptyState(): void
     {
-        $this->users->create('ada@example.com', 'Ada Lovelace', self::PASSWORD, true, true);
+        $this->users->create('ada@example.com', 'Ada Lovelace', self::PASSWORD, User::ROLE_ADMIN, true);
         $this->store->start();
         $this->authService->attempt('ada@example.com', self::PASSWORD);
 
@@ -159,7 +159,7 @@ final class AdminShellTest extends TestCase
 
     public function testDashboardRendersCollectionAndEntryCountsWhenNotEmpty(): void
     {
-        $this->users->create('ada@example.com', 'Ada Lovelace', self::PASSWORD, true, true);
+        $this->users->create('ada@example.com', 'Ada Lovelace', self::PASSWORD, User::ROLE_ADMIN, true);
         $this->store->start();
         $this->authService->attempt('ada@example.com', self::PASSWORD);
 
@@ -181,7 +181,7 @@ final class AdminShellTest extends TestCase
 
     public function testCollectionsLinkIsActiveInTheDashboardNav(): void
     {
-        $this->users->create('ada@example.com', 'Ada Lovelace', self::PASSWORD, true, true);
+        $this->users->create('ada@example.com', 'Ada Lovelace', self::PASSWORD, User::ROLE_ADMIN, true);
         $this->store->start();
         $this->authService->attempt('ada@example.com', self::PASSWORD);
 
@@ -194,7 +194,7 @@ final class AdminShellTest extends TestCase
 
     public function testActiveCollectionNameIsSurfacedOnTheEntryList(): void
     {
-        $this->users->create('ada@example.com', 'Ada Lovelace', self::PASSWORD, true, true);
+        $this->users->create('ada@example.com', 'Ada Lovelace', self::PASSWORD, User::ROLE_ADMIN, true);
         $this->store->start();
         $this->authService->attempt('ada@example.com', self::PASSWORD);
 
@@ -235,7 +235,7 @@ final class AdminShellTest extends TestCase
 
     public function testUnknownAdminPathsReturn404(): void
     {
-        $this->users->create('ada@example.com', 'Ada Lovelace', self::PASSWORD, true, true);
+        $this->users->create('ada@example.com', 'Ada Lovelace', self::PASSWORD, User::ROLE_ADMIN, true);
         $this->store->start();
         $this->authService->attempt('ada@example.com', self::PASSWORD);
 
@@ -248,7 +248,7 @@ final class AdminShellTest extends TestCase
 
     public function testUnsupportedMethodReturns405(): void
     {
-        $this->users->create('ada@example.com', 'Ada Lovelace', self::PASSWORD, true, true);
+        $this->users->create('ada@example.com', 'Ada Lovelace', self::PASSWORD, User::ROLE_ADMIN, true);
         $this->store->start();
         $this->authService->attempt('ada@example.com', self::PASSWORD);
 
@@ -291,7 +291,7 @@ final class AdminShellTest extends TestCase
 
     public function testSuccessfulLoginRedirectsToTheShell(): void
     {
-        $this->users->create('ada@example.com', 'Ada Lovelace', self::PASSWORD, true, true);
+        $this->users->create('ada@example.com', 'Ada Lovelace', self::PASSWORD, User::ROLE_ADMIN, true);
 
         $response = $this->kernel->handle(Request::create('/admin/login', 'POST', [
             'email' => 'ada@example.com',
@@ -306,7 +306,7 @@ final class AdminShellTest extends TestCase
     {
         @unlink($this->templatesDir . '/admin.twig');
 
-        $this->users->create('ada@example.com', 'Ada Lovelace', self::PASSWORD, true, true);
+        $this->users->create('ada@example.com', 'Ada Lovelace', self::PASSWORD, User::ROLE_ADMIN, true);
         $this->store->start();
         $this->authService->attempt('ada@example.com', self::PASSWORD);
 

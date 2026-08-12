@@ -29,6 +29,7 @@ final class Entry
         private readonly array $values,
         private readonly string $status = self::STATUS_DRAFT,
         private readonly ?string $publishedAt = null,
+        private readonly ?int $authorId = null,
     ) {
     }
 
@@ -75,6 +76,11 @@ final class Entry
         return $this->status === self::STATUS_PUBLISHED;
     }
 
+    public function authorId(): ?int
+    {
+        return $this->authorId;
+    }
+
     /**
      * Returns the same entry with the supplied values merged in (existing
      * keys are overwritten). Identity fields are preserved.
@@ -83,26 +89,31 @@ final class Entry
      */
     public function withValues(array $values): self
     {
-        return new self($this->id, $this->collectionId, $this->slug, $values, $this->status, $this->publishedAt);
+        return new self($this->id, $this->collectionId, $this->slug, $values, $this->status, $this->publishedAt, $this->authorId);
     }
 
     public function withId(int $id): self
     {
-        return new self($id, $this->collectionId, $this->slug, $this->values, $this->status, $this->publishedAt);
+        return new self($id, $this->collectionId, $this->slug, $this->values, $this->status, $this->publishedAt, $this->authorId);
     }
 
     public function withSlug(string $slug): self
     {
-        return new self($this->id, $this->collectionId, $slug, $this->values, $this->status, $this->publishedAt);
+        return new self($this->id, $this->collectionId, $slug, $this->values, $this->status, $this->publishedAt, $this->authorId);
     }
 
     public function withStatus(string $status): self
     {
-        return new self($this->id, $this->collectionId, $this->slug, $this->values, $status, $this->publishedAt);
+        return new self($this->id, $this->collectionId, $this->slug, $this->values, $status, $this->publishedAt, $this->authorId);
     }
 
     public function withPublishedAt(?string $publishedAt): self
     {
-        return new self($this->id, $this->collectionId, $this->slug, $this->values, $this->status, $publishedAt);
+        return new self($this->id, $this->collectionId, $this->slug, $this->values, $this->status, $publishedAt, $this->authorId);
+    }
+
+    public function withAuthorId(?int $authorId): self
+    {
+        return new self($this->id, $this->collectionId, $this->slug, $this->values, $this->status, $this->publishedAt, $authorId);
     }
 }

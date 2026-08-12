@@ -55,7 +55,7 @@ final class AuthenticationTest extends DatabaseTestCase
 
     private function makeUser(bool $isActive = true, string $email = 'ada@example.com'): User
     {
-        return $this->users->create($email, 'Ada Lovelace', self::PASSWORD, true, $isActive);
+        return $this->users->create($email, 'Ada Lovelace', self::PASSWORD, User::ROLE_ADMIN, $isActive);
     }
 
     // --- Hashing -----------------------------------------------------------

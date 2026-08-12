@@ -12,8 +12,13 @@
             <li><a href="/admin">Dashboard</a></li>
             <li><a href="/admin/collections" aria-current="page">Collections</a></li>
             <li><a href="/admin/media">Media</a></li>
-            <li><span class="nav-placeholder" aria-disabled="true">Users</span></li>
-            <li><span class="nav-placeholder" aria-disabled="true">Settings</span></li>
+            {% if user_role == 'admin' %}
+                <li><a href="/admin/users">Users</a></li>
+                <li><a href="/admin/permissions">Permissions</a></li>
+            {% else %}
+                <li><span class="nav-placeholder" aria-disabled="true">Users</span></li>
+                <li><span class="nav-placeholder" aria-disabled="true">Settings</span></li>
+            {% endif %}
         </ul>
     </nav>
     <div class="admin-account">
@@ -27,7 +32,9 @@
 <main class="admin-main">
     <section class="collections-header">
         <h2>Collections</h2>
-        <p><a href="/admin/collections/new">New collection</a></p>
+        {% if is_admin %}
+            <p><a href="/admin/collections/new">New collection</a></p>
+        {% endif %}
     </section>
 
     {% if collections is empty %}

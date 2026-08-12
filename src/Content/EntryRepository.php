@@ -35,7 +35,7 @@ final class EntryRepository
     public function find(int $id): ?Entry
     {
         $row = $this->connection->fetchOne(
-            'SELECT id, collection_id, slug, title, status, published_at FROM entries WHERE id = :id',
+            'SELECT id, collection_id, slug, title, status, published_at, author_id FROM entries WHERE id = :id',
             ['id' => $id],
         );
         if ($row === null) {
@@ -46,7 +46,7 @@ final class EntryRepository
 
     public function findByCollectionAndSlug(int $collectionId, string $slug, ?string $status = null): ?Entry
     {
-        $sql = 'SELECT id, collection_id, slug, title, status, published_at FROM entries
+        $sql = 'SELECT id, collection_id, slug, title, status, published_at, author_id FROM entries
               WHERE collection_id = :collection_id AND slug = :slug';
         $params = ['collection_id' => $collectionId, 'slug' => $slug];
         if ($status !== null) {
@@ -65,7 +65,7 @@ final class EntryRepository
      */
     public function listByCollection(int $collectionId, ?string $status = null): array
     {
-        $sql = 'SELECT id, collection_id, slug, title, status, published_at FROM entries
+        $sql = 'SELECT id, collection_id, slug, title, status, published_at, author_id FROM entries
               WHERE collection_id = :collection_id ORDER BY id ASC';
         $params = ['collection_id' => $collectionId];
         if ($status !== null) {
@@ -95,7 +95,7 @@ final class EntryRepository
 
         $total = $this->countByCollection($collectionId, $status);
 
-        $sql = 'SELECT id, collection_id, slug, title, status, published_at FROM entries
+        $sql = 'SELECT id, collection_id, slug, title, status, published_at, author_id FROM entries
               WHERE collection_id = :collection_id';
         $params = ['collection_id' => $collectionId];
         if ($status !== null) {
@@ -181,12 +181,13 @@ final class EntryRepository
                 $title = $slugSourceString !== '' ? $slugSourceString : $slug;
 
                 $this->connection->execute(
-                    'INSERT INTO entries (collection_id, slug, title, created_at, updated_at)
-                     VALUES (:collection_id, :slug, :title, :created_at, :updated_at)',
+                    'INSERT INTO entries (collection_id, slug, title, author_id, created_at, updated_at)
+                     VALUES (:collection_id, :slug, :title, :author_id, :created_at, :updated_at)',
                     [
                         'collection_id' => $collection->id(),
                         'slug' => $slug,
                         'title' => $title,
+                        'author_id' => $authorId,
                         'created_at' => $now,
                         'updated_at' => $now,
                     ],
@@ -313,9 +314,12 @@ final class EntryRepository
         $publishedAt = isset($row['published_at']) && $row['published_at'] !== null
             ? (string) $row['published_at']
             : null;
+        $authorId = isset($row['author_id']) && $row['author_id'] !== null
+            ? (int) $row['author_id']
+            : null;
         $values = $this->loadValues($id);
 
-        return new Entry($id, $collectionId, $slug, $values, $status, $publishedAt);
+        return new Entry($id, $collectionId, $slug, $values, $status, $publishedAt, $authorId);
     }
 
     /**
