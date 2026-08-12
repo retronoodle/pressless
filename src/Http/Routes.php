@@ -13,6 +13,7 @@ use Stead\Auth\SessionRepository;
 use Stead\Auth\SessionStore;
 use Stead\Auth\UserRepository;
 use Stead\Bootstrap\Application;
+use Stead\Config\Configuration;
 use Stead\Content\CollectionRepository;
 use Stead\Content\CollectionSchemaValidator;
 use Stead\Content\EntryRepository;
@@ -30,7 +31,10 @@ use Stead\Content\FieldType\TextFieldType;
 use Stead\Content\SchemaChangeHelper;
 use Stead\Content\SlugGenerator;
 use Stead\Database\Connection;
+use Stead\Http\Cache\CollectionVersionStore;
+use Stead\Http\Cache\PageCache;
 use Stead\Http\Controller\AdminController;
+use Stead\Http\Controller\AssetController;
 use Stead\Http\Controller\CollectionAdminController;
 use Stead\Http\Controller\EntryAdminController;
 use Stead\Http\Controller\LoginController;
@@ -76,19 +80,23 @@ final class Routes
             new TwigRenderer($config),
             self::buildFieldTypeRegistry(),
             $connection,
+            $config,
         );
     }
 
     /**
      * Registers the admin routes against the supplied services. Connection is
      * passed in so Phase 2 collection/entry controllers can build their own
-     * repositories without a service locator.
+     * repositories without a service locator. Configuration is passed in so
+     * file-based caches (Phase 4+) can resolve `paths.cache` without a
+     * service locator.
      */
     public static function register(
         AuthenticationService $auth,
         Renderer $renderer,
         FieldTypeRegistry $fieldTypes,
         Connection $connection,
+        Configuration $config,
     ): Router {
         $guard = new AuthGuard($auth);
         $login = new LoginController($auth, $renderer);
@@ -99,6 +107,8 @@ final class Routes
         $slugs = new SlugGenerator($connection);
         $entryRepository = new EntryRepository($connection, $fieldTypes, $slugs);
         $entryValidator = new EntryValidator($fieldTypes);
+        $versions = new CollectionVersionStore($config->path('paths.cache'));
+        $pageCache = new PageCache($config->path('paths.cache'));
 
         $admin = new AdminController($renderer, $collections, $entryRepository);
 
@@ -117,9 +127,11 @@ final class Routes
             $entryValidator,
             $fieldTypes,
             $slugs,
+            $versions,
         );
 
-        $publicController = new PublicController($renderer, $collections, $entryRepository);
+        $publicController = new PublicController($renderer, $collections, $entryRepository, $pageCache, $versions);
+        $assetController = new AssetController($config);
 
         $router = new Router();
 
@@ -146,6 +158,11 @@ final class Routes
         $router->get('/admin/collections/{slug}/entries/{id}/edit', $guard->protect($entriesController->edit(...)), 'entries.edit');
         $router->post('/admin/collections/{slug}/entries/{id}/edit', $guard->protect($entriesController->update(...)), 'entries.update');
         $router->post('/admin/collections/{slug}/entries/{id}/delete', $guard->protect($entriesController->destroy(...)), 'entries.destroy');
+
+        // Phase 4 — static assets from the active theme's `assets/` directory.
+        // Mounted ahead of the public collection pattern so a literal `/assets/*`
+        // prefix always wins, even if a collection is named `assets`.
+        $router->get('/assets/{path}', $assetController->serve(...), 'public.asset');
 
         // Phase 3 — public collection listing and single entry pages. These
         // patterns are registered last so the literal admin paths above win.
@@ -179,6 +196,7 @@ final class Routes
             $renderer ?? new SimpleRenderer(),
             self::buildFieldTypeRegistry(),
             $connection,
+            $config,
         );
     }
 

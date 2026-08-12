@@ -6,7 +6,7 @@ WordPress runs ~40% of the web and still ships an admin from a decade and a half
 
 ## Status
 
-Early days — most of what's below is the destination, not the current state. Built so far: typed collections/entries (Collections → Fields → Entries, 8 field types), the admin CRUD for them, session-based auth + admin shell, and public site rendering (theme-aware Twig templates, a starter theme, paginated collection/entry pages). Not yet built: media library, drafts/revisions, roles & permissions, mail/invites, login rate limiting, backups, the web installer, and the entire plugin system described below.
+Early days — most of what's below is the destination, not the current state. Built so far: typed collections/entries (Collections → Fields → Entries, 8 field types), the admin CRUD for them, session-based auth + admin shell, public site rendering (theme-aware Twig templates, a starter theme, paginated collection/entry pages), a file-based page cache for public routes keyed by collection version with auto-invalidation on entry changes, and a `/assets/{path}` route serving static files from the active theme's `assets/` directory. Not yet built: media library, drafts/revisions, roles & permissions, mail/invites, login rate limiting, backups, the web installer, and the entire plugin system described below.
 
 ## Principles
 

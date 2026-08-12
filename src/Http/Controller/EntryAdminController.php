@@ -13,6 +13,7 @@ use Stead\Content\EntryValidator;
 use Stead\Content\FieldType\FieldTypeRegistry;
 use Stead\Content\SlugGenerator;
 use Stead\Exception\SafeException;
+use Stead\Http\Cache\CollectionVersionStore;
 use Stead\View\Renderer;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -34,6 +35,7 @@ final class EntryAdminController
         private readonly EntryValidator $validator,
         private readonly FieldTypeRegistry $fieldTypes,
         private readonly SlugGenerator $slugs,
+        private readonly CollectionVersionStore $versions,
     ) {
     }
 
@@ -135,6 +137,8 @@ final class EntryAdminController
             );
         }
 
+        $this->versions->bump($collection->id());
+
         return new RedirectResponse(
             '/admin/collections/' . rawurlencode($slug) . '/entries/' . $saved->id() . '/edit',
             Response::HTTP_SEE_OTHER,
@@ -215,6 +219,8 @@ final class EntryAdminController
             );
         }
 
+        $this->versions->bump($collection->id());
+
         return new RedirectResponse(
             '/admin/collections/' . rawurlencode($slug) . '/entries/' . $saved->id() . '/edit',
             Response::HTTP_SEE_OTHER,
@@ -238,6 +244,7 @@ final class EntryAdminController
         }
 
         $this->entries->delete($entry->id());
+        $this->versions->bump($collection->id());
 
         return new RedirectResponse(
             '/admin/collections/' . rawurlencode($slug),

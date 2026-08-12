@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace Stead\Http\Controller;
 
-use Stead\Content\Collection;
 use Stead\Content\CollectionRepository;
-use Stead\Content\Entry;
 use Stead\Content\EntryRepository;
+use Stead\Http\Cache\CollectionVersionStore;
+use Stead\Http\Cache\PageCache;
 use Stead\View\Renderer;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -27,6 +27,8 @@ final class PublicController
         private readonly Renderer $renderer,
         private readonly CollectionRepository $collections,
         private readonly EntryRepository $entries,
+        private readonly PageCache $pageCache,
+        private readonly CollectionVersionStore $versions,
     ) {
     }
 
@@ -36,10 +38,15 @@ final class PublicController
     public function home(Request $request, array $parameters = []): Response
     {
         $collections = $this->collections->all();
+        $key = 'home|' . $this->homeVersionsKey($collections);
 
-        return $this->html($this->renderer->render('home', [
-            'collections' => $collections,
-        ]));
+        $html = $this->pageCache->remember($key, function () use ($collections): string {
+            return $this->renderer->render('home', [
+                'collections' => $collections,
+            ]);
+        });
+
+        return $this->html($html);
     }
 
     /**
@@ -54,16 +61,26 @@ final class PublicController
         }
 
         $page = $this->resolvePage($request);
-        $listing = $this->entries->listByCollectionPaged($collection->id(), $page);
+        $key = sprintf(
+            'collection|%s|%d|%d',
+            $collection->slug(),
+            $this->versions->get($collection->id()),
+            $page,
+        );
 
-        return $this->html($this->renderer->render('collection', [
-            'collection' => $collection,
-            'entries' => $listing['entries'],
-            'page' => $listing['page'],
-            'has_next' => $listing['has_next'],
-            'total' => $listing['total'],
-            'page_size' => $listing['page_size'],
-        ]));
+        $html = $this->pageCache->remember($key, function () use ($collection, $page): string {
+            $listing = $this->entries->listByCollectionPaged($collection->id(), $page);
+            return $this->renderer->render('collection', [
+                'collection' => $collection,
+                'entries' => $listing['entries'],
+                'page' => $listing['page'],
+                'has_next' => $listing['has_next'],
+                'total' => $listing['total'],
+                'page_size' => $listing['page_size'],
+            ]);
+        });
+
+        return $this->html($html);
     }
 
     /**
@@ -84,10 +101,21 @@ final class PublicController
             return new Response('', Response::HTTP_NOT_FOUND);
         }
 
-        return $this->html($this->renderer->render('entry', [
-            'collection' => $collection,
-            'entry' => $entry,
-        ]));
+        $key = sprintf(
+            'entry|%s|%s|%d',
+            $collection->slug(),
+            $entry->slug(),
+            $this->versions->get($collection->id()),
+        );
+
+        $html = $this->pageCache->remember($key, function () use ($collection, $entry): string {
+            return $this->renderer->render('entry', [
+                'collection' => $collection,
+                'entry' => $entry,
+            ]);
+        });
+
+        return $this->html($html);
     }
 
     private function resolvePage(Request $request): int
@@ -98,6 +126,18 @@ final class PublicController
         }
         $page = (int) $raw;
         return $page < 1 ? 1 : $page;
+    }
+
+    /**
+     * @param list<\Stead\Content\Collection> $collections
+     */
+    private function homeVersionsKey(array $collections): string
+    {
+        $parts = [];
+        foreach ($collections as $collection) {
+            $parts[] = $collection->id() . ':' . $this->versions->get($collection->id());
+        }
+        return implode('|', $parts);
     }
 
     private function html(string $body): Response
