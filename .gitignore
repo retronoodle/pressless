@@ -49,6 +49,11 @@ composer.lock
 /var/*.sqlite-wal
 /var/*.db
 
+# Local backup archives. These are generated dumps of the DB and media
+# directory, made on-demand or before an update — not source, and can contain
+# real user data. LocalStorageTarget creates the directory itself if missing.
+/var/backups/*
+
 # Test & static analysis caches
 /.phpunit.cache/
 /.phpunit.result.cache

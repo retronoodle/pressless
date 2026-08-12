@@ -288,8 +288,6 @@ final class InstallerController
             return $this->finishRedirect();
         }
 
-        $this->writeConfig($wizard, $db);
-
         $config = $this->buildLiveConfiguration($db, $wizard);
         $connection = new Connection($config);
 
@@ -311,6 +309,11 @@ final class InstallerController
 
         $connection->close();
 
+        // Only point .env (and the installer lock) at this database once it's
+        // fully migrated and has an admin user — otherwise a request that
+        // lands between the write and the migration would find a real path
+        // with no schema behind it yet.
+        $this->writeConfig($wizard, $db);
         InstallerLock::create($this->projectRoot);
 
         return $this->finishRedirect();
