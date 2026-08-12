@@ -25,6 +25,8 @@ final class Resetter
         'permissions',
         'roles',
         'backups',
+        'redirects',
+        'settings',
         'migrations',
     ];
 

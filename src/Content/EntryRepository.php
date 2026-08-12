@@ -29,13 +29,14 @@ final class EntryRepository
         private readonly SlugGenerator $slugs,
         private readonly ?RevisionRepository $revisions = null,
         private readonly ?Configuration $config = null,
+        private readonly ?RedirectRepository $redirects = null,
     ) {
     }
 
     public function find(int $id): ?Entry
     {
         $row = $this->connection->fetchOne(
-            'SELECT id, collection_id, slug, title, status, published_at, author_id FROM entries WHERE id = :id',
+            'SELECT id, collection_id, slug, title, status, published_at, author_id, meta_title, meta_description, og_image_id FROM entries WHERE id = :id',
             ['id' => $id],
         );
         if ($row === null) {
@@ -46,7 +47,7 @@ final class EntryRepository
 
     public function findByCollectionAndSlug(int $collectionId, string $slug, ?string $status = null): ?Entry
     {
-        $sql = 'SELECT id, collection_id, slug, title, status, published_at, author_id FROM entries
+        $sql = 'SELECT id, collection_id, slug, title, status, published_at, author_id, meta_title, meta_description, og_image_id FROM entries
               WHERE collection_id = :collection_id AND slug = :slug';
         $params = ['collection_id' => $collectionId, 'slug' => $slug];
         if ($status !== null) {
@@ -65,7 +66,7 @@ final class EntryRepository
      */
     public function listByCollection(int $collectionId, ?string $status = null): array
     {
-        $sql = 'SELECT id, collection_id, slug, title, status, published_at, author_id FROM entries
+        $sql = 'SELECT id, collection_id, slug, title, status, published_at, author_id, meta_title, meta_description, og_image_id FROM entries
               WHERE collection_id = :collection_id ORDER BY id ASC';
         $params = ['collection_id' => $collectionId];
         if ($status !== null) {
@@ -95,7 +96,7 @@ final class EntryRepository
 
         $total = $this->countByCollection($collectionId, $status);
 
-        $sql = 'SELECT id, collection_id, slug, title, status, published_at, author_id FROM entries
+        $sql = 'SELECT id, collection_id, slug, title, status, published_at, author_id, meta_title, meta_description, og_image_id FROM entries
               WHERE collection_id = :collection_id';
         $params = ['collection_id' => $collectionId];
         if ($status !== null) {
@@ -153,15 +154,31 @@ final class EntryRepository
      * capturing the entry's pre-save state; the oldest revisions beyond
      * the configured retention limit are pruned in the same transaction.
      *
+     * The optional `$seo` array carries the entry-level SEO fields
+     * (`meta_title`, `meta_description`, `og_image_id`) which live on the
+     * `entries` row rather than in `entry_values`. Pass an empty array to
+     * leave them as-is for updates or default NULL for inserts.
+     *
      * @param array<string, mixed> $payload map of field_key => submitted value
+     * @param array{meta_title?: ?string, meta_description?: ?string, og_image_id?: ?int} $seo
      */
-    public function save(Entry $entry, Collection $collection, array $payload, ?int $authorId = null): Entry
+    public function save(Entry $entry, Collection $collection, array $payload, ?int $authorId = null, array $seo = []): Entry
     {
         $fields = $collection->fields();
         $now = self::now();
         $slugSourceKey = $this->resolveSlugSourceKey($fields);
         $slugSourceRaw = $payload[$slugSourceKey] ?? null;
         $slugSourceString = $this->stringify($slugSourceRaw);
+
+        $seoMetaTitle = isset($seo['meta_title']) && $seo['meta_title'] !== ''
+            ? (string) $seo['meta_title']
+            : null;
+        $seoMetaDescription = isset($seo['meta_description']) && $seo['meta_description'] !== ''
+            ? (string) $seo['meta_description']
+            : null;
+        $seoOgImageId = isset($seo['og_image_id']) && $seo['og_image_id'] !== null && $seo['og_image_id'] !== '' && (int) $seo['og_image_id'] > 0
+            ? (int) $seo['og_image_id']
+            : null;
 
         $resultEntry = $this->connection->transaction(function () use (
             $entry,
@@ -172,6 +189,9 @@ final class EntryRepository
             $slugSourceString,
             $now,
             $authorId,
+            $seoMetaTitle,
+            $seoMetaDescription,
+            $seoOgImageId,
         ): array {
             if ($entry->id() === 0) {
                 $slug = $this->slugs->uniqueForCollection(
@@ -181,13 +201,16 @@ final class EntryRepository
                 $title = $slugSourceString !== '' ? $slugSourceString : $slug;
 
                 $this->connection->execute(
-                    'INSERT INTO entries (collection_id, slug, title, author_id, created_at, updated_at)
-                     VALUES (:collection_id, :slug, :title, :author_id, :created_at, :updated_at)',
+                    'INSERT INTO entries (collection_id, slug, title, author_id, meta_title, meta_description, og_image_id, created_at, updated_at)
+                     VALUES (:collection_id, :slug, :title, :author_id, :meta_title, :meta_description, :og_image_id, :created_at, :updated_at)',
                     [
                         'collection_id' => $collection->id(),
                         'slug' => $slug,
                         'title' => $title,
                         'author_id' => $authorId,
+                        'meta_title' => $seoMetaTitle,
+                        'meta_description' => $seoMetaDescription,
+                        'og_image_id' => $seoOgImageId,
                         'created_at' => $now,
                         'updated_at' => $now,
                     ],
@@ -213,6 +236,7 @@ final class EntryRepository
 
                 $existingSource = $existing->value($slugSourceKey);
                 $sourceChanged = $this->stringify($existingSource) !== $slugSourceString;
+                $oldSlug = $existing->slug();
 
                 if ($sourceChanged) {
                     $slug = $this->slugs->uniqueForCollection(
@@ -221,15 +245,25 @@ final class EntryRepository
                         $entryId,
                     );
                 } else {
-                    $slug = $existing->slug();
+                    $slug = $oldSlug;
                 }
                 $title = $slugSourceString !== '' ? $slugSourceString : $slug;
 
                 $this->connection->execute(
-                    'UPDATE entries SET slug = :slug, title = :title, updated_at = :updated_at WHERE id = :id',
+                    'UPDATE entries
+                        SET slug = :slug,
+                            title = :title,
+                            meta_title = :meta_title,
+                            meta_description = :meta_description,
+                            og_image_id = :og_image_id,
+                            updated_at = :updated_at
+                      WHERE id = :id',
                     [
                         'slug' => $slug,
                         'title' => $title,
+                        'meta_title' => $seoMetaTitle,
+                        'meta_description' => $seoMetaDescription,
+                        'og_image_id' => $seoOgImageId,
                         'updated_at' => $now,
                         'id' => $entryId,
                     ],
@@ -239,6 +273,13 @@ final class EntryRepository
                     'DELETE FROM entry_values WHERE entry_id = :entry_id',
                     ['entry_id' => $entryId],
                 );
+
+                if ($sourceChanged && $slug !== $oldSlug && $this->redirects !== null) {
+                    $this->redirects->upsert(
+                        $this->publicPath($collection->slug(), $oldSlug),
+                        $this->publicPath($collection->slug(), $slug),
+                    );
+                }
             }
 
             $this->writeValues($entryId, $collection, $payload, $fields, $now);
@@ -317,9 +358,18 @@ final class EntryRepository
         $authorId = isset($row['author_id']) && $row['author_id'] !== null
             ? (int) $row['author_id']
             : null;
+        $metaTitle = isset($row['meta_title']) && $row['meta_title'] !== null && $row['meta_title'] !== ''
+            ? (string) $row['meta_title']
+            : null;
+        $metaDescription = isset($row['meta_description']) && $row['meta_description'] !== null && $row['meta_description'] !== ''
+            ? (string) $row['meta_description']
+            : null;
+        $ogImageId = isset($row['og_image_id']) && $row['og_image_id'] !== null
+            ? (int) $row['og_image_id']
+            : null;
         $values = $this->loadValues($id);
 
-        return new Entry($id, $collectionId, $slug, $values, $status, $publishedAt, $authorId);
+        return new Entry($id, $collectionId, $slug, $values, $status, $publishedAt, $authorId, $metaTitle, $metaDescription, $ogImageId);
     }
 
     /**
@@ -474,5 +524,10 @@ final class EntryRepository
     private static function now(): string
     {
         return gmdate('Y-m-d H:i:s');
+    }
+
+    private function publicPath(string $collectionSlug, string $entrySlug): string
+    {
+        return '/' . ltrim($collectionSlug, '/') . '/' . ltrim($entrySlug, '/');
     }
 }

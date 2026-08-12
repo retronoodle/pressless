@@ -30,6 +30,9 @@ final class Entry
         private readonly string $status = self::STATUS_DRAFT,
         private readonly ?string $publishedAt = null,
         private readonly ?int $authorId = null,
+        private readonly ?string $metaTitle = null,
+        private readonly ?string $metaDescription = null,
+        private readonly ?int $ogImageId = null,
     ) {
     }
 
@@ -81,6 +84,21 @@ final class Entry
         return $this->authorId;
     }
 
+    public function metaTitle(): ?string
+    {
+        return $this->metaTitle;
+    }
+
+    public function metaDescription(): ?string
+    {
+        return $this->metaDescription;
+    }
+
+    public function ogImageId(): ?int
+    {
+        return $this->ogImageId;
+    }
+
     /**
      * Returns the same entry with the supplied values merged in (existing
      * keys are overwritten). Identity fields are preserved.
@@ -89,31 +107,36 @@ final class Entry
      */
     public function withValues(array $values): self
     {
-        return new self($this->id, $this->collectionId, $this->slug, $values, $this->status, $this->publishedAt, $this->authorId);
+        return new self($this->id, $this->collectionId, $this->slug, $values, $this->status, $this->publishedAt, $this->authorId, $this->metaTitle, $this->metaDescription, $this->ogImageId);
     }
 
     public function withId(int $id): self
     {
-        return new self($id, $this->collectionId, $this->slug, $this->values, $this->status, $this->publishedAt, $this->authorId);
+        return new self($id, $this->collectionId, $this->slug, $this->values, $this->status, $this->publishedAt, $this->authorId, $this->metaTitle, $this->metaDescription, $this->ogImageId);
     }
 
     public function withSlug(string $slug): self
     {
-        return new self($this->id, $this->collectionId, $slug, $this->values, $this->status, $this->publishedAt, $this->authorId);
+        return new self($this->id, $this->collectionId, $slug, $this->values, $this->status, $this->publishedAt, $this->authorId, $this->metaTitle, $this->metaDescription, $this->ogImageId);
     }
 
     public function withStatus(string $status): self
     {
-        return new self($this->id, $this->collectionId, $this->slug, $this->values, $status, $this->publishedAt, $this->authorId);
+        return new self($this->id, $this->collectionId, $this->slug, $this->values, $status, $this->publishedAt, $this->authorId, $this->metaTitle, $this->metaDescription, $this->ogImageId);
     }
 
     public function withPublishedAt(?string $publishedAt): self
     {
-        return new self($this->id, $this->collectionId, $this->slug, $this->values, $this->status, $publishedAt, $this->authorId);
+        return new self($this->id, $this->collectionId, $this->slug, $this->values, $this->status, $publishedAt, $this->authorId, $this->metaTitle, $this->metaDescription, $this->ogImageId);
     }
 
     public function withAuthorId(?int $authorId): self
     {
-        return new self($this->id, $this->collectionId, $this->slug, $this->values, $this->status, $this->publishedAt, $authorId);
+        return new self($this->id, $this->collectionId, $this->slug, $this->values, $this->status, $this->publishedAt, $authorId, $this->metaTitle, $this->metaDescription, $this->ogImageId);
+    }
+
+    public function withSeo(?string $metaTitle, ?string $metaDescription, ?int $ogImageId): self
+    {
+        return new self($this->id, $this->collectionId, $this->slug, $this->values, $this->status, $this->publishedAt, $this->authorId, $metaTitle, $metaDescription, $ogImageId);
     }
 }

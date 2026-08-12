@@ -27,6 +27,7 @@ use Stead\Content\CollectionRepository;
 use Stead\Content\CollectionSchemaValidator;
 use Stead\Content\EntryRepository;
 use Stead\Content\EntryValidator;
+use Stead\Content\RedirectRepository;
 use Stead\Content\RevisionRepository;
 use Stead\Content\FieldType\BooleanFieldType;
 use Stead\Content\FieldType\DateFieldType;
@@ -57,11 +58,14 @@ use Stead\Http\Controller\MediaAdminController;
 use Stead\Http\Controller\MediaServeController;
 use Stead\Http\Controller\PermissionAdminController;
 use Stead\Http\Controller\PublicController;
+use Stead\Http\Controller\RedirectAdminController;
+use Stead\Http\Controller\SettingsAdminController;
 use Stead\Http\Controller\UserAdminController;
 use Stead\Invites\InviteRepository;
 use Stead\Mail\MailSettingsRepository;
 use Stead\Mail\SmtpTransport;
 use Stead\Media\GdImageTransformer;
+use Stead\Settings\SettingsRepository;
 use Stead\Media\LocalStorage;
 use Stead\Media\MediaRepository;
 use Stead\Media\TransformCache;
@@ -144,7 +148,15 @@ final class Routes
         $schemaChanges = new SchemaChangeHelper($connection);
         $slugs = new SlugGenerator($connection);
         $revisionRepository = new RevisionRepository($connection);
-        $entryRepository = new EntryRepository($connection, $fieldTypes, $slugs, $revisionRepository, $config);
+        $redirectRepository = new RedirectRepository($connection);
+        $entryRepository = new EntryRepository(
+            $connection,
+            $fieldTypes,
+            $slugs,
+            $revisionRepository,
+            $config,
+            $redirectRepository,
+        );
         $entryValidator = new EntryValidator($fieldTypes);
         $versions = new CollectionVersionStore($config->path('paths.cache'));
         $pageCache = new PageCache($config->path('paths.cache'));
@@ -208,12 +220,13 @@ final class Routes
             $versions,
             $revisionRepository,
             $authorization,
+            $mediaRepository,
         );
 
         $mediaAdminController = new MediaAdminController($renderer, $mediaRepository, $storage, $config);
         $mediaServeController = new MediaServeController($mediaRepository, $storage, $transforms);
 
-        $publicController = new PublicController($renderer, $collections, $entryRepository, $pageCache, $versions);
+        $publicController = new PublicController($renderer, $collections, $entryRepository, $pageCache, $versions, $redirectRepository);
         $assetController = new AssetController($config);
 
         $userAdminController = new UserAdminController($renderer, $users);
@@ -232,6 +245,11 @@ final class Routes
             $smtpTransport,
             $config,
         );
+
+        $settingsRepository = new SettingsRepository($connection);
+        $settingsAdminController = new SettingsAdminController($renderer, $settingsRepository);
+
+        $redirectAdminController = new RedirectAdminController($renderer, $redirectRepository);
 
         $inviteRepository = new InviteRepository($connection);
         $inviteAdminController = new InviteAdminController(
@@ -301,6 +319,15 @@ final class Routes
         $router->get('/admin/mail-settings', $guard->protect($collectionAuth->requireAdmin($mailSettingsAdminController->index(...))), 'mail-settings.index');
         $router->post('/admin/mail-settings', $guard->protect($collectionAuth->requireAdmin($mailSettingsAdminController->save(...))), 'mail-settings.save');
         $router->post('/admin/mail-settings/test-send', $guard->protect($collectionAuth->requireAdmin($mailSettingsAdminController->testSend(...))), 'mail-settings.test-send');
+
+        // Phase 13 — site settings (admin-only).
+        $router->get('/admin/settings', $guard->protect($collectionAuth->requireAdmin($settingsAdminController->index(...))), 'settings.index');
+        $router->post('/admin/settings', $guard->protect($collectionAuth->requireAdmin($settingsAdminController->save(...))), 'settings.save');
+
+        // Phase 13 — manual redirects (admin-only).
+        $router->get('/admin/redirects', $guard->protect($collectionAuth->requireAdmin($redirectAdminController->index(...))), 'redirects.index');
+        $router->post('/admin/redirects', $guard->protect($collectionAuth->requireAdmin($redirectAdminController->store(...))), 'redirects.store');
+        $router->post('/admin/redirects/{id}/delete', $guard->protect($collectionAuth->requireAdmin($redirectAdminController->destroy(...))), 'redirects.destroy');
 
         $router->get('/admin/invites', $guard->protect($collectionAuth->requireAdmin(static function (): RedirectResponse {
             return new RedirectResponse('/admin/invites/new', Response::HTTP_SEE_OTHER);

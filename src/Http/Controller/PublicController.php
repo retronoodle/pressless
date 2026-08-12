@@ -6,9 +6,11 @@ namespace Stead\Http\Controller;
 
 use Stead\Content\CollectionRepository;
 use Stead\Content\EntryRepository;
+use Stead\Content\RedirectRepository;
 use Stead\Http\Cache\CollectionVersionStore;
 use Stead\Http\Cache\PageCache;
 use Stead\View\Renderer;
+use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -29,6 +31,7 @@ final class PublicController
         private readonly EntryRepository $entries,
         private readonly PageCache $pageCache,
         private readonly CollectionVersionStore $versions,
+        private readonly RedirectRepository $redirects,
     ) {
     }
 
@@ -93,12 +96,12 @@ final class PublicController
 
         $collection = $this->collections->findBySlug($collectionSlug);
         if ($collection === null) {
-            return new Response('', Response::HTTP_NOT_FOUND);
+            return $this->redirectOrNotFound($collectionSlug, $entrySlug);
         }
 
         $entry = $this->entries->findByCollectionAndSlug($collection->id(), $entrySlug, EntryRepository::STATUS_PUBLISHED);
         if ($entry === null) {
-            return new Response('', Response::HTTP_NOT_FOUND);
+            return $this->redirectOrNotFound($collectionSlug, $entrySlug);
         }
 
         $key = sprintf(
@@ -116,6 +119,22 @@ final class PublicController
         });
 
         return $this->html($html);
+    }
+
+    /**
+     * Looks up the requested public entry path in `redirects`. Returns an
+     * HTTP 301 to the new path on a match; otherwise returns the existing
+     * 404 empty response. The live entry lookup above has already failed,
+     * so a redirect row is the only remaining fallback.
+     */
+    private function redirectOrNotFound(string $collectionSlug, string $entrySlug): Response
+    {
+        $requestedPath = '/' . ltrim($collectionSlug, '/') . '/' . ltrim($entrySlug, '/');
+        $redirect = $this->redirects->findByOldPath($requestedPath);
+        if ($redirect !== null) {
+            return new RedirectResponse($redirect->newPath(), Response::HTTP_MOVED_PERMANENTLY);
+        }
+        return new Response('', Response::HTTP_NOT_FOUND);
     }
 
     private function resolvePage(Request $request): int

@@ -79,6 +79,29 @@
             {% endif %}
         {% endfor %}
 
+        <fieldset class="field field-seo">
+            <legend>SEO</legend>
+            <p class="hint">Optional metadata for search engines and social shares.</p>
+            <label>
+                <span>Meta title</span>
+                <input type="text" name="seo[meta_title]" value="{{ seo.meta_title|default('')|e }}" maxlength="255">
+            </label>
+            <label>
+                <span>Meta description</span>
+                <textarea name="seo[meta_description]" rows="3" maxlength="500">{{ seo.meta_description|default('')|e }}</textarea>
+            </label>
+            <label>
+                <span>Open Graph image</span>
+                <select name="seo[og_image_id]">
+                    <option value="0" {% if not seo.og_image_id %}selected{% endif %}>— None —</option>
+                    {% for item in media_items %}
+                        <option value="{{ item.id()|e }}" {% if seo.og_image_id == item.id() %}selected{% endif %}>{{ item.filename()|e }} ({{ item.mimeType()|e }})</option>
+                    {% endfor %}
+                </select>
+                <small>Upload new files in <a href="/admin/media">Media</a>.</small>
+            </label>
+        </fieldset>
+
         <p>
             <button type="submit">Save entry</button>
             <a href="{{ cancel_url|e }}">Cancel</a>

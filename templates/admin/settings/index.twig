@@ -1,0 +1,72 @@
+{% extends 'layout/base.twig' %}
+
+{% block title %}Site settings - Stead admin{% endblock %}
+
+{% block body_class %}stead stead-admin stead-settings{% endblock %}
+
+{% block body %}
+<header class="admin-header">
+    <h1>Stead admin</h1>
+    <nav class="admin-nav" aria-label="Admin sections">
+        <ul>
+            <li><a href="/admin">Dashboard</a></li>
+            <li><a href="/admin/collections">Collections</a></li>
+            <li><a href="/admin/media">Media</a></li>
+            <li><a href="/admin/users">Users</a></li>
+            <li><a href="/admin/permissions">Permissions</a></li>
+            <li><a href="/admin/mail-settings">Mail</a></li>
+            <li><a href="/admin/settings" aria-current="page">Settings</a></li>
+            <li><a href="/admin/invites">Invites</a></li>
+        </ul>
+    </nav>
+    <div class="admin-account">
+        <p>Signed in as <strong>{{ user_name }}</strong> ({{ user_role }}).</p>
+        <form method="post" action="/admin/logout">
+            <button type="submit">Sign out</button>
+        </form>
+    </div>
+</header>
+
+<main class="admin-main">
+    <section class="settings-header">
+        <h2>Site settings</h2>
+        <p>Site-wide identity used across the public site.</p>
+    </section>
+
+    {% if flash %}
+        <section class="form-flash">
+            <p>{{ flash|e }}</p>
+        </section>
+    {% endif %}
+
+    {% if errors|length > 0 %}
+        <section class="form-errors">
+            <h3>Please correct the following:</h3>
+            <ul>
+                {% for field, messages in errors %}
+                    {% for message in messages %}
+                        <li><strong>{{ field|e }}:</strong> {{ message|e }}</li>
+                    {% endfor %}
+                {% endfor %}
+            </ul>
+        </section>
+    {% endif %}
+
+    <form method="post" action="{{ action_url }}" class="settings-form">
+        <label>
+            <span>Site name</span>
+            <input type="text" name="site_name" value="{{ values.site_name|e }}" maxlength="190">
+        </label>
+        <label>
+            <span>Timezone</span>
+            <input type="text" name="timezone" value="{{ values.timezone|e }}" required placeholder="UTC">
+        </label>
+        <label>
+            <span>Date format</span>
+            <input type="text" name="date_format" value="{{ values.date_format|e }}" required placeholder="Y-m-d">
+            <small>PHP <code>date()</code> format string (e.g. <code>Y-m-d</code>, <code>F j, Y</code>).</small>
+        </label>
+        <p><button type="submit">Save settings</button></p>
+    </form>
+</main>
+{% endblock %}

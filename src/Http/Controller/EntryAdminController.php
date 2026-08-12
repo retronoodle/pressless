@@ -17,6 +17,7 @@ use Stead\Content\RevisionRepository;
 use Stead\Content\SlugGenerator;
 use Stead\Exception\SafeException;
 use Stead\Http\Cache\CollectionVersionStore;
+use Stead\Media\MediaRepository;
 use Stead\View\Renderer;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -44,6 +45,7 @@ final class EntryAdminController
         private readonly CollectionVersionStore $versions,
         private readonly RevisionRepository $revisions,
         private readonly AuthorizationService $authorization,
+        private readonly MediaRepository $media,
     ) {
     }
 
@@ -96,12 +98,14 @@ final class EntryAdminController
         }
 
         $payload = $this->extractPayload($request);
+        $seo = $this->extractSeo($request);
         return $this->renderForm(
             $request,
             $collection,
             new Entry(0, $collection->id(), '', []),
             $payload['values'],
             [],
+            $seo,
             isEdit: false,
             actionUrl: '/admin/collections/' . rawurlencode($slug) . '/entries/new',
             cancelUrl: '/admin/collections/' . rawurlencode($slug),
@@ -120,6 +124,7 @@ final class EntryAdminController
         }
 
         $payload = $this->extractPayload($request);
+        $seo = $this->extractSeo($request);
         $result = $this->validator->validate($collection, $payload['values']);
         if ($result->hasErrors()) {
             return $this->renderForm(
@@ -128,6 +133,7 @@ final class EntryAdminController
                 new Entry(0, $collection->id(), '', []),
                 $payload['values'],
                 $result->errors(),
+                $seo,
                 isEdit: false,
                 actionUrl: '/admin/collections/' . rawurlencode($slug) . '/entries/new',
                 cancelUrl: '/admin/collections/' . rawurlencode($slug),
@@ -140,6 +146,7 @@ final class EntryAdminController
                 $collection,
                 $payload['values'],
                 $this->authorIdFromRequest($request),
+                $seo,
             );
         } catch (SafeException $e) {
             return $this->renderForm(
@@ -148,6 +155,7 @@ final class EntryAdminController
                 new Entry(0, $collection->id(), '', []),
                 $payload['values'],
                 ['__schema' => [$e->publicMessage()]],
+                $seo,
                 isEdit: false,
                 actionUrl: '/admin/collections/' . rawurlencode($slug) . '/entries/new',
                 cancelUrl: '/admin/collections/' . rawurlencode($slug),
@@ -194,6 +202,7 @@ final class EntryAdminController
             $entry,
             $entry->values(),
             [],
+            $this->seoFromEntry($entry),
             isEdit: true,
             actionUrl: '/admin/collections/' . rawurlencode($slug) . '/entries/' . $id . '/edit',
             cancelUrl: '/admin/collections/' . rawurlencode($slug),
@@ -227,6 +236,7 @@ final class EntryAdminController
         }
 
         $payload = $this->extractPayload($request);
+        $seo = $this->extractSeo($request);
         $result = $this->validator->validate($collection, $payload['values']);
         if ($result->hasErrors()) {
             return $this->renderForm(
@@ -235,6 +245,7 @@ final class EntryAdminController
                 $existing,
                 $payload['values'],
                 $result->errors(),
+                $seo,
                 isEdit: true,
                 actionUrl: '/admin/collections/' . rawurlencode($slug) . '/entries/' . $id . '/edit',
                 cancelUrl: '/admin/collections/' . rawurlencode($slug),
@@ -242,7 +253,7 @@ final class EntryAdminController
         }
 
         try {
-            $saved = $this->entries->save($existing, $collection, $payload['values'], $this->authorIdFromRequest($request));
+            $saved = $this->entries->save($existing, $collection, $payload['values'], $this->authorIdFromRequest($request), $seo);
         } catch (SafeException $e) {
             return $this->renderForm(
                 $request,
@@ -250,6 +261,7 @@ final class EntryAdminController
                 $existing,
                 $payload['values'],
                 ['__schema' => [$e->publicMessage()]],
+                $seo,
                 isEdit: true,
                 actionUrl: '/admin/collections/' . rawurlencode($slug) . '/entries/' . $id . '/edit',
                 cancelUrl: '/admin/collections/' . rawurlencode($slug),
@@ -439,6 +451,7 @@ final class EntryAdminController
                 $entry,
                 $values,
                 $result->errors(),
+                $this->seoFromEntry($entry),
                 isEdit: true,
                 actionUrl: '/admin/collections/' . rawurlencode($slug) . '/entries/' . $id . '/edit',
                 cancelUrl: '/admin/collections/' . rawurlencode($slug),
@@ -446,7 +459,7 @@ final class EntryAdminController
         }
 
         try {
-            $this->entries->save($entry, $collection, $values, $this->authorIdFromRequest($request));
+            $this->entries->save($entry, $collection, $values, $this->authorIdFromRequest($request), $this->seoFromEntry($entry));
         } catch (SafeException $e) {
             return $this->renderForm(
                 $request,
@@ -454,6 +467,7 @@ final class EntryAdminController
                 $entry,
                 $values,
                 ['__schema' => [$e->publicMessage()]],
+                $this->seoFromEntry($entry),
                 isEdit: true,
                 actionUrl: '/admin/collections/' . rawurlencode($slug) . '/entries/' . $id . '/edit',
                 cancelUrl: '/admin/collections/' . rawurlencode($slug),
@@ -471,6 +485,7 @@ final class EntryAdminController
     /**
      * @param array<string, mixed>       $values
      * @param array<string, list<string>> $errors
+     * @param array{meta_title: ?string, meta_description: ?string, og_image_id: ?int} $seo
      */
     private function renderForm(
         Request $request,
@@ -478,6 +493,7 @@ final class EntryAdminController
         Entry $entry,
         array $values,
         array $errors,
+        array $seo,
         bool $isEdit,
         string $actionUrl,
         string $cancelUrl,
@@ -511,6 +527,8 @@ final class EntryAdminController
             'action_url' => $actionUrl,
             'cancel_url' => $cancelUrl,
             'slug_preview' => $slugPreview,
+            'seo' => $seo,
+            'media_items' => $this->media->all(),
             'form_title' => $isEdit
                 ? sprintf('Edit entry #%d in %s', $entry->id(), $collection->name())
                 : sprintf('New entry in %s', $collection->name()),
@@ -545,6 +563,48 @@ final class EntryAdminController
             }
         }
         return ['values' => $values];
+    }
+
+    /**
+     * Pulls the SEO field block from the submitted request. Missing keys
+     * default to empty so the form repopulates with what the admin typed.
+     *
+     * @return array{meta_title: ?string, meta_description: ?string, og_image_id: ?int}
+     */
+    private function extractSeo(Request $request): array
+    {
+        $raw = $request->request->all('seo');
+        $seo = [
+            'meta_title' => null,
+            'meta_description' => null,
+            'og_image_id' => null,
+        ];
+        if (!is_array($raw)) {
+            return $seo;
+        }
+        if (isset($raw['meta_title']) && is_string($raw['meta_title'])) {
+            $seo['meta_title'] = trim($raw['meta_title']);
+        }
+        if (isset($raw['meta_description']) && is_string($raw['meta_description'])) {
+            $seo['meta_description'] = trim($raw['meta_description']);
+        }
+        if (isset($raw['og_image_id']) && (is_string($raw['og_image_id']) || is_int($raw['og_image_id']))) {
+            $id = (int) $raw['og_image_id'];
+            $seo['og_image_id'] = $id > 0 ? $id : null;
+        }
+        return $seo;
+    }
+
+    /**
+     * @return array{meta_title: ?string, meta_description: ?string, og_image_id: ?int}
+     */
+    private function seoFromEntry(Entry $entry): array
+    {
+        return [
+            'meta_title' => $entry->metaTitle(),
+            'meta_description' => $entry->metaDescription(),
+            'og_image_id' => $entry->ogImageId(),
+        ];
     }
 
     private function findOwnedEntry(Collection $collection, int $id): ?Entry

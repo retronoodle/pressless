@@ -27,6 +27,9 @@ Early days — most of what's below is the destination, not the current state.
 - **Release pipeline:** `bin/release` builds a version-stamped, dev-stripped, production-only dist ZIP; a tagged-push CI workflow builds and publishes it automatically
 - **Update checker:** installed sites compare their `VERSION` file against the latest published release (cached, fails closed on any endpoint error) and surface an admin dashboard banner with manual update instructions
 - **Backups & restore:** `bin/backup` dumps the database (`mysqldump`, PDO fallback, or a SQLite file copy) and the media directory into a single archive, written to a local path or an S3-compatible target; scheduled via cron + `--scheduled`, with configurable retention pruning, an admin UI for settings/history, and a restore flow (CLI + admin UI, both requiring explicit confirmation). A backup is triggered automatically before the update-instructions page is shown, so a failed update has a rollback path.
+- **Site settings:** admin UI at `/admin/settings` for site name, timezone, and date format, single-row storage with sane defaults before first save
+- **Entry SEO:** `meta_title`, `meta_description`, and an `og_image` media picker on every entry's edit form, persisted alongside the entry regardless of collection
+- **Redirects:** `redirects` table with an admin UI at `/admin/redirects` for manual old-path → new-path entries; entry slug changes auto-create a redirect from the old public path to the new one, and public entry requests that would 404 check redirects first, responding with a 301
 
 **Not yet built**
 - Plugin system (described below)
@@ -50,6 +53,7 @@ Early days — most of what's below is the destination, not the current state.
 - **Invites.** Admins invite by email + role; single-use hashed tokens, public acceptance flow.
 - **Login security.** Rate limiting and lockout after repeated failed attempts.
 - **Backups built in.** Scheduled DB + media backups to a configurable target, with a restore flow.
+- **SEO-ready out of the box.** Per-entry meta title/description and social image, plus automatic redirects on slug changes so published URLs don't rot.
 - **Plugins.** Themes, field types, repositories, and admin extensions ship as plugins through a designed plugin model — not an open hook soup.
 - **Self-hosted.** LAMP-style: PHP 8.2+, MySQL/MariaDB, Twig templates.
 - **Small core.** Hand-rolled HTTP/router/DB layer. Composer only where it earns it.
