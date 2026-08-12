@@ -30,6 +30,7 @@ defaults:
         templates: templates
         cache: var/cache
         log: var/log
+        storage: storage/media
         # When `theme.active` is set, theme templates resolve from
         # `themes/<active>/` ahead of the default `templates/` directory.
         # Leave `theme.active` empty to use the default templates only.
@@ -42,6 +43,9 @@ defaults:
         cookie_secure: false
         cookie_httponly: true
         cookie_samesite: Lax
+    media:
+        # Maximum upload size in bytes. Defaults to 10 MiB.
+        max_size_bytes: 10485760
     logging:
         level: info
         file: stead.log

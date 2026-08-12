@@ -4,13 +4,24 @@ declare(strict_types=1);
 
 namespace Stead\Content\FieldType;
 
+use Stead\Media\MediaRepository;
+
 /**
- * Placeholder media reference. The picker UI is not wired until Phase 4;
- * for now the field round-trips `{"id": 0}` through `value_json` and renders
- * a clearly labeled placeholder so evaluators can see the contract.
+ * Reference to a row in the `media` table. The visible form is a `<select>`
+ * sourced from {@see MediaRepository} so an editor can pick any uploaded
+ * file. The persisted value is `{"id": int}` stored in `value_json`; the
+ * picker writes back that same shape on submit.
+ *
+ * The repository is optional so the field type can be constructed without
+ * a database (tests, headless contexts). Without it the picker renders an
+ * empty dropdown and `validate()` skips the existence check.
  */
 final class MediaFieldType implements FieldType
 {
+    public function __construct(private readonly ?MediaRepository $media = null)
+    {
+    }
+
     public function key(): string
     {
         return 'media';
@@ -49,6 +60,10 @@ final class MediaFieldType implements FieldType
             return [];
         }
 
+        if ($this->media !== null && $this->media->find($ref['id']) === null) {
+            return ['Selected media item no longer exists.'];
+        }
+
         return [];
     }
 
@@ -79,11 +94,19 @@ final class MediaFieldType implements FieldType
         $ref = $this->asMediaRef($value);
         $refId = (int) ($ref['id'] ?? 0);
 
-        $html = '<label for="' . self::e($key) . '">' . self::e($label) . '</label>'
-            . '<p class="field-placeholder" data-field="' . self::e($key) . '">'
-            . 'Media picker not yet wired.</p>'
-            . '<input type="hidden" name="fields[' . self::e($key) . '][id]" value="' . $refId . '">'
-            . '<input type="text" id="' . self::e($key) . '" value="(placeholder)" disabled>';
+        $items = $this->media !== null ? $this->media->all() : [];
+
+        $html = '<label for="' . self::e($key) . '">' . self::e($label) . '</label>';
+        $html .= '<select id="' . self::e($key) . '" name="fields[' . self::e($key) . '][id]">';
+        $html .= '<option value="0"' . ($refId === 0 ? ' selected' : '') . '>— None —</option>';
+        foreach ($items as $item) {
+            $selected = $item->id() === $refId ? ' selected' : '';
+            $html .= '<option value="' . $item->id() . '"' . $selected . '>'
+                . self::e($item->filename())
+                . ' (' . self::e($item->mimeType()) . ')</option>';
+        }
+        $html .= '</select>';
+        $html .= '<p class="hint">Upload new files in <a href="/admin/media">Media</a>.</p>';
 
         return $html . self::renderErrors($errors);
     }

@@ -1,0 +1,110 @@
+{% extends 'layout/base.twig' %}
+
+{% block title %}Media - Stead admin{% endblock %}
+
+{% block body_class %}stead stead-admin stead-media{% endblock %}
+
+{% block body %}
+<header class="admin-header">
+    <h1>Stead admin</h1>
+    <nav class="admin-nav" aria-label="Admin sections">
+        <ul>
+            <li><a href="/admin">Dashboard</a></li>
+            <li><a href="/admin/collections">Collections</a></li>
+            <li><a href="/admin/media" aria-current="page">Media</a></li>
+            <li><span class="nav-placeholder" aria-disabled="true">Users</span></li>
+            <li><span class="nav-placeholder" aria-disabled="true">Settings</span></li>
+        </ul>
+    </nav>
+    <div class="admin-account">
+        <p>Signed in as <strong>{{ user_name }}</strong>.</p>
+        <form method="post" action="/admin/logout">
+            <button type="submit">Sign out</button>
+        </form>
+    </div>
+</header>
+
+<main class="admin-main">
+    <section class="media-header">
+        <h2>Media library</h2>
+        <p>
+            <strong>{{ total }}</strong> file{{ total == 1 ? '' : 's' }}
+            {% if page_size is defined and total > page_size %}
+                &middot; page {{ page }}
+            {% endif %}
+        </p>
+    </section>
+
+    <section class="media-upload">
+        <h3>Upload a new file</h3>
+        <p class="hint">Allowed: JPEG, PNG, GIF, WebP. Maximum 10 MB.</p>
+
+        {% if errors %}
+            <ul class="form-errors" role="alert">
+                {% for message in errors %}
+                    <li>{{ message|e }}</li>
+                {% endfor %}
+            </ul>
+        {% endif %}
+
+        <form method="post" action="/admin/media" enctype="multipart/form-data">
+            <p>
+                <label for="media-file">File</label>
+                <input type="file" id="media-file" name="file" required accept="image/jpeg,image/png,image/gif,image/webp">
+            </p>
+            <p>
+                <button type="submit">Upload</button>
+            </p>
+        </form>
+    </section>
+
+    {% if items is empty %}
+        <section class="empty-state">
+            <h3>No files yet</h3>
+            <p>Uploaded files will appear here.</p>
+        </section>
+    {% else %}
+        <table class="media-table">
+            <thead>
+                <tr>
+                    <th scope="col">Preview</th>
+                    <th scope="col">Filename</th>
+                    <th scope="col">Type</th>
+                    <th scope="col">Size</th>
+                    <th scope="col">Uploaded</th>
+                    <th scope="col">URL</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in items %}
+                    <tr>
+                        <td>
+                            {% if item.mimeType() matches '/^image\\//' %}
+                                <img class="media-thumb" src="/media/{{ item.id() }}/thumb" alt="{{ item.filename()|e }}" loading="lazy">
+                            {% else %}
+                                <span class="media-thumb-fallback">{{ item.mimeType()|e }}</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ item.filename()|e }}</td>
+                        <td><code>{{ item.mimeType()|e }}</code></td>
+                        <td>{{ (item.sizeBytes() / 1024)|round(1, 'floor') }} KB</td>
+                        <td>{{ item.createdAt()|e }}</td>
+                        <td><code>/media/{{ item.id() }}/original</code></td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        {% if page_size is defined and total > page_size %}
+            <nav class="pagination" aria-label="Media pagination">
+                {% if page > 1 %}
+                    <a href="/admin/media?page={{ page - 1 }}">&larr; Previous</a>
+                {% endif %}
+                {% if has_next %}
+                    <a href="/admin/media?page={{ page + 1 }}">Next &rarr;</a>
+                {% endif %}
+            </nav>
+        {% endif %}
+    {% endif %}
+</main>
+{% endblock %}

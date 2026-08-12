@@ -1,24 +1,4 @@
-# Capability: field-types
-
-## Purpose
-
-TBD
-
-## Requirements
-
-### Requirement: Field type contract
-
-The content engine SHALL define a `FieldType` contract that exposes a stable key, human-readable label, schema fragment, value validation, value normalization, the database columns used to persist a value, the binding used when writing an entry row, the binding used when reading an entry row, and the HTML for an admin form control. The contract SHALL be the only place where per-field-type behavior is defined.
-
-#### Scenario: Registry lookup
-
-- **WHEN** application code looks up a field type by its short key (for example `text`, `number`, `date`)
-- **THEN** the registry returns the matching implementation with all contract methods callable
-
-#### Scenario: Unknown field type
-
-- **WHEN** application code looks up a field type key that is not registered
-- **THEN** the registry raises a safe error identifying the unknown key without crashing the request
+## MODIFIED Requirements
 
 ### Requirement: Built-in field types
 
@@ -63,12 +43,3 @@ The system SHALL ship the eight built-in field types behind the `FieldType` cont
 
 - **WHEN** a `media` field is submitted with an id that does not correspond to an existing media item
 - **THEN** validation returns a field-scoped error and the value is not persisted
-
-### Requirement: Field type registry is the single source of truth
-
-The system SHALL route every per-field-type decision (schema defaults, validation, persistence, form rendering) through the `FieldTypeRegistry`. Application code outside the registry SHALL NOT branch on field-type identity using `instanceof` or string equality on the type key.
-
-#### Scenario: Collection save validates field set against the registry
-
-- **WHEN** a collection is saved with a field whose `type` is not registered
-- **THEN** the save is rejected with a clear error referencing the unknown type

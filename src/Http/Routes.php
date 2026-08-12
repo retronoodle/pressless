@@ -38,7 +38,13 @@ use Stead\Http\Controller\AssetController;
 use Stead\Http\Controller\CollectionAdminController;
 use Stead\Http\Controller\EntryAdminController;
 use Stead\Http\Controller\LoginController;
+use Stead\Http\Controller\MediaAdminController;
+use Stead\Http\Controller\MediaServeController;
 use Stead\Http\Controller\PublicController;
+use Stead\Media\GdImageTransformer;
+use Stead\Media\LocalStorage;
+use Stead\Media\MediaRepository;
+use Stead\Media\TransformCache;
 use Stead\View\Renderer;
 use Stead\View\SimpleRenderer;
 use Stead\View\TwigRenderer;
@@ -78,7 +84,7 @@ final class Routes
         return self::register(
             $auth,
             new TwigRenderer($config),
-            self::buildFieldTypeRegistry(),
+            self::buildFieldTypeRegistry(new MediaRepository($connection)),
             $connection,
             $config,
         );
@@ -110,6 +116,11 @@ final class Routes
         $versions = new CollectionVersionStore($config->path('paths.cache'));
         $pageCache = new PageCache($config->path('paths.cache'));
 
+        $mediaRepository = new MediaRepository($connection);
+        $storage = new LocalStorage($config);
+        $transformer = new GdImageTransformer();
+        $transforms = new TransformCache($storage, $transformer);
+
         $admin = new AdminController($renderer, $collections, $entryRepository);
 
         $collectionsController = new CollectionAdminController(
@@ -129,6 +140,9 @@ final class Routes
             $slugs,
             $versions,
         );
+
+        $mediaAdminController = new MediaAdminController($renderer, $mediaRepository, $storage, $config);
+        $mediaServeController = new MediaServeController($mediaRepository, $storage, $transforms);
 
         $publicController = new PublicController($renderer, $collections, $entryRepository, $pageCache, $versions);
         $assetController = new AssetController($config);
@@ -159,10 +173,19 @@ final class Routes
         $router->post('/admin/collections/{slug}/entries/{id}/edit', $guard->protect($entriesController->update(...)), 'entries.update');
         $router->post('/admin/collections/{slug}/entries/{id}/delete', $guard->protect($entriesController->destroy(...)), 'entries.destroy');
 
+        // Phase 5 — media library admin.
+        $router->get('/admin/media', $guard->protect($mediaAdminController->index(...)), 'media.index');
+        $router->post('/admin/media', $guard->protect($mediaAdminController->upload(...)), 'media.upload');
+
         // Phase 4 — static assets from the active theme's `assets/` directory.
         // Mounted ahead of the public collection pattern so a literal `/assets/*`
         // prefix always wins, even if a collection is named `assets`.
         $router->get('/assets/{path}', $assetController->serve(...), 'public.asset');
+
+        // Phase 5 — public media serving. Mounted ahead of the public
+        // collection pattern so `/media/{id}/{key}` doesn't get misread as a
+        // collection slug.
+        $router->get('/media/{id}/{key}', $mediaServeController->serve(...), 'public.media');
 
         // Phase 3 — public collection listing and single entry pages. These
         // patterns are registered last so the literal admin paths above win.
@@ -194,7 +217,7 @@ final class Routes
         return self::register(
             $auth,
             $renderer ?? new SimpleRenderer(),
-            self::buildFieldTypeRegistry(),
+            self::buildFieldTypeRegistry(new MediaRepository($connection)),
             $connection,
             $config,
         );
@@ -207,7 +230,7 @@ final class Routes
      *
      * @return list<FieldType>
      */
-    private static function buildBuiltinFieldTypes(): array
+    private static function buildBuiltinFieldTypes(?MediaRepository $media = null): array
     {
         return [
             new TextFieldType(),
@@ -216,13 +239,13 @@ final class Routes
             new BooleanFieldType(),
             new DateFieldType(),
             new SelectFieldType(),
-            new MediaFieldType(),
+            new MediaFieldType($media),
             new RelationFieldType(),
         ];
     }
 
-    public static function buildFieldTypeRegistry(): FieldTypeRegistry
+    public static function buildFieldTypeRegistry(?MediaRepository $media = null): FieldTypeRegistry
     {
-        return new FieldTypeRegistry(self::buildBuiltinFieldTypes());
+        return new FieldTypeRegistry(self::buildBuiltinFieldTypes($media));
     }
 }

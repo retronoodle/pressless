@@ -23,6 +23,11 @@ composer.lock
 !/var/cache/.gitkeep
 !/var/log/.gitkeep
 
+# Uploaded media is project state, not source. The directory itself is kept
+# in git so the first upload doesn't have to handle a missing-parent race.
+/storage/media/*
+!/storage/media/.gitkeep
+
 # Local SQLite databases. These hold real password hashes once seeded, so they
 # must never be committed. WAL mode also produces -shm/-wal sidecar files.
 /var/*.sqlite
