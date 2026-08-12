@@ -46,6 +46,11 @@ defaults:
     media:
         # Maximum upload size in bytes. Defaults to 10 MiB.
         max_size_bytes: 10485760
+    content:
+        # Maximum number of revisions retained per entry. Each save of an
+        # existing entry writes a pre-save snapshot; once this many are on
+        # record, the oldest are pruned inside the same save transaction.
+        revision_retention_limit: 20
     logging:
         level: info
         file: stead.log

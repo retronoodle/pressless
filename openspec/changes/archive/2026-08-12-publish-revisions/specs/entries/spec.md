@@ -1,10 +1,4 @@
-# Capability: entries
-
-## Purpose
-
-TBD
-
-## Requirements
+## MODIFIED Requirements
 
 ### Requirement: Entry persistence with typed value rows
 
@@ -29,25 +23,6 @@ The system SHALL persist entries by writing one row per field into `entry_values
 
 - **WHEN** an administrator creates a new entry via the standard save action
 - **THEN** the entry is persisted with `status = draft` and is not visible on any public route
-
-### Requirement: Entry slug generation and uniqueness
-
-Each collection SHALL declare one field as its `slug_source`. On entry save, the system SHALL compute a slug from that field's value (lowercased, non-alphanumerics replaced with `-`, leading/trailing dashes trimmed, runs collapsed) and SHALL append `-2`, `-3`, … until a free slug is found within that collection. The slug SHALL be stored on `entries.slug` and SHALL be unique per collection.
-
-#### Scenario: First save with no collision
-
-- **WHEN** an entry is saved whose computed slug does not exist in the same collection
-- **THEN** the entry is persisted with that slug
-
-#### Scenario: Collision appends suffix
-
-- **WHEN** two entries in the same collection would compute the same slug
-- **THEN** the second entry is persisted with the first available suffixed slug (`-2`, `-3`, …) and earlier entries are unchanged
-
-#### Scenario: Editing unrelated fields keeps the slug
-
-- **WHEN** an existing entry is edited without changing its `slug_source` field
-- **THEN** the existing slug is preserved
 
 ### Requirement: Entry CRUD admin surface
 

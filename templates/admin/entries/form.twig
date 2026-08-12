@@ -34,6 +34,16 @@
 
     <h2>{{ form_title|e }}</h2>
 
+    {% if is_edit and entry.id() > 0 %}
+        <p class="entry-status">
+            <strong>Status:</strong>
+            <span class="status status-{{ entry.status()|e }}">{{ entry.status()|e }}</span>
+            {% if entry.publishedAt() is not null %}
+                <small>(published {{ entry.publishedAt()|e }})</small>
+            {% endif %}
+        </p>
+    {% endif %}
+
     {% if slug_preview %}
         <p class="slug-preview">
             <strong>Slug:</strong>
@@ -69,5 +79,23 @@
             <a href="{{ cancel_url|e }}">Cancel</a>
         </p>
     </form>
+
+    {% if is_edit and entry.id() > 0 %}
+        <section class="entry-actions">
+            <h3>Lifecycle</h3>
+            {% if entry.isPublished() %}
+                <form method="post" action="{{ unpublish_url }}">
+                    <button type="submit">Unpublish</button>
+                </form>
+            {% else %}
+                <form method="post" action="{{ publish_url }}">
+                    <button type="submit">Publish</button>
+                </form>
+            {% endif %}
+            <p>
+                <a href="{{ revisions_url }}">View revision history</a>
+            </p>
+        </section>
+    {% endif %}
 </main>
 {% endblock %}

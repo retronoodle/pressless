@@ -11,6 +11,7 @@ use Stead\Content\Entry;
 use Stead\Content\EntryRepository;
 use Stead\Content\EntryValidator;
 use Stead\Content\FieldType\FieldTypeRegistry;
+use Stead\Content\RevisionRepository;
 use Stead\Content\SlugGenerator;
 use Stead\Exception\SafeException;
 use Stead\Http\Cache\CollectionVersionStore;
@@ -36,6 +37,7 @@ final class EntryAdminController
         private readonly FieldTypeRegistry $fieldTypes,
         private readonly SlugGenerator $slugs,
         private readonly CollectionVersionStore $versions,
+        private readonly RevisionRepository $revisions,
     ) {
     }
 
@@ -57,6 +59,7 @@ final class EntryAdminController
             $rows[] = [
                 'id' => $entry->id(),
                 'slug' => $entry->slug(),
+                'status' => $entry->status(),
                 'preview' => $this->preview($entry, $previewKey),
             ];
         }
@@ -123,6 +126,7 @@ final class EntryAdminController
                 new Entry(0, $collection->id(), '', []),
                 $collection,
                 $payload['values'],
+                $this->authorIdFromRequest($request),
             );
         } catch (SafeException $e) {
             return $this->renderForm(
@@ -205,7 +209,7 @@ final class EntryAdminController
         }
 
         try {
-            $saved = $this->entries->save($existing, $collection, $payload['values']);
+            $saved = $this->entries->save($existing, $collection, $payload['values'], $this->authorIdFromRequest($request));
         } catch (SafeException $e) {
             return $this->renderForm(
                 $request,
@@ -253,6 +257,144 @@ final class EntryAdminController
     }
 
     /**
+     * @param array<string, string> $parameters
+     */
+    public function publish(Request $request, array $parameters = []): Response
+    {
+        $slug = (string) ($parameters['slug'] ?? '');
+        $id = (int) ($parameters['id'] ?? 0);
+        $collection = $this->collections->findBySlug($slug);
+        if ($collection === null) {
+            return new Response('', Response::HTTP_NOT_FOUND);
+        }
+        $entry = $this->findOwnedEntry($collection, $id);
+        if ($entry === null) {
+            return new Response('', Response::HTTP_NOT_FOUND);
+        }
+
+        $this->entries->publish($entry->id());
+        $this->versions->bump($collection->id());
+
+        return new RedirectResponse(
+            '/admin/collections/' . rawurlencode($slug) . '/entries/' . $id . '/edit',
+            Response::HTTP_SEE_OTHER,
+        );
+    }
+
+    /**
+     * @param array<string, string> $parameters
+     */
+    public function unpublish(Request $request, array $parameters = []): Response
+    {
+        $slug = (string) ($parameters['slug'] ?? '');
+        $id = (int) ($parameters['id'] ?? 0);
+        $collection = $this->collections->findBySlug($slug);
+        if ($collection === null) {
+            return new Response('', Response::HTTP_NOT_FOUND);
+        }
+        $entry = $this->findOwnedEntry($collection, $id);
+        if ($entry === null) {
+            return new Response('', Response::HTTP_NOT_FOUND);
+        }
+
+        $this->entries->unpublish($entry->id());
+        $this->versions->bump($collection->id());
+
+        return new RedirectResponse(
+            '/admin/collections/' . rawurlencode($slug) . '/entries/' . $id . '/edit',
+            Response::HTTP_SEE_OTHER,
+        );
+    }
+
+    /**
+     * @param array<string, string> $parameters
+     */
+    public function revisions(Request $request, array $parameters = []): Response
+    {
+        $slug = (string) ($parameters['slug'] ?? '');
+        $id = (int) ($parameters['id'] ?? 0);
+        $collection = $this->collections->findBySlug($slug);
+        if ($collection === null) {
+            return new Response('', Response::HTTP_NOT_FOUND);
+        }
+        $entry = $this->findOwnedEntry($collection, $id);
+        if ($entry === null) {
+            return new Response('', Response::HTTP_NOT_FOUND);
+        }
+
+        $user = $request->attributes->get('user');
+        $revisions = $this->revisions->listByEntry($entry->id());
+
+        return $this->html($this->renderer->render('admin/entries/revisions', [
+            'user_name' => $user instanceof User ? $user->name : '',
+            'collection' => $collection,
+            'entry' => $entry,
+            'revisions' => $revisions,
+            'back_url' => '/admin/collections/' . rawurlencode($slug) . '/entries/' . $id . '/edit',
+        ]));
+    }
+
+    /**
+     * @param array<string, string> $parameters
+     */
+    public function restore(Request $request, array $parameters = []): Response
+    {
+        $slug = (string) ($parameters['slug'] ?? '');
+        $id = (int) ($parameters['id'] ?? 0);
+        $revisionId = (int) ($parameters['revisionId'] ?? 0);
+        $collection = $this->collections->findBySlug($slug);
+        if ($collection === null) {
+            return new Response('', Response::HTTP_NOT_FOUND);
+        }
+        $entry = $this->findOwnedEntry($collection, $id);
+        if ($entry === null) {
+            return new Response('', Response::HTTP_NOT_FOUND);
+        }
+        $revision = $this->revisions->find($revisionId);
+        if ($revision === null || (int) ($revision['entry_id'] ?? 0) !== $entry->id()) {
+            return new Response('', Response::HTTP_NOT_FOUND);
+        }
+
+        $payload = is_array($revision['payload'] ?? null) ? $revision['payload'] : [];
+        $values = is_array($payload['values'] ?? null) ? $payload['values'] : [];
+        $result = $this->validator->validate($collection, $values);
+        if ($result->hasErrors()) {
+            return $this->renderForm(
+                $request,
+                $collection,
+                $entry,
+                $values,
+                $result->errors(),
+                isEdit: true,
+                actionUrl: '/admin/collections/' . rawurlencode($slug) . '/entries/' . $id . '/edit',
+                cancelUrl: '/admin/collections/' . rawurlencode($slug),
+            );
+        }
+
+        try {
+            $this->entries->save($entry, $collection, $values, $this->authorIdFromRequest($request));
+        } catch (SafeException $e) {
+            return $this->renderForm(
+                $request,
+                $collection,
+                $entry,
+                $values,
+                ['__schema' => [$e->publicMessage()]],
+                isEdit: true,
+                actionUrl: '/admin/collections/' . rawurlencode($slug) . '/entries/' . $id . '/edit',
+                cancelUrl: '/admin/collections/' . rawurlencode($slug),
+            );
+        }
+
+        $this->versions->bump($collection->id());
+
+        return new RedirectResponse(
+            '/admin/collections/' . rawurlencode($slug) . '/entries/' . $id . '/edit',
+            Response::HTTP_SEE_OTHER,
+        );
+    }
+
+    /**
      * @param array<string, mixed>       $values
      * @param array<string, list<string>> $errors
      */
@@ -293,6 +435,15 @@ final class EntryAdminController
             'form_title' => $isEdit
                 ? sprintf('Edit entry #%d in %s', $entry->id(), $collection->name())
                 : sprintf('New entry in %s', $collection->name()),
+            'publish_url' => $isEdit && $entry->id() !== 0
+                ? '/admin/collections/' . rawurlencode($collection->slug()) . '/entries/' . $entry->id() . '/publish'
+                : null,
+            'unpublish_url' => $isEdit && $entry->id() !== 0
+                ? '/admin/collections/' . rawurlencode($collection->slug()) . '/entries/' . $entry->id() . '/unpublish'
+                : null,
+            'revisions_url' => $isEdit && $entry->id() !== 0
+                ? '/admin/collections/' . rawurlencode($collection->slug()) . '/entries/' . $entry->id() . '/revisions'
+                : null,
         ]));
     }
 
@@ -324,6 +475,15 @@ final class EntryAdminController
             return null;
         }
         return $entry;
+    }
+
+    private function authorIdFromRequest(Request $request): ?int
+    {
+        $user = $request->attributes->get('user');
+        if (!$user instanceof User) {
+            return null;
+        }
+        return $user->id > 0 ? $user->id : null;
     }
 
     private function preview(Entry $entry, string $previewKey): string

@@ -1,0 +1,75 @@
+{% extends 'layout/base.twig' %}
+
+{% block title %}Revisions - {{ entry.slug|e }} - Stead admin{% endblock %}
+
+{% block body_class %}stead stead-admin stead-entries{% endblock %}
+
+{% block body %}
+<header class="admin-header">
+    <h1>Stead admin</h1>
+    <nav class="admin-nav" aria-label="Admin sections">
+        <ul>
+            <li><a href="/admin">Dashboard</a></li>
+            <li><a href="/admin/collections">Collections</a></li>
+            <li><a href="/admin/media">Media</a></li>
+            <li><span class="nav-placeholder" aria-disabled="true">Users</span></li>
+            <li><span class="nav-placeholder" aria-disabled="true">Settings</span></li>
+        </ul>
+    </nav>
+    <div class="admin-account">
+        <p>Signed in as <strong>{{ user_name }}</strong>.</p>
+        <form method="post" action="/admin/logout">
+            <button type="submit">Sign out</button>
+        </form>
+    </div>
+</header>
+
+<main class="admin-main">
+    <section class="active-collection">
+        <p>Now editing <strong>{{ collection.name|e }}</strong> (<code>{{ collection.slug|e }}</code>)
+            &middot;
+            <a href="{{ back_url|e }}">Back to entry</a>
+            &middot;
+            <a href="/admin/collections/{{ collection.slug|e }}">All entries</a>
+        </p>
+    </section>
+
+    <h2>Revision history: <code>{{ entry.slug|e }}</code></h2>
+    <p>
+        Status: <span class="status status-{{ entry.status()|e }}">{{ entry.status()|e }}</span>
+        {% if entry.publishedAt() is not null %}
+            <small>(published {{ entry.publishedAt()|e }})</small>
+        {% endif %}
+    </p>
+
+    {% if revisions is empty %}
+        <section class="empty-state">
+            <h3>No revisions yet</h3>
+            <p>This entry has never been re-saved, so there is nothing to restore.</p>
+        </section>
+    {% else %}
+        <table class="revisions-table">
+            <thead>
+                <tr>
+                    <th scope="col">Saved at</th>
+                    <th scope="col">Author</th>
+                    <th scope="col">Restore</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for revision in revisions %}
+                    <tr>
+                        <td>{{ revision.created_at|e }}</td>
+                        <td>{{ revision.author_name|default('Unknown')|e }}</td>
+                        <td>
+                            <form method="post" action="/admin/collections/{{ collection.slug|e }}/entries/{{ entry.id() }}/revisions/{{ revision.id }}/restore">
+                                <button type="submit">Restore</button>
+                            </form>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% endif %}
+</main>
+{% endblock %}

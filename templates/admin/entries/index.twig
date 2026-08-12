@@ -49,6 +49,7 @@
             <thead>
                 <tr>
                     <th scope="col">Slug</th>
+                    <th scope="col">Status</th>
                     <th scope="col">Preview</th>
                     <th scope="col">Actions</th>
                 </tr>
@@ -57,6 +58,7 @@
                 {% for entry in entries %}
                     <tr>
                         <td><code>{{ entry.slug|e }}</code></td>
+                        <td><span class="status status-{{ entry.status|e }}">{{ entry.status|e }}</span></td>
                         <td>{{ entry.preview|e }}</td>
                         <td>
                             <a href="/admin/collections/{{ collection.slug|e }}/entries/{{ entry.id }}/edit">Edit</a>

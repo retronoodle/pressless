@@ -69,7 +69,7 @@ final class PublicController
         );
 
         $html = $this->pageCache->remember($key, function () use ($collection, $page): string {
-            $listing = $this->entries->listByCollectionPaged($collection->id(), $page);
+            $listing = $this->entries->listByCollectionPaged($collection->id(), $page, EntryRepository::STATUS_PUBLISHED);
             return $this->renderer->render('collection', [
                 'collection' => $collection,
                 'entries' => $listing['entries'],
@@ -96,7 +96,7 @@ final class PublicController
             return new Response('', Response::HTTP_NOT_FOUND);
         }
 
-        $entry = $this->entries->findByCollectionAndSlug($collection->id(), $entrySlug);
+        $entry = $this->entries->findByCollectionAndSlug($collection->id(), $entrySlug, EntryRepository::STATUS_PUBLISHED);
         if ($entry === null) {
             return new Response('', Response::HTTP_NOT_FOUND);
         }

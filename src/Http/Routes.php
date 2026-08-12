@@ -18,6 +18,7 @@ use Stead\Content\CollectionRepository;
 use Stead\Content\CollectionSchemaValidator;
 use Stead\Content\EntryRepository;
 use Stead\Content\EntryValidator;
+use Stead\Content\RevisionRepository;
 use Stead\Content\FieldType\BooleanFieldType;
 use Stead\Content\FieldType\DateFieldType;
 use Stead\Content\FieldType\FieldType;
@@ -111,7 +112,8 @@ final class Routes
         $schemaValidator = new CollectionSchemaValidator($fieldTypes);
         $schemaChanges = new SchemaChangeHelper($connection);
         $slugs = new SlugGenerator($connection);
-        $entryRepository = new EntryRepository($connection, $fieldTypes, $slugs);
+        $revisionRepository = new RevisionRepository($connection);
+        $entryRepository = new EntryRepository($connection, $fieldTypes, $slugs, $revisionRepository, $config);
         $entryValidator = new EntryValidator($fieldTypes);
         $versions = new CollectionVersionStore($config->path('paths.cache'));
         $pageCache = new PageCache($config->path('paths.cache'));
@@ -139,6 +141,7 @@ final class Routes
             $fieldTypes,
             $slugs,
             $versions,
+            $revisionRepository,
         );
 
         $mediaAdminController = new MediaAdminController($renderer, $mediaRepository, $storage, $config);
@@ -172,6 +175,10 @@ final class Routes
         $router->get('/admin/collections/{slug}/entries/{id}/edit', $guard->protect($entriesController->edit(...)), 'entries.edit');
         $router->post('/admin/collections/{slug}/entries/{id}/edit', $guard->protect($entriesController->update(...)), 'entries.update');
         $router->post('/admin/collections/{slug}/entries/{id}/delete', $guard->protect($entriesController->destroy(...)), 'entries.destroy');
+        $router->post('/admin/collections/{slug}/entries/{id}/publish', $guard->protect($entriesController->publish(...)), 'entries.publish');
+        $router->post('/admin/collections/{slug}/entries/{id}/unpublish', $guard->protect($entriesController->unpublish(...)), 'entries.unpublish');
+        $router->get('/admin/collections/{slug}/entries/{id}/revisions', $guard->protect($entriesController->revisions(...)), 'entries.revisions');
+        $router->post('/admin/collections/{slug}/entries/{id}/revisions/{revisionId}/restore', $guard->protect($entriesController->restore(...)), 'entries.restore');
 
         // Phase 5 — media library admin.
         $router->get('/admin/media', $guard->protect($mediaAdminController->index(...)), 'media.index');

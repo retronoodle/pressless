@@ -1,10 +1,4 @@
-# Capability: public-rendering
-
-## Purpose
-
-TBD
-
-## Requirements
+## MODIFIED Requirements
 
 ### Requirement: Public collection listing route
 
@@ -48,31 +42,3 @@ The system SHALL serve `GET /{collectionSlug}/{entrySlug}` by resolving the coll
 
 - **WHEN** a visitor requests `GET /{collectionSlug}/{entrySlug}` for an entry that exists in that collection but has `status = draft`
 - **THEN** the response is the existing 404 page and no entry data is exposed
-
-### Requirement: Theme-aware template resolution with default fallback
-
-The system SHALL resolve Twig templates by checking the active theme's template directory first and falling back to the default `templates/` directory when the theme does not provide a given template. When no theme is configured, resolution SHALL behave exactly as it does today (default directory only).
-
-#### Scenario: Theme overrides a template
-
-- **WHEN** the active theme provides its own `entry.twig`
-- **THEN** rendering `entry.twig` uses the theme's version
-
-#### Scenario: Theme does not override a template
-
-- **WHEN** the active theme has no `home.twig` of its own
-- **THEN** rendering `home.twig` falls back to the default `templates/home.twig`
-
-#### Scenario: No theme configured
-
-- **WHEN** no active theme is set in configuration
-- **THEN** template resolution uses only the default `templates/` directory, unchanged from current behavior
-
-### Requirement: Starter theme
-
-The system SHALL ship a starter theme providing `base.twig`, `home.twig`, `collection.twig`, and `entry.twig`, active by default, sufficient to render a homepage, a collection listing, and a single entry with basic styling.
-
-#### Scenario: Fresh install renders without a custom theme
-
-- **WHEN** an entry is published in a fresh install with no custom theme installed
-- **THEN** visiting its public URL renders the entry using the starter theme's `entry.twig`

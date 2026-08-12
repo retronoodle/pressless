@@ -8,6 +8,17 @@ use Stead\Auth\PasswordHasher;
 use Stead\Auth\User;
 use Stead\Auth\UserRepository;
 use Stead\Config\Configuration;
+use Stead\Content\Collection;
+use Stead\Content\Entry;
+use Stead\Content\EntryRepository;
+use Stead\Content\FieldType\BooleanFieldType;
+use Stead\Content\FieldType\DateFieldType;
+use Stead\Content\FieldType\FieldTypeRegistry;
+use Stead\Content\FieldType\NumberFieldType;
+use Stead\Content\FieldType\RichtextFieldType;
+use Stead\Content\FieldType\TextFieldType;
+use Stead\Content\RevisionRepository;
+use Stead\Content\SlugGenerator;
 use Stead\Database\Connection;
 use Stead\Exception\SafeException;
 
@@ -153,15 +164,6 @@ final class Seeder
         return $row !== null;
     }
 
-    private function entryExists(int $collectionId, string $slug): bool
-    {
-        $row = $this->connection->fetchOne(
-            'SELECT id FROM entries WHERE collection_id = :collection_id AND slug = :slug',
-            ['collection_id' => $collectionId, 'slug' => $slug],
-        );
-        return $row !== null;
-    }
-
     private function createCollection(string $slug, string $name): void
     {
         $now = gmdate('Y-m-d H:i:s');
@@ -217,13 +219,21 @@ final class Seeder
         }
         $collectionId = (int) $row['id'];
 
+        $collection = new Collection(
+            $collectionId,
+            self::POSTS_COLLECTION_SLUG,
+            self::POSTS_COLLECTION_NAME,
+            ['fields' => self::POSTS_FIELDS],
+        );
+        $entries = $this->buildEntryRepository();
+
         $created = 0;
         foreach (self::POSTS_ENTRIES as $entry) {
             $slug = (string) $entry['slug'];
             if ($this->entryExists($collectionId, $slug)) {
                 continue;
             }
-            $this->createPostEntry($collectionId, $entry);
+            $this->createPostEntry($entries, $collection, $entry);
             $created++;
         }
         return $created;
@@ -232,87 +242,48 @@ final class Seeder
     /**
      * @param array{slug: string, title: string, body: string, published_at: string} $entry
      */
-    private function createPostEntry(int $collectionId, array $entry): void
+    private function createPostEntry(EntryRepository $entries, Collection $collection, array $entry): void
     {
-        $now = gmdate('Y-m-d H:i:s');
-        $this->connection->execute(
-            'INSERT INTO entries (collection_id, slug, title, status, created_at, updated_at)
-             VALUES (:collection_id, :slug, :title, :status, :created_at, :updated_at)',
+        $saved = $entries->save(
+            new Entry(0, $collection->id(), '', []),
+            $collection,
             [
-                'collection_id' => $collectionId,
-                'slug' => $entry['slug'],
                 'title' => $entry['title'],
-                'status' => 'published',
-                'created_at' => $now,
-                'updated_at' => $now,
+                'body' => $entry['body'],
+                'published_at' => $entry['published_at'],
             ],
         );
+        // Save defaults to draft; explicitly publish so the seeded content
+        // is reachable on the public site.
+        $entries->publish($saved->id());
+    }
 
-        $entryRow = $this->connection->fetchOne(
+    private function buildEntryRepository(): EntryRepository
+    {
+        $fieldTypes = new FieldTypeRegistry([
+            new TextFieldType(),
+            new RichtextFieldType(),
+            new NumberFieldType(),
+            new BooleanFieldType(),
+            new DateFieldType(),
+        ]);
+        $revisions = new RevisionRepository($this->connection);
+        return new EntryRepository(
+            $this->connection,
+            $fieldTypes,
+            new SlugGenerator($this->connection),
+            $revisions,
+            $this->config,
+        );
+    }
+
+    private function entryExists(int $collectionId, string $slug): bool
+    {
+        $row = $this->connection->fetchOne(
             'SELECT id FROM entries WHERE collection_id = :collection_id AND slug = :slug',
-            ['collection_id' => $collectionId, 'slug' => $entry['slug']],
+            ['collection_id' => $collectionId, 'slug' => $slug],
         );
-        if ($entryRow === null) {
-            return;
-        }
-        $entryId = (int) $entryRow['id'];
-
-        $titleRow = [
-            'entry_id' => $entryId,
-            'field_key' => 'title',
-            'field_type' => 'text',
-            'value' => $entry['title'],
-            'value_text' => $entry['title'],
-            'value_index' => '',
-            'created_at' => $now,
-            'updated_at' => $now,
-        ];
-        $this->connection->execute(
-            'INSERT INTO entry_values
-                 (entry_id, field_key, field_type, value,
-                  value_text, value_number, value_date, value_bool, value_json,
-                  value_index, created_at, updated_at)
-             VALUES
-                 (:entry_id, :field_key, :field_type, :value,
-                  :value_text, NULL, NULL, NULL, NULL,
-                  :value_index, :created_at, :updated_at)',
-            $titleRow,
-        );
-
-        $bodyRow = $titleRow;
-        $bodyRow['field_key'] = 'body';
-        $bodyRow['field_type'] = 'richtext';
-        $bodyRow['value'] = $entry['body'];
-        $bodyRow['value_text'] = $entry['body'];
-        $this->connection->execute(
-            'INSERT INTO entry_values
-                 (entry_id, field_key, field_type, value,
-                  value_text, value_number, value_date, value_bool, value_json,
-                  value_index, created_at, updated_at)
-             VALUES
-                 (:entry_id, :field_key, :field_type, :value,
-                  :value_text, NULL, NULL, NULL, NULL,
-                  :value_index, :created_at, :updated_at)',
-            $bodyRow,
-        );
-
-        $dateRow = $titleRow;
-        $dateRow['field_key'] = 'published_at';
-        $dateRow['field_type'] = 'date';
-        $dateRow['value'] = $entry['published_at'];
-        $dateRow['value_text'] = null;
-        $dateRow['value_date'] = $entry['published_at'];
-        $this->connection->execute(
-            'INSERT INTO entry_values
-                 (entry_id, field_key, field_type, value,
-                  value_text, value_number, value_date, value_bool, value_json,
-                  value_index, created_at, updated_at)
-             VALUES
-                 (:entry_id, :field_key, :field_type, :value,
-                  :value_text, NULL, :value_date, NULL, NULL,
-                  :value_index, :created_at, :updated_at)',
-            $dateRow,
-        );
+        return $row !== null;
     }
 
     private static function generatePassword(): string

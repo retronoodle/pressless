@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Stead\Content;
 
+use Stead\Config\Configuration;
 use Stead\Content\FieldType\FieldTypeRegistry;
 use Stead\Database\Connection;
 use Stead\Exception\SafeException;
@@ -19,18 +20,22 @@ use Stead\Exception\SafeException;
 final class EntryRepository
 {
     public const PAGE_SIZE = 10;
+    public const STATUS_DRAFT = Entry::STATUS_DRAFT;
+    public const STATUS_PUBLISHED = Entry::STATUS_PUBLISHED;
 
     public function __construct(
         private readonly Connection $connection,
         private readonly FieldTypeRegistry $fieldTypes,
         private readonly SlugGenerator $slugs,
+        private readonly ?RevisionRepository $revisions = null,
+        private readonly ?Configuration $config = null,
     ) {
     }
 
     public function find(int $id): ?Entry
     {
         $row = $this->connection->fetchOne(
-            'SELECT id, collection_id, slug, title FROM entries WHERE id = :id',
+            'SELECT id, collection_id, slug, title, status, published_at FROM entries WHERE id = :id',
             ['id' => $id],
         );
         if ($row === null) {
@@ -39,13 +44,16 @@ final class EntryRepository
         return $this->hydrate($row);
     }
 
-    public function findByCollectionAndSlug(int $collectionId, string $slug): ?Entry
+    public function findByCollectionAndSlug(int $collectionId, string $slug, ?string $status = null): ?Entry
     {
-        $row = $this->connection->fetchOne(
-            'SELECT id, collection_id, slug, title FROM entries
-              WHERE collection_id = :collection_id AND slug = :slug',
-            ['collection_id' => $collectionId, 'slug' => $slug],
-        );
+        $sql = 'SELECT id, collection_id, slug, title, status, published_at FROM entries
+              WHERE collection_id = :collection_id AND slug = :slug';
+        $params = ['collection_id' => $collectionId, 'slug' => $slug];
+        if ($status !== null) {
+            $sql .= ' AND status = :status';
+            $params['status'] = $status;
+        }
+        $row = $this->connection->fetchOne($sql, $params);
         if ($row === null) {
             return null;
         }
@@ -55,13 +63,16 @@ final class EntryRepository
     /**
      * @return list<Entry>
      */
-    public function listByCollection(int $collectionId): array
+    public function listByCollection(int $collectionId, ?string $status = null): array
     {
-        $rows = $this->connection->fetchAll(
-            'SELECT id, collection_id, slug, title FROM entries
-              WHERE collection_id = :collection_id ORDER BY id ASC',
-            ['collection_id' => $collectionId],
-        );
+        $sql = 'SELECT id, collection_id, slug, title, status, published_at FROM entries
+              WHERE collection_id = :collection_id ORDER BY id ASC';
+        $params = ['collection_id' => $collectionId];
+        if ($status !== null) {
+            $sql .= ' AND status = :status';
+            $params['status'] = $status;
+        }
+        $rows = $this->connection->fetchAll($sql, $params);
         $out = [];
         foreach ($rows as $row) {
             $out[] = $this->hydrate($row);
@@ -76,24 +87,26 @@ final class EntryRepository
      *
      * @return array{entries: list<Entry>, has_next: bool, total: int, page: int, page_size: int}
      */
-    public function listByCollectionPaged(int $collectionId, int $page): array
+    public function listByCollectionPaged(int $collectionId, int $page, ?string $status = null): array
     {
         $pageSize = self::PAGE_SIZE;
         $page = $page < 1 ? 1 : $page;
         $offset = ($page - 1) * $pageSize;
 
-        $total = $this->countByCollection($collectionId);
+        $total = $this->countByCollection($collectionId, $status);
 
-        $rows = $this->connection->fetchAll(
-            'SELECT id, collection_id, slug, title FROM entries
-              WHERE collection_id = :collection_id
-              ORDER BY id ASC LIMIT :limit OFFSET :offset',
-            [
-                'collection_id' => $collectionId,
-                'limit' => $pageSize,
-                'offset' => $offset,
-            ],
-        );
+        $sql = 'SELECT id, collection_id, slug, title, status, published_at FROM entries
+              WHERE collection_id = :collection_id';
+        $params = ['collection_id' => $collectionId];
+        if ($status !== null) {
+            $sql .= ' AND status = :status';
+            $params['status'] = $status;
+        }
+        $sql .= ' ORDER BY id ASC LIMIT :limit OFFSET :offset';
+        $params['limit'] = $pageSize;
+        $params['offset'] = $offset;
+
+        $rows = $this->connection->fetchAll($sql, $params);
         $entries = [];
         foreach ($rows as $row) {
             $entries[] = $this->hydrate($row);
@@ -114,12 +127,15 @@ final class EntryRepository
         return (int) ($row['c'] ?? 0);
     }
 
-    public function countByCollection(int $collectionId): int
+    public function countByCollection(int $collectionId, ?string $status = null): int
     {
-        $row = $this->connection->fetchOne(
-            'SELECT COUNT(*) AS c FROM entries WHERE collection_id = :collection_id',
-            ['collection_id' => $collectionId],
-        );
+        $sql = 'SELECT COUNT(*) AS c FROM entries WHERE collection_id = :collection_id';
+        $params = ['collection_id' => $collectionId];
+        if ($status !== null) {
+            $sql .= ' AND status = :status';
+            $params['status'] = $status;
+        }
+        $row = $this->connection->fetchOne($sql, $params);
         return (int) ($row['c'] ?? 0);
     }
 
@@ -130,9 +146,16 @@ final class EntryRepository
      * regenerated only when that source field changes; unrelated edits
      * preserve the existing slug.
      *
+     * New entries default to `status = draft` (matches the column's own
+     * default). Editing an existing entry never changes its status —
+     * publish/unpublish are explicit calls on this repository. A revision
+     * row is written before the existing entry_values are replaced,
+     * capturing the entry's pre-save state; the oldest revisions beyond
+     * the configured retention limit are pruned in the same transaction.
+     *
      * @param array<string, mixed> $payload map of field_key => submitted value
      */
-    public function save(Entry $entry, Collection $collection, array $payload): Entry
+    public function save(Entry $entry, Collection $collection, array $payload, ?int $authorId = null): Entry
     {
         $fields = $collection->fields();
         $now = self::now();
@@ -148,6 +171,7 @@ final class EntryRepository
             $slugSourceKey,
             $slugSourceString,
             $now,
+            $authorId,
         ): array {
             if ($entry->id() === 0) {
                 $slug = $this->slugs->uniqueForCollection(
@@ -157,13 +181,12 @@ final class EntryRepository
                 $title = $slugSourceString !== '' ? $slugSourceString : $slug;
 
                 $this->connection->execute(
-                    'INSERT INTO entries (collection_id, slug, title, status, created_at, updated_at)
-                     VALUES (:collection_id, :slug, :title, :status, :created_at, :updated_at)',
+                    'INSERT INTO entries (collection_id, slug, title, created_at, updated_at)
+                     VALUES (:collection_id, :slug, :title, :created_at, :updated_at)',
                     [
                         'collection_id' => $collection->id(),
                         'slug' => $slug,
                         'title' => $title,
-                        'status' => 'published',
                         'created_at' => $now,
                         'updated_at' => $now,
                     ],
@@ -182,6 +205,10 @@ final class EntryRepository
                     throw new SafeException('Entry not found.');
                 }
                 $entryId = $entry->id();
+
+                if ($this->revisions !== null) {
+                    $this->revisions->save($entryId, $this->snapshotForRevision($existing, $slugSourceKey), $authorId);
+                }
 
                 $existingSource = $existing->value($slugSourceKey);
                 $sourceChanged = $this->stringify($existingSource) !== $slugSourceString;
@@ -215,6 +242,10 @@ final class EntryRepository
 
             $this->writeValues($entryId, $collection, $payload, $fields, $now);
 
+            if ($this->revisions !== null) {
+                $this->revisions->pruneOldest($entryId, $this->retentionLimit());
+            }
+
             return [
                 'id' => $entryId,
                 'slug' => $slug,
@@ -235,6 +266,42 @@ final class EntryRepository
     }
 
     /**
+     * Marks the entry as published. Sets `published_at` only if it was
+     * previously NULL so a republished entry preserves its original
+     * publish date. Does not write a revision.
+     */
+    public function publish(int $id): void
+    {
+        $now = self::now();
+        $this->connection->execute(
+            'UPDATE entries
+                SET status = :status,
+                    published_at = COALESCE(published_at, :published_at)
+              WHERE id = :id',
+            [
+                'status' => self::STATUS_PUBLISHED,
+                'published_at' => $now,
+                'id' => $id,
+            ],
+        );
+    }
+
+    /**
+     * Marks the entry as draft. Leaves `published_at` untouched so a
+     * later publish keeps the original date. Does not write a revision.
+     */
+    public function unpublish(int $id): void
+    {
+        $this->connection->execute(
+            'UPDATE entries SET status = :status WHERE id = :id',
+            [
+                'status' => self::STATUS_DRAFT,
+                'id' => $id,
+            ],
+        );
+    }
+
+    /**
      * @param array<string, mixed> $row
      */
     private function hydrate(array $row): Entry
@@ -242,9 +309,13 @@ final class EntryRepository
         $id = (int) ($row['id'] ?? 0);
         $collectionId = (int) ($row['collection_id'] ?? 0);
         $slug = (string) ($row['slug'] ?? '');
+        $status = (string) ($row['status'] ?? self::STATUS_DRAFT);
+        $publishedAt = isset($row['published_at']) && $row['published_at'] !== null
+            ? (string) $row['published_at']
+            : null;
         $values = $this->loadValues($id);
 
-        return new Entry($id, $collectionId, $slug, $values);
+        return new Entry($id, $collectionId, $slug, $values, $status, $publishedAt);
     }
 
     /**
@@ -314,6 +385,31 @@ final class EntryRepository
                 $row,
             );
         }
+    }
+
+    /**
+     * Builds the pre-save snapshot stored in `revisions.payload`. Carries
+     * the entry's slug, title, and current field values keyed by
+     * `field_key`. Restore replays this through {@see save()}, so values
+     * pass through the existing validation/binding path.
+     *
+     * @return array<string, mixed>
+     */
+    private function snapshotForRevision(Entry $entry, string $slugSourceKey): array
+    {
+        return [
+            'slug' => $entry->slug(),
+            'title' => (string) $entry->value($slugSourceKey),
+            'values' => $entry->values(),
+        ];
+    }
+
+    private function retentionLimit(): int
+    {
+        if ($this->config === null) {
+            return 20;
+        }
+        return max(0, $this->config->getInt('content.revision_retention_limit', 20));
     }
 
     /**
