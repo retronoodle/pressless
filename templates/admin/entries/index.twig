@@ -7,31 +7,9 @@
 {% block body_class %}stead stead-admin stead-entries{% endblock %}
 
 {% block body %}
-<header class="admin-header">
-    <h1>Stead admin</h1>
-    <nav class="admin-nav" aria-label="Admin sections">
-        <ul>
-            <li><a href="/admin">Dashboard</a></li>
-            <li><a href="/admin/collections">Collections</a></li>
-            <li><a href="/admin/media">Media</a></li>
-            {% if user_role == 'admin' %}
-                <li><a href="/admin/users">Users</a></li>
-                <li><a href="/admin/permissions">Permissions</a></li>
-            {% else %}
-                <li><span class="nav-placeholder" aria-disabled="true">Users</span></li>
-                <li><span class="nav-placeholder" aria-disabled="true">Settings</span></li>
-            {% endif %}
-        </ul>
-    </nav>
-    <div class="admin-account">
-        <p>Signed in as <strong>{{ user_name }}</strong>.</p>
-        <form method="post" action="/admin/logout">
-            <button type="submit">Sign out</button>
-        </form>
-    </div>
-</header>
+{% include 'admin/_header.twig' with {active_nav: ''} %}
 
-<main class="admin-main">
+<main class="admin-main admin-main--wide">
     <section class="active-collection">
         <p>Now editing <strong>{{ collection.name|e }}</strong> (<code>{{ collection.slug|e }}</code>)</p>
     </section>
@@ -45,7 +23,7 @@
             {% endif %}
             {% if can_edit %}
                 &middot;
-                <a href="/admin/collections/{{ collection.slug|e }}/entries/new" data-shortcut="mod+shift+n">New entry</a>
+                <a href="/admin/collections/{{ collection.slug|e }}/entries/new" data-shortcut="mod+shift+n">{% include 'admin/_icons/add.twig' %}New entry</a>
             {% endif %}
         </p>
     </section>
@@ -53,7 +31,7 @@
     {% if entries is empty %}
         {{ state.empty('No entries yet', 'Add the first entry to start filling this collection.', can_edit ? ('/admin/collections/' ~ collection.slug|e ~ '/entries/new') : null, can_edit ? 'Create entry' : null) }}
     {% else %}
-        <table class="entries-table">
+        <table class="admin-table entries-table">
             <thead>
                 <tr>
                     <th scope="col">Slug</th>
@@ -70,7 +48,7 @@
                         <td>{{ entry.preview|e }}</td>
                         <td>
                             {% if can_edit and (not ownership_scoped or entry.author_id == user_id) %}
-                                <a href="/admin/collections/{{ collection.slug|e }}/entries/{{ entry.id }}/edit">Edit</a>
+                                <a href="/admin/collections/{{ collection.slug|e }}/entries/{{ entry.id }}/edit">{% include 'admin/_icons/edit.twig' %}Edit</a>
                             {% endif %}
                         </td>
                     </tr>

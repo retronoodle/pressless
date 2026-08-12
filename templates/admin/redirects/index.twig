@@ -7,28 +7,7 @@
 {% block body_class %}stead stead-admin stead-redirects{% endblock %}
 
 {% block body %}
-<header class="admin-header">
-    <h1>Stead admin</h1>
-    <nav class="admin-nav" aria-label="Admin sections">
-        <ul>
-            <li><a href="/admin">Dashboard</a></li>
-            <li><a href="/admin/collections">Collections</a></li>
-            <li><a href="/admin/media">Media</a></li>
-            <li><a href="/admin/users">Users</a></li>
-            <li><a href="/admin/permissions">Permissions</a></li>
-            <li><a href="/admin/mail-settings">Mail</a></li>
-            <li><a href="/admin/settings">Settings</a></li>
-            <li><a href="/admin/redirects" aria-current="page">Redirects</a></li>
-            <li><a href="/admin/invites">Invites</a></li>
-        </ul>
-    </nav>
-    <div class="admin-account">
-        <p>Signed in as <strong>{{ user_name }}</strong> ({{ user_role }}).</p>
-        <form method="post" action="/admin/logout">
-            <button type="submit">Sign out</button>
-        </form>
-    </div>
-</header>
+{% include 'admin/_header.twig' with {active_nav: 'redirects'} %}
 
 <main class="admin-main">
     <section class="redirects-header">
@@ -68,7 +47,7 @@
     </form>
 
     {% if rows|length > 0 %}
-        <table class="redirects-table">
+        <table class="admin-table redirects-table">
             <thead>
                 <tr>
                     <th>Old path</th>
@@ -85,7 +64,7 @@
                         <td>{{ row.created_at|default('')|e }}</td>
                         <td>
                             <form method="post" action="/admin/redirects/{{ row.id|e }}/delete" onsubmit="return confirm('Delete this redirect?');">
-                                <button type="submit">Delete</button>
+                                <button type="submit" class="button--danger">{% include 'admin/_icons/delete.twig' %}Delete</button>
                             </form>
                         </td>
                     </tr>

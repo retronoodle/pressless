@@ -10,6 +10,7 @@ use Stead\Backups\BackupStatus;
 use Stead\Backups\BackupTrigger;
 use Stead\Backups\Dump\DumperFactory;
 use Stead\Backups\Storage\StorageTargetFactory;
+use Stead\Auth\User;
 use Stead\Config\Configuration;
 use Stead\Database\Connection;
 use Stead\Update\UpdateChecker;
@@ -49,6 +50,8 @@ final class AdminUpdateController
      */
     public function show(Request $request, array $parameters = []): Response
     {
+        $user = $request->attributes->get('user');
+
         $result = null;
         try {
             $result = $this->updateChecker->check();
@@ -82,6 +85,8 @@ final class AdminUpdateController
 
         return new Response(
             $this->renderer->render('admin/update', [
+                'user_name' => $user instanceof User ? $user->name : '',
+                'user_role' => $user instanceof User ? $user->roleName : '',
                 'available' => $available,
                 'latest_version' => $latest,
                 'installed_version' => $installed,

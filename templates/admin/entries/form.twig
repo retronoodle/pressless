@@ -5,29 +5,7 @@
 {% block body_class %}stead stead-admin stead-entries{% endblock %}
 
 {% block body %}
-<header class="admin-header">
-    <h1>Stead admin</h1>
-    <nav class="admin-nav" aria-label="Admin sections">
-        <ul>
-            <li><a href="/admin">Dashboard</a></li>
-            <li><a href="/admin/collections">Collections</a></li>
-            <li><a href="/admin/media">Media</a></li>
-            {% if user_role == 'admin' %}
-                <li><a href="/admin/users">Users</a></li>
-                <li><a href="/admin/permissions">Permissions</a></li>
-            {% else %}
-                <li><span class="nav-placeholder" aria-disabled="true">Users</span></li>
-                <li><span class="nav-placeholder" aria-disabled="true">Settings</span></li>
-            {% endif %}
-        </ul>
-    </nav>
-    <div class="admin-account">
-        <p>Signed in as <strong>{{ user_name }}</strong>.</p>
-        <form method="post" action="/admin/logout">
-            <button type="submit">Sign out</button>
-        </form>
-    </div>
-</header>
+{% include 'admin/_header.twig' with {active_nav: ''} %}
 
 <main class="admin-main">
     <section class="active-collection">
@@ -104,7 +82,7 @@
 
         <p>
             <button type="submit" data-shortcut="mod+s">Save entry</button>
-            <a href="{{ cancel_url|e }}">Cancel</a>
+            <a class="button--secondary" href="{{ cancel_url|e }}">Cancel</a>
         </p>
     </form>
 
@@ -114,7 +92,7 @@
             {% if entry.isPublished() %}
                 {% if unpublish_url %}
                     <form method="post" action="{{ unpublish_url }}">
-                        <button type="submit">Unpublish</button>
+                        <button type="submit" class="button--secondary">Unpublish</button>
                     </form>
                 {% endif %}
             {% else %}
@@ -126,7 +104,7 @@
             {% endif %}
             {% if delete_url %}
                 <form method="post" action="{{ delete_url }}">
-                    <button type="submit">Delete</button>
+                    <button type="submit" class="button--danger">Delete</button>
                 </form>
             {% endif %}
             <p>

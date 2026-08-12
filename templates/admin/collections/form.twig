@@ -5,24 +5,7 @@
 {% block body_class %}stead stead-admin stead-collections{% endblock %}
 
 {% block body %}
-<header class="admin-header">
-    <h1>Stead admin</h1>
-    <nav class="admin-nav" aria-label="Admin sections">
-        <ul>
-            <li><a href="/admin">Dashboard</a></li>
-            <li><a href="/admin/collections" aria-current="page">Collections</a></li>
-            <li><a href="/admin/media">Media</a></li>
-            <li><span class="nav-placeholder" aria-disabled="true">Users</span></li>
-            <li><span class="nav-placeholder" aria-disabled="true">Settings</span></li>
-        </ul>
-    </nav>
-    <div class="admin-account">
-        <p>Signed in as <strong>{{ user_name }}</strong>.</p>
-        <form method="post" action="/admin/logout">
-            <button type="submit">Sign out</button>
-        </form>
-    </div>
-</header>
+{% include 'admin/_header.twig' with {active_nav: 'collections'} %}
 
 <main class="admin-main">
     <h2>{{ form_title|e }}</h2>
@@ -94,19 +77,19 @@
                     </p>
 
                     <p>
-                        <button type="submit" name="_remove_field[{{ loop.index0 }}]" value="1">Remove field</button>
+                        <button type="submit" class="button--danger" name="_remove_field[{{ loop.index0 }}]" value="1">Remove field</button>
                     </p>
                 </fieldset>
             {% endfor %}
 
             <p>
-                <button type="submit" name="_add_field" value="1">Add field</button>
+                <button type="submit" class="button--secondary" name="_add_field" value="1">Add field</button>
             </p>
         </fieldset>
 
         <p>
             <button type="submit" data-shortcut="mod+s">Save collection</button>
-            <a href="{{ cancel_url|e }}">Cancel</a>
+            <a class="button--secondary" href="{{ cancel_url|e }}">Cancel</a>
         </p>
     </form>
 </main>

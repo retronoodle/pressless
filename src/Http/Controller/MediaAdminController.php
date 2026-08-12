@@ -196,6 +196,7 @@ final class MediaAdminController
 
         return $this->html($this->renderer->render('admin/media/index', [
             'user_name' => $user instanceof User ? $user->name : '',
+            'user_role' => $user instanceof User ? $user->roleName : '',
             'items' => $listing['items'],
             'page' => $listing['page'],
             'has_next' => $listing['has_next'],

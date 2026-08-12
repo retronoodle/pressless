@@ -6,7 +6,10 @@
     --stead-muted: #5f5f5f;
     --stead-rule: #e0e0e0;
     --stead-error: #8a1c1c;
+    --stead-success: #2c5a1f;
+    --stead-warning: #6a4a00;
     --stead-bg: #fdfdfc;
+    --stead-bg-soft: #fafaf8;
     --stead-accent: #2f5fbf;
 
     /* Spacing scale: 1 = 0.25rem (4px) up to 6 = 2rem (32px) */
@@ -68,13 +71,16 @@ input {
     box-sizing: border-box;
 }
 
-button {
+button,
+a.button {
+    display: inline-block;
     padding: var(--stead-space-2) var(--stead-space-4);
     border: 1px solid var(--stead-ink);
     border-radius: 3px;
     background: var(--stead-ink);
     color: #fff;
     font: inherit;
+    text-decoration: none;
     cursor: pointer;
 }
 
@@ -100,7 +106,8 @@ input,
         transform var(--stead-transition-base);
 }
 
-button:hover {
+button:hover,
+a.button:hover {
     background: #2a2a2a;
     border-color: var(--stead-ink);
 }
@@ -224,6 +231,161 @@ button:hover {
 .admin-main {
     padding: var(--stead-space-6);
     max-width: 48rem;
+}
+
+.admin-main--wide {
+    max-width: none;
+}
+
+/* Tables -------------------------------------------------------------------- */
+
+.admin-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: var(--stead-space-4) 0;
+    font-size: var(--stead-text-sm);
+}
+
+.admin-table caption {
+    text-align: left;
+    padding: var(--stead-space-2) 0;
+    color: var(--stead-muted);
+    font-size: var(--stead-text-sm);
+}
+
+.admin-table th {
+    text-align: left;
+    padding: var(--stead-space-2) var(--stead-space-3);
+    border-bottom: 2px solid var(--stead-rule);
+    color: var(--stead-muted);
+    font-weight: 600;
+    font-size: var(--stead-text-sm);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+}
+
+.admin-table td {
+    padding: var(--stead-space-2) var(--stead-space-3);
+    border-bottom: 1px solid var(--stead-rule);
+    vertical-align: top;
+}
+
+.admin-table tbody tr:hover {
+    background: var(--stead-bg-soft);
+}
+
+.admin-table tbody tr:last-child td {
+    border-bottom: 0;
+}
+
+.admin-table code {
+    color: var(--stead-ink);
+}
+
+/* Status badges ------------------------------------------------------------- */
+
+.status {
+    display: inline-block;
+    padding: 0.1em 0.5em;
+    font-size: var(--stead-text-sm);
+    border-radius: 3px;
+    background: var(--stead-rule);
+    color: var(--stead-ink);
+    text-transform: lowercase;
+}
+
+.status-published,
+.status-success {
+    background: #e8f3e0;
+    color: var(--stead-success);
+}
+
+.status-draft,
+.status-pending {
+    background: #fff5d8;
+    color: var(--stead-warning);
+}
+
+.status-archived {
+    background: #ececec;
+    color: var(--stead-muted);
+}
+
+.status-failed,
+.status-error {
+    background: #fce6e6;
+    color: var(--stead-error);
+}
+
+/* Icons -------------------------------------------------------------------- */
+
+.icon {
+    display: inline-block;
+    vertical-align: -0.15em;
+    margin-right: 0.35em;
+    color: inherit;
+}
+
+.admin-nav a {
+    display: inline-flex;
+    align-items: center;
+}
+
+/* Button variants ----------------------------------------------------------- */
+
+.button--secondary,
+a.button--secondary {
+    background: transparent;
+    color: var(--stead-ink);
+    border-color: var(--stead-rule);
+}
+
+.button--secondary:hover,
+a.button--secondary:hover {
+    background: var(--stead-bg-soft);
+    border-color: var(--stead-muted);
+}
+
+.button--ghost,
+a.button--ghost {
+    background: transparent;
+    color: var(--stead-accent);
+    border-color: transparent;
+    padding-left: var(--stead-space-2);
+    padding-right: var(--stead-space-2);
+}
+
+.button--ghost:hover,
+a.button--ghost:hover {
+    color: var(--stead-ink);
+    background: var(--stead-bg-soft);
+}
+
+.button--danger,
+a.button--danger {
+    background: var(--stead-error);
+    color: #fff;
+    border-color: var(--stead-error);
+}
+
+.button--danger:hover,
+a.button--danger:hover {
+    background: #6e1616;
+    border-color: #6e1616;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .button--secondary:hover,
+    .button--ghost:hover,
+    .button--danger:hover,
+    a.button--secondary:hover,
+    a.button--ghost:hover,
+    a.button--danger:hover {
+        background: revert;
+        border-color: revert;
+        color: revert;
+    }
 }
 
 .empty-state,
@@ -351,4 +513,152 @@ button:hover {
 .recent-when {
     color: var(--stead-muted);
     font-variant-numeric: tabular-nums;
+}
+
+/* Dark mode ---------------------------------------------------------------- */
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        --stead-ink: #f1f1ee;
+        --stead-muted: #a4a4a0;
+        --stead-rule: #3a3a3a;
+        --stead-error: #f4a3a3;
+        --stead-success: #b4d99e;
+        --stead-warning: #f0d178;
+        --stead-bg: #1a1a1a;
+        --stead-bg-soft: #232323;
+        --stead-accent: #7fa9ff;
+    }
+
+    body {
+        background: var(--stead-bg);
+    }
+
+    a {
+        color: var(--stead-accent);
+    }
+
+    .admin-header {
+        background: var(--stead-bg-soft);
+        border-bottom-color: var(--stead-rule);
+    }
+
+    input,
+    select,
+    textarea {
+        background: var(--stead-bg-soft);
+        color: var(--stead-ink);
+        border-color: var(--stead-rule);
+    }
+
+    button,
+    a.button {
+        background: var(--stead-ink);
+        color: var(--stead-bg);
+        border-color: var(--stead-ink);
+    }
+
+    button:hover,
+    a.button:hover {
+        background: #e8e8e8;
+        border-color: var(--stead-ink);
+    }
+
+    .admin-account button {
+        background: transparent;
+        color: var(--stead-ink);
+        border-color: var(--stead-rule);
+    }
+
+    .admin-account button:hover {
+        background: var(--stead-rule);
+    }
+
+    .admin-table th {
+        color: var(--stead-muted);
+    }
+
+    .admin-table tbody tr:hover {
+        background: var(--stead-bg-soft);
+    }
+
+    .status-published,
+    .status-success {
+        background: #1f3a1c;
+        color: var(--stead-success);
+    }
+
+    .status-draft,
+    .status-pending {
+        background: #3a2e10;
+        color: var(--stead-warning);
+    }
+
+    .status-archived {
+        background: #2a2a2a;
+        color: var(--stead-muted);
+    }
+
+    .status-failed,
+    .status-error {
+        background: #3a1c1c;
+        color: var(--stead-error);
+    }
+
+    .button--secondary,
+    a.button--secondary {
+        color: var(--stead-ink);
+        border-color: var(--stead-rule);
+    }
+
+    .button--secondary:hover,
+    a.button--secondary:hover {
+        background: var(--stead-bg-soft);
+        border-color: var(--stead-muted);
+    }
+
+    .button--ghost,
+    a.button--ghost {
+        color: var(--stead-accent);
+    }
+
+    .button--ghost:hover,
+    a.button--ghost:hover {
+        color: var(--stead-ink);
+        background: var(--stead-bg-soft);
+    }
+
+    .button--danger,
+    a.button--danger {
+        background: var(--stead-error);
+        color: #1a1a1a;
+        border-color: var(--stead-error);
+    }
+
+    .button--danger:hover,
+    a.button--danger:hover {
+        background: #d88080;
+        border-color: #d88080;
+    }
+
+    .empty-state,
+    .loading-state,
+    .error-state {
+        background: var(--stead-bg-soft);
+        border-color: var(--stead-rule);
+    }
+
+    .form-flash {
+        background: var(--stead-bg-soft);
+        border-color: var(--stead-rule);
+    }
+
+    .form-errors {
+        background: #2a1414;
+        border-color: var(--stead-error);
+    }
+
+    .recent-list li {
+        border-color: var(--stead-rule);
+    }
 }

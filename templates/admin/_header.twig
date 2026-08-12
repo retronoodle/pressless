@@ -1,0 +1,28 @@
+<header class="admin-header">
+    <h1>Stead admin</h1>
+    <nav class="admin-nav" aria-label="Admin sections">
+        <ul>
+            <li><a href="/admin" {% if active_nav|default('') == 'dashboard' %}aria-current="page"{% endif %}>{% include 'admin/_icons/dashboard.twig' %}Dashboard</a></li>
+            <li><a href="/admin/collections" {% if active_nav|default('') == 'collections' %}aria-current="page"{% endif %}>{% include 'admin/_icons/collections.twig' %}Collections</a></li>
+            <li><a href="/admin/media" {% if active_nav|default('') == 'media' %}aria-current="page"{% endif %}>{% include 'admin/_icons/media.twig' %}Media</a></li>
+            {% if user_role|default('') == 'admin' %}
+                <li><a href="/admin/users" {% if active_nav|default('') == 'users' %}aria-current="page"{% endif %}>{% include 'admin/_icons/users.twig' %}Users</a></li>
+                <li><a href="/admin/permissions" {% if active_nav|default('') == 'permissions' %}aria-current="page"{% endif %}>{% include 'admin/_icons/permissions.twig' %}Permissions</a></li>
+                <li><a href="/admin/mail-settings" {% if active_nav|default('') == 'mail' %}aria-current="page"{% endif %}>{% include 'admin/_icons/mail.twig' %}Mail</a></li>
+                <li><a href="/admin/settings" {% if active_nav|default('') == 'settings' %}aria-current="page"{% endif %}>{% include 'admin/_icons/settings.twig' %}Settings</a></li>
+                <li><a href="/admin/redirects" {% if active_nav|default('') == 'redirects' %}aria-current="page"{% endif %}>{% include 'admin/_icons/redirects.twig' %}Redirects</a></li>
+                <li><a href="/admin/invites" {% if active_nav|default('') == 'invites' %}aria-current="page"{% endif %}>{% include 'admin/_icons/invites.twig' %}Invites</a></li>
+                <li><a href="/admin/backups" {% if active_nav|default('') == 'backups' %}aria-current="page"{% endif %}>{% include 'admin/_icons/backups.twig' %}Backups</a></li>
+            {% else %}
+                <li><span class="nav-placeholder" aria-disabled="true">{% include 'admin/_icons/users.twig' %}Users</span></li>
+                <li><span class="nav-placeholder" aria-disabled="true">{% include 'admin/_icons/settings.twig' %}Settings</span></li>
+            {% endif %}
+        </ul>
+    </nav>
+    <div class="admin-account">
+        <p>Signed in as <strong>{{ user_name|default('') }}</strong> ({{ user_role|default('') }}).</p>
+        <form method="post" action="/admin/logout">
+            <button type="submit">Sign out</button>
+        </form>
+    </div>
+</header>

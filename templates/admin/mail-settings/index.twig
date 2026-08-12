@@ -5,26 +5,7 @@
 {% block body_class %}stead stead-admin stead-mail-settings{% endblock %}
 
 {% block body %}
-<header class="admin-header">
-    <h1>Stead admin</h1>
-    <nav class="admin-nav" aria-label="Admin sections">
-        <ul>
-            <li><a href="/admin">Dashboard</a></li>
-            <li><a href="/admin/collections">Collections</a></li>
-            <li><a href="/admin/media">Media</a></li>
-            <li><a href="/admin/users">Users</a></li>
-            <li><a href="/admin/permissions">Permissions</a></li>
-            <li><a href="/admin/mail-settings" aria-current="page">Mail</a></li>
-            <li><a href="/admin/invites">Invites</a></li>
-        </ul>
-    </nav>
-    <div class="admin-account">
-        <p>Signed in as <strong>{{ user_name }}</strong> ({{ user_role }}).</p>
-        <form method="post" action="/admin/logout">
-            <button type="submit">Sign out</button>
-        </form>
-    </div>
-</header>
+{% include 'admin/_header.twig' with {active_nav: 'mail'} %}
 
 <main class="admin-main">
     <section class="mail-settings-header">

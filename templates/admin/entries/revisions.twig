@@ -5,29 +5,7 @@
 {% block body_class %}stead stead-admin stead-entries{% endblock %}
 
 {% block body %}
-<header class="admin-header">
-    <h1>Stead admin</h1>
-    <nav class="admin-nav" aria-label="Admin sections">
-        <ul>
-            <li><a href="/admin">Dashboard</a></li>
-            <li><a href="/admin/collections">Collections</a></li>
-            <li><a href="/admin/media">Media</a></li>
-            {% if user_role == 'admin' %}
-                <li><a href="/admin/users">Users</a></li>
-                <li><a href="/admin/permissions">Permissions</a></li>
-            {% else %}
-                <li><span class="nav-placeholder" aria-disabled="true">Users</span></li>
-                <li><span class="nav-placeholder" aria-disabled="true">Settings</span></li>
-            {% endif %}
-        </ul>
-    </nav>
-    <div class="admin-account">
-        <p>Signed in as <strong>{{ user_name }}</strong>.</p>
-        <form method="post" action="/admin/logout">
-            <button type="submit">Sign out</button>
-        </form>
-    </div>
-</header>
+{% include 'admin/_header.twig' with {active_nav: ''} %}
 
 <main class="admin-main">
     <section class="active-collection">
@@ -53,7 +31,7 @@
             <p>This entry has never been re-saved, so there is nothing to restore.</p>
         </section>
     {% else %}
-        <table class="revisions-table">
+        <table class="admin-table revisions-table">
             <thead>
                 <tr>
                     <th scope="col">Saved at</th>
@@ -67,9 +45,9 @@
                         <td>{{ revision.created_at|e }}</td>
                         <td>{{ revision.author_name|default('Unknown')|e }}</td>
                         <td>
-                            <form method="post" action="/admin/collections/{{ collection.slug|e }}/entries/{{ entry.id() }}/revisions/{{ revision.id }}/restore">
-                                <button type="submit">Restore</button>
-                            </form>
+                                <form method="post" action="/admin/collections/{{ collection.slug|e }}/entries/{{ entry.id() }}/revisions/{{ revision.id }}/restore">
+                                    <button type="submit" class="button--secondary">Restore</button>
+                                </form>
                         </td>
                     </tr>
                 {% endfor %}

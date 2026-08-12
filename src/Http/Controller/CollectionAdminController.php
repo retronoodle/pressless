@@ -289,6 +289,7 @@ final class CollectionAdminController
 
         return $this->html($this->renderer->render('admin/collections/form', [
             'user_name' => $user instanceof User ? $user->name : '',
+            'user_role' => $user instanceof User ? $user->roleName : '',
             'fields' => $this->displayFields($collection->fields()),
             'field_types' => $this->fieldTypes,
             'errors' => $errors,
