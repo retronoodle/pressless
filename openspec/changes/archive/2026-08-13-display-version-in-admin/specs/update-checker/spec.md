@@ -1,10 +1,4 @@
-# Capability: update-checker
-
-## Purpose
-
-TBD
-
-## Requirements
+## MODIFIED Requirements
 
 ### Requirement: Installed version detection
 
@@ -47,6 +41,8 @@ The system SHALL cache the result of an update check so it is not re-queried on 
 
 - **WHEN** the cached check is older than the configured interval
 - **THEN** the next admin page load triggers a fresh check against the release endpoint and updates the cache
+
+## ADDED Requirements
 
 ### Requirement: Installed version release-date lookup
 

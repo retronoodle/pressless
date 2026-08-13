@@ -63,7 +63,8 @@ final class UpdateChecker
         if ($this->client->githubRepo() === '') {
             // No endpoint configured at all. Persist an "up to date"
             // sentinel so we don't log on every page load, and return
-            // it.
+            // it. No installed-version release date is available without
+            // a GitHub endpoint, so we leave it null.
             $result = new UpdateCheckResult(
                 installedVersion: $installedVersion,
                 latestVersion: null,
@@ -72,6 +73,7 @@ final class UpdateChecker
                 error: null,
                 fromCache: false,
                 checkedAt: time(),
+                installedVersionReleasedAt: null,
             );
             $this->cache->save($result);
             return $result;
@@ -96,6 +98,12 @@ final class UpdateChecker
         }
 
         $isUpToDate = $this->isUpToDate($installedVersion, $payload['latest']);
+        $installedVersionReleasedAt = $this->resolveInstalledVersionReleasedAt(
+            installedVersion: $installedVersion,
+            latestVersion: $payload['latest'],
+            latestPublishedAt: $payload['published_at'],
+        );
+
         $result = new UpdateCheckResult(
             installedVersion: $installedVersion,
             latestVersion: $payload['latest'],
@@ -104,6 +112,7 @@ final class UpdateChecker
             error: null,
             fromCache: false,
             checkedAt: time(),
+            installedVersionReleasedAt: $installedVersionReleasedAt,
         );
         $this->cache->save($result);
         return $result;
@@ -185,6 +194,7 @@ final class UpdateChecker
             error: $error,
             fromCache: false,
             checkedAt: time(),
+            installedVersionReleasedAt: null,
         );
     }
 
@@ -198,6 +208,47 @@ final class UpdateChecker
             error: $cached->error,
             fromCache: true,
             checkedAt: $cached->checkedAt,
+            installedVersionReleasedAt: $cached->installedVersionReleasedAt,
         );
+    }
+
+    /**
+     * Returns the GitHub `published_at` for the installed version.
+     *
+     * - When installed equals latest, we already have the timestamp
+     *   from the `/releases/latest` response, so no extra HTTP call.
+     * - When installed differs from latest, we ask the client to look
+     *   up the installed tag separately. The leading `v` is re-added
+     *   here because the local `VERSION` file is unprefixed SemVer
+     *   while GitHub tags are `vX.Y.Z`.
+     * - On any failure (missing method on a subclass that hasn't been
+     *   updated yet, transport error, 404, malformed payload), the
+     *   field stays `null` and the check returns normally — this code
+     *   path is purely additive on top of the existing update check.
+     */
+    private function resolveInstalledVersionReleasedAt(
+        string $installedVersion,
+        string $latestVersion,
+        string $latestPublishedAt,
+    ): ?string {
+        if ($installedVersion === $latestVersion) {
+            return $latestPublishedAt;
+        }
+        if (!method_exists($this->client, 'fetchReleaseByTag')) {
+            $this->logger->info('Update checker: client lacks fetchReleaseByTag(); leaving installed-version release date unset.');
+            return null;
+        }
+        try {
+            $tagPayload = $this->client->fetchReleaseByTag('v' . $installedVersion);
+        } catch (\Throwable $e) {
+            $this->logger->info('Update checker: tag lookup threw; leaving installed-version release date unset.', [
+                'exception' => $e->getMessage(),
+            ]);
+            return null;
+        }
+        if ($tagPayload === null) {
+            return null;
+        }
+        return $tagPayload['published_at'];
     }
 }

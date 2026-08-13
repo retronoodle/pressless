@@ -21,6 +21,7 @@ final class UpdateCheckResult
         public readonly ?string $error,
         public readonly bool $fromCache,
         public readonly int $checkedAt,
+        public readonly ?string $installedVersionReleasedAt = null,
     ) {
     }
 
@@ -34,7 +35,7 @@ final class UpdateCheckResult
      */
     public function toArray(): array
     {
-        return [
+        $out = [
             'installed' => $this->installedVersion,
             'latest' => $this->latestVersion,
             'download_url' => $this->downloadUrl,
@@ -44,5 +45,9 @@ final class UpdateCheckResult
             'from_cache' => $this->fromCache,
             'checked_at' => $this->checkedAt,
         ];
+        if ($this->installedVersionReleasedAt !== null) {
+            $out['installed_version_released_at'] = $this->installedVersionReleasedAt;
+        }
+        return $out;
     }
 }

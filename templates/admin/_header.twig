@@ -1,5 +1,6 @@
 <header class="admin-header">
     <h1>Stead admin</h1>
+    <p class="admin-version">Stead {{ installed_version|default('version unknown') }}{% if installed_version_released_at|default('') %} · released {{ installed_version_released_at|date('Y-m-d') }}{% endif %}</p>
     <nav class="admin-nav" aria-label="Admin sections">
         <ul>
             <li><a href="/admin" {% if active_nav|default('') == 'dashboard' %}aria-current="page"{% endif %}>{% include 'admin/_icons/dashboard.twig' %}Dashboard</a></li>

@@ -79,7 +79,7 @@ final class UpdateCheckerTest extends TestCase
     {
         $this->writeVersion('1.0.0');
         $client = $this->makeClient(
-            returnValue: ['latest' => '1.1.0', 'url' => 'https://example.test/x.zip'],
+            returnValue: ['latest' => '1.1.0', 'url' => 'https://example.test/x.zip', 'published_at' => '2026-08-13T12:34:56Z'],
             githubRepo: 'owner/repo',
         );
         $checker = $this->makeChecker(githubRepo: 'owner/repo', client: $client);
@@ -94,7 +94,7 @@ final class UpdateCheckerTest extends TestCase
     {
         $this->writeVersion('1.0.0');
         $client = $this->makeClient(
-            returnValue: ['latest' => '1.0.0', 'url' => 'https://example.test/x.zip'],
+            returnValue: ['latest' => '1.0.0', 'url' => 'https://example.test/x.zip', 'published_at' => '2026-08-13T12:34:56Z'],
             githubRepo: 'owner/repo',
         );
         $checker = $this->makeChecker(githubRepo: 'owner/repo', client: $client);
@@ -116,6 +116,7 @@ final class UpdateCheckerTest extends TestCase
             error: null,
             fromCache: false,
             checkedAt: time(),
+            installedVersionReleasedAt: '2026-01-01T00:00:00Z',
         ));
 
         // Client throws if called.
@@ -141,6 +142,73 @@ final class UpdateCheckerTest extends TestCase
         $result = $checker->check();
         $this->assertTrue($result->fromCache);
         $this->assertSame('2.0.0', $result->latestVersion);
+        $this->assertSame('2026-01-01T00:00:00Z', $result->installedVersionReleasedAt);
+    }
+
+    public function testInstalledEqualsLatestPopulatesInstalledVersionReleasedAtFromLatest(): void
+    {
+        $this->writeVersion('1.2.3');
+        $client = $this->makeClient(
+            returnValue: ['latest' => '1.2.3', 'url' => 'https://example.test/x.zip', 'published_at' => '2026-08-13T12:34:56Z'],
+            githubRepo: 'owner/repo',
+        );
+        $checker = $this->makeChecker(githubRepo: 'owner/repo', client: $client);
+        $result = $checker->check();
+        $this->assertSame('2026-08-13T12:34:56Z', $result->installedVersionReleasedAt);
+    }
+
+    public function testInstalledDiffersFromLatestCallsFetchReleaseByTagWithVPrefix(): void
+    {
+        $this->writeVersion('1.0.0');
+        $client = $this->makeClientWithTag(
+            fetchLatestReturn: ['latest' => '2.0.0', 'url' => 'https://example.test/x.zip', 'published_at' => '2026-09-01T00:00:00Z'],
+            fetchReleaseByTagReturn: ['version' => '1.0.0', 'published_at' => '2026-01-01T00:00:00Z', 'download_url' => 'https://example.test/1.0.0.zip'],
+            githubRepo: 'owner/repo',
+        );
+        $checker = $this->makeChecker(githubRepo: 'owner/repo', client: $client);
+        $result = $checker->check();
+        $this->assertSame('2026-01-01T00:00:00Z', $result->installedVersionReleasedAt);
+        /** @phpstan-ignore-next-line accessing-test-double-state */
+        $this->assertSame('v1.0.0', $client->lastTagFetched);
+    }
+
+    public function testFetchReleaseByTagFailureLeavesInstalledVersionReleasedAtNull(): void
+    {
+        $this->writeVersion('1.0.0');
+        $client = $this->makeClientWithTag(
+            fetchLatestReturn: ['latest' => '2.0.0', 'url' => 'https://example.test/x.zip', 'published_at' => '2026-09-01T00:00:00Z'],
+            fetchReleaseByTagReturn: null,
+            githubRepo: 'owner/repo',
+        );
+        $checker = $this->makeChecker(githubRepo: 'owner/repo', client: $client);
+        $result = $checker->check();
+        $this->assertNull($result->installedVersionReleasedAt);
+        // The check itself still completes normally with the latest info.
+        $this->assertSame('2.0.0', $result->latestVersion);
+    }
+
+    public function testFetchReleaseByTagMissingMethodDoesNotThrow(): void
+    {
+        $this->writeVersion('1.0.0');
+        // A client without the new method must still be tolerated by
+        // the checker, leaving the date null and continuing.
+        $client = $this->makeClientWithoutFetchReleaseByTag(
+            returnValue: ['latest' => '2.0.0', 'url' => 'https://example.test/x.zip', 'published_at' => '2026-09-01T00:00:00Z'],
+            githubRepo: 'owner/repo',
+        );
+        $checker = $this->makeChecker(githubRepo: 'owner/repo', client: $client);
+        $result = $checker->check();
+        $this->assertNull($result->installedVersionReleasedAt);
+        $this->assertSame('2.0.0', $result->latestVersion);
+    }
+
+    public function testNoRepoConfiguredSetsInstalledVersionReleasedAtToNull(): void
+    {
+        $this->writeVersion('1.0.0');
+        $checker = $this->makeChecker(githubRepo: '');
+        $result = $checker->check();
+        $this->assertNull($result->installedVersionReleasedAt);
+        $this->assertTrue($result->isUpToDate);
     }
 
     private function makeChecker(
@@ -175,13 +243,13 @@ final class UpdateCheckerTest extends TestCase
     }
 
     /**
-     * @param array{latest: string, url: string}|null $returnValue
+     * @param array{latest: string, url: string, published_at: string}|null $returnValue
      */
     private function makeClient(?array $returnValue, string $githubRepo = ''): ReleaseEndpointClient
     {
         return new class($returnValue, $githubRepo) extends ReleaseEndpointClient {
             /**
-             * @param array{latest: string, url: string}|null $returnValue
+             * @param array{latest: string, url: string, published_at: string}|null $returnValue
              */
             public function __construct(
                 private readonly ?array $returnValue,
@@ -191,12 +259,80 @@ final class UpdateCheckerTest extends TestCase
             }
 
             /**
-             * @return array{latest: string, url: string}|null
+             * @return array{latest: string, url: string, published_at: string}|null
              */
             public function fetchLatest(): ?array
             {
                 return $this->returnValue;
             }
+        };
+    }
+
+    /**
+     * @param array{latest: string, url: string, published_at: string}|null $fetchLatestReturn
+     * @param array{version: string, published_at: string, download_url: string|null}|null $fetchReleaseByTagReturn
+     */
+    private function makeClientWithTag(?array $fetchLatestReturn, ?array $fetchReleaseByTagReturn, string $githubRepo = ''): ReleaseEndpointClient
+    {
+        return new class($fetchLatestReturn, $fetchReleaseByTagReturn, $githubRepo) extends ReleaseEndpointClient {
+            public ?string $lastTagFetched = null;
+
+            /**
+             * @param array{latest: string, url: string, published_at: string}|null $fetchLatestReturn
+             * @param array{version: string, published_at: string, download_url: string|null}|null $fetchReleaseByTagReturn
+             */
+            public function __construct(
+                private readonly ?array $fetchLatestReturn,
+                private readonly ?array $fetchReleaseByTagReturn,
+                string $githubRepo,
+            ) {
+                parent::__construct($githubRepo, 1);
+            }
+
+            /**
+             * @return array{latest: string, url: string, published_at: string}|null
+             */
+            public function fetchLatest(): ?array
+            {
+                return $this->fetchLatestReturn;
+            }
+
+            /**
+             * @return array{version: string, published_at: string, download_url: string|null}|null
+             */
+            public function fetchReleaseByTag(string $tag): ?array
+            {
+                $this->lastTagFetched = $tag;
+                return $this->fetchReleaseByTagReturn;
+            }
+        };
+    }
+
+    /**
+     * @param array{latest: string, url: string, published_at: string}|null $returnValue
+     */
+    private function makeClientWithoutFetchReleaseByTag(?array $returnValue, string $githubRepo = ''): ReleaseEndpointClient
+    {
+        return new class($returnValue, $githubRepo) extends ReleaseEndpointClient {
+            /**
+             * @param array{latest: string, url: string, published_at: string}|null $returnValue
+             */
+            public function __construct(
+                private readonly ?array $returnValue,
+                string $githubRepo,
+            ) {
+                parent::__construct($githubRepo, 1);
+            }
+
+            /**
+             * @return array{latest: string, url: string, published_at: string}|null
+             */
+            public function fetchLatest(): ?array
+            {
+                return $this->returnValue;
+            }
+
+            // Intentionally NO fetchReleaseByTag() override.
         };
     }
 

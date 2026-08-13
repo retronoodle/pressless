@@ -66,6 +66,8 @@ final class AdminController
                 'entry_count' => $this->entries->count(),
                 'visible_collections' => $collections,
                 'update_notice' => $this->buildUpdateNotice($updateResult),
+                'installed_version' => $this->installedVersionString($updateResult),
+                'installed_version_released_at' => $updateResult?->installedVersionReleasedAt ?? '',
                 'recent_revisions' => $this->safeRecentRevisions(),
                 'recent_logins' => $this->safeRecentLogins(),
             ]),
@@ -134,6 +136,22 @@ final class AdminController
             'installed' => $result->installedVersion,
             'url' => $downloadUrl,
         ];
+    }
+
+    /**
+     * Resolves the version string to surface in the admin header. The
+     * value comes from the same `UpdateCheckResult` the checker used to
+     * read the VERSION file (so we don't read VERSION from the
+     * template); if the check itself errored out, fall back to "version
+     * unknown" rather than rendering nothing — the spec requires the
+     * segment to always be present.
+     */
+    private function installedVersionString(?UpdateCheckResult $result): string
+    {
+        if ($result === null || $result->installedVersion === '' || $result->installedVersion === 'unknown') {
+            return 'version unknown';
+        }
+        return $result->installedVersion;
     }
 
     /**

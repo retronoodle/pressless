@@ -85,6 +85,7 @@ final class UpdateCheckCache
         $error = $data['error'] ?? null;
         $fromCache = $data['from_cache'] ?? null;
         $checkedAt = $data['checked_at'] ?? null;
+        $installedVersionReleasedAt = $data['installed_version_released_at'] ?? null;
 
         if (!is_string($installed) || !is_bool($isUpToDate) || !is_int($checkedAt)) {
             return null;
@@ -98,6 +99,12 @@ final class UpdateCheckCache
         if ($error !== null && !is_string($error)) {
             return null;
         }
+        // installed_version_released_at is optional and added later than
+        // the rest of the schema; a missing or wrong-typed value must
+        // never invalidate an otherwise-valid cache file.
+        if ($installedVersionReleasedAt !== null && !is_string($installedVersionReleasedAt)) {
+            $installedVersionReleasedAt = null;
+        }
 
         return new UpdateCheckResult(
             installedVersion: $installed,
@@ -107,6 +114,7 @@ final class UpdateCheckCache
             error: $error,
             fromCache: is_bool($fromCache) ? $fromCache : false,
             checkedAt: $checkedAt,
+            installedVersionReleasedAt: $installedVersionReleasedAt,
         );
     }
 

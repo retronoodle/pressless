@@ -152,6 +152,7 @@ final class UpdateAdminTest extends TestCase
             responseStatus: 200,
             responseBody: json_encode([
                 'tag_name' => 'v9.9.9',
+                'published_at' => '2026-08-13T12:34:56Z',
                 'assets' => [
                     ['name' => 'stead-9.9.9.zip', 'browser_download_url' => 'https://example.test/stead-9.9.9.zip'],
                 ],
@@ -179,6 +180,7 @@ final class UpdateAdminTest extends TestCase
             responseStatus: 200,
             responseBody: json_encode([
                 'tag_name' => 'v9.9.9',
+                'published_at' => '2026-08-13T12:34:56Z',
                 'assets' => [
                     ['name' => 'stead-9.9.9.zip', 'browser_download_url' => 'https://example.test/stead-9.9.9.zip'],
                 ],
@@ -236,6 +238,7 @@ final class UpdateAdminTest extends TestCase
             responseStatus: 200,
             responseBody: json_encode([
                 'tag_name' => 'v1.0.0',
+                'published_at' => '2026-08-13T12:34:56Z',
                 'assets' => [
                     ['name' => 'stead-1.0.0.zip', 'browser_download_url' => 'https://example.test/stead-1.0.0.zip'],
                 ],
@@ -250,6 +253,87 @@ final class UpdateAdminTest extends TestCase
         $this->assertSame(200, $response->getStatusCode());
         $body = (string) $response->getContent();
         $this->assertStringNotContainsString('Update available', $body);
+    }
+
+    public function testHeaderRendersInstalledVersionOnAdminPage(): void
+    {
+        file_put_contents($this->projectRoot . '/VERSION', "1.2.3\n");
+        $this->retargetUpdateSource('http://127.0.0.1:1/');
+        $this->logInAsAdmin();
+
+        $response = $this->kernel->handle(Request::create('/admin'));
+        $this->assertSame(200, $response->getStatusCode());
+        $body = (string) $response->getContent();
+        $this->assertStringContainsString('Stead 1.2.3', $body);
+    }
+
+    public function testHeaderRendersReleaseDateWhenCachedCheckHasIt(): void
+    {
+        file_put_contents($this->projectRoot . '/VERSION', "1.2.3\n");
+        $this->retargetUpdateSource('http://127.0.0.1:1/');
+
+        // Seed the cache with a known release date.
+        $cache = new UpdateCheckCache($this->cacheRoot);
+        $cache->save(new \Stead\Update\UpdateCheckResult(
+            installedVersion: '1.2.3',
+            latestVersion: null,
+            downloadUrl: null,
+            isUpToDate: true,
+            error: null,
+            fromCache: false,
+            checkedAt: time(),
+            installedVersionReleasedAt: '2026-08-13T12:34:56Z',
+        ));
+
+        $this->logInAsAdmin();
+        $response = $this->kernel->handle(Request::create('/admin'));
+        $this->assertSame(200, $response->getStatusCode());
+        $body = (string) $response->getContent();
+        $this->assertStringContainsString('Stead 1.2.3', $body);
+        $this->assertStringContainsString('released 2026-08-13', $body);
+    }
+
+    public function testHeaderOmitsReleaseDateWhenCacheHasNone(): void
+    {
+        file_put_contents($this->projectRoot . '/VERSION', "1.2.3\n");
+        $this->retargetUpdateSource('http://127.0.0.1:1/');
+
+        // Seed the cache without the new field (simulates an older
+        // cache file or a check that hasn't populated the date yet).
+        $cache = new UpdateCheckCache($this->cacheRoot);
+        $cache->save(new \Stead\Update\UpdateCheckResult(
+            installedVersion: '1.2.3',
+            latestVersion: null,
+            downloadUrl: null,
+            isUpToDate: true,
+            error: null,
+            fromCache: false,
+            checkedAt: time(),
+        ));
+
+        $this->logInAsAdmin();
+        $response = $this->kernel->handle(Request::create('/admin'));
+        $this->assertSame(200, $response->getStatusCode());
+        $body = (string) $response->getContent();
+        $this->assertStringContainsString('Stead 1.2.3', $body);
+        $this->assertStringNotContainsString('released', $body);
+    }
+
+    public function testHeaderVersionIndicatorIsNotInteractive(): void
+    {
+        file_put_contents($this->projectRoot . '/VERSION', "1.2.3\n");
+        $this->retargetUpdateSource('http://127.0.0.1:1/');
+        $this->logInAsAdmin();
+
+        $response = $this->kernel->handle(Request::create('/admin'));
+        $this->assertSame(200, $response->getStatusCode());
+        $body = (string) $response->getContent();
+        // The indicator should be a plain <p>, not wrapped in an
+        // interactive element.
+        $this->assertMatchesRegularExpression(
+            '#<p class="admin-version">[^<]*Stead\s*1\.2\.3[^<]*</p>#',
+            $body,
+        );
     }
 
     /**
@@ -306,12 +390,34 @@ final class UpdateAdminTest extends TestCase
 
     private function installTemplates(): void
     {
+        $adminDir = $this->templatesDir . '/admin';
+        if (!is_dir($adminDir)) {
+            mkdir($adminDir, 0775, true);
+        }
+        $layoutDir = $this->templatesDir . '/layout';
+        if (!is_dir($layoutDir)) {
+            mkdir($layoutDir, 0775, true);
+        }
+
+        // Mirror the real _header.twig markup so the integration tests
+        // exercise the production version indicator (including the
+        // "Stead <version> · released Y-M-D" line and its fallback
+        // paths). Anything not asserted against here is intentionally
+        // stripped — the test only cares about the version block.
+        file_put_contents(
+            $adminDir . '/_header.twig',
+            "<header class=\"admin-header\">"
+            . "<h1>Stead admin</h1>"
+            . "<p class=\"admin-version\">Stead {{ installed_version|default('version unknown') }}"
+            . "{% if installed_version_released_at|default('') %} · released {{ installed_version_released_at|date('Y-m-d') }}{% endif %}"
+            . "</p>"
+            . "</header>\n",
+        );
+
         file_put_contents(
             $this->templatesDir . '/admin.twig',
             "{% extends 'layout/base.twig' %}\n"
-            . "{% block body %}<header><nav>"
-            . "<a href=\"/admin\">Dashboard</a>"
-            . "</nav></header>"
+            . "{% block body %}{% include 'admin/_header.twig' %}"
             . "<main>"
             . "{% if update_notice is defined and update_notice %}"
             . "<section class=\"update-notice\" role=\"status\">"
@@ -324,10 +430,6 @@ final class UpdateAdminTest extends TestCase
             . "</main>{% endblock %}\n",
         );
 
-        $adminDir = $this->templatesDir . '/admin';
-        if (!is_dir($adminDir)) {
-            mkdir($adminDir, 0775, true);
-        }
         file_put_contents(
             $adminDir . '/update.twig',
             "{% extends 'layout/base.twig' %}\n"
@@ -346,10 +448,6 @@ final class UpdateAdminTest extends TestCase
             . "{% endblock %}\n",
         );
 
-        $layoutDir = $this->templatesDir . '/layout';
-        if (!is_dir($layoutDir)) {
-            mkdir($layoutDir, 0775, true);
-        }
         file_put_contents(
             $layoutDir . '/base.twig',
             "<!doctype html><html><head><title>{% block title %}Stead{% endblock %}</title></head>"

@@ -197,6 +197,13 @@ a.button:hover {
     margin: 0 0 var(--stead-space-4);
 }
 
+.admin-version {
+    margin: 0 0 var(--stead-space-4);
+    color: var(--stead-muted);
+    font-size: var(--stead-text-sm);
+    font-variant-numeric: tabular-nums;
+}
+
 .admin-nav ul {
     display: flex;
     flex-wrap: wrap;

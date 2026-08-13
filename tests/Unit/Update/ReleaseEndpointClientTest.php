@@ -36,6 +36,7 @@ final class ReleaseEndpointClientTest extends TestCase
     {
         $body = json_encode([
             'tag_name' => 'v1.2.3',
+            'published_at' => '2026-08-13T12:34:56Z',
             'assets' => [
                 [
                     'name' => 'stead-1.2.3.zip',
@@ -54,7 +55,11 @@ final class ReleaseEndpointClientTest extends TestCase
         $client = $this->makeClient($this->server);
         $payload = $client->fetchLatest();
         $this->assertSame(
-            ['latest' => '1.2.3', 'url' => 'https://example.test/stead-1.2.3.zip'],
+            [
+                'latest' => '1.2.3',
+                'url' => 'https://example.test/stead-1.2.3.zip',
+                'published_at' => '2026-08-13T12:34:56Z',
+            ],
             $payload,
         );
     }
@@ -63,6 +68,7 @@ final class ReleaseEndpointClientTest extends TestCase
     {
         $body = json_encode([
             'tag_name' => 'v1.2.3',
+            'published_at' => '2026-08-13T12:34:56Z',
             'assets' => [
                 ['name' => 'stead-1.2.3.tar.gz', 'browser_download_url' => 'https://example.test/x.tar.gz'],
             ],
@@ -74,7 +80,11 @@ final class ReleaseEndpointClientTest extends TestCase
         $client = $this->makeClient($this->server);
         $payload = $client->fetchLatest();
         $this->assertSame(
-            ['latest' => '1.2.3', 'url' => 'https://api.github.com/repos/o/r/zipball/v1.2.3'],
+            [
+                'latest' => '1.2.3',
+                'url' => 'https://api.github.com/repos/o/r/zipball/v1.2.3',
+                'published_at' => '2026-08-13T12:34:56Z',
+            ],
             $payload,
         );
     }
@@ -83,6 +93,7 @@ final class ReleaseEndpointClientTest extends TestCase
     {
         $body = json_encode([
             'tag_name' => 'v1.2.3',
+            'published_at' => '2026-08-13T12:34:56Z',
             'zipball_url' => 'https://api.github.com/repos/o/r/zipball/v1.2.3',
         ]);
         $this->assertNotFalse($body);
@@ -91,7 +102,11 @@ final class ReleaseEndpointClientTest extends TestCase
         $client = $this->makeClient($this->server);
         $payload = $client->fetchLatest();
         $this->assertSame(
-            ['latest' => '1.2.3', 'url' => 'https://api.github.com/repos/o/r/zipball/v1.2.3'],
+            [
+                'latest' => '1.2.3',
+                'url' => 'https://api.github.com/repos/o/r/zipball/v1.2.3',
+                'published_at' => '2026-08-13T12:34:56Z',
+            ],
             $payload,
         );
     }
@@ -100,6 +115,7 @@ final class ReleaseEndpointClientTest extends TestCase
     {
         $body = json_encode([
             'tag_name' => 'v1.2.3',
+            'published_at' => '2026-08-13T12:34:56Z',
             'assets' => [],
             'zipball_url' => '',
         ]);
@@ -114,7 +130,7 @@ final class ReleaseEndpointClientTest extends TestCase
     {
         $this->server = new FakeReleaseServer(
             500,
-            json_encode(['tag_name' => 'v1.2.3', 'assets' => [], 'zipball_url' => 'x']) ?: '',
+            json_encode(['tag_name' => 'v1.2.3', 'published_at' => '2026-08-13T12:34:56Z', 'assets' => [], 'zipball_url' => 'x']) ?: '',
         );
         $client = $this->makeClient($this->server);
         $this->assertNull($client->fetchLatest());
@@ -130,6 +146,36 @@ final class ReleaseEndpointClientTest extends TestCase
     public function testReturnsNullWhenTagNameMissing(): void
     {
         $body = json_encode([
+            'published_at' => '2026-08-13T12:34:56Z',
+            'assets' => [['name' => 'stead-1.2.3.zip', 'browser_download_url' => 'https://x.test/z.zip']],
+            'zipball_url' => 'https://x.test/z',
+        ]);
+        $this->assertNotFalse($body);
+
+        $this->server = new FakeReleaseServer(200, $body);
+        $client = $this->makeClient($this->server);
+        $this->assertNull($client->fetchLatest());
+    }
+
+    public function testReturnsNullWhenPublishedAtMissing(): void
+    {
+        $body = json_encode([
+            'tag_name' => 'v1.2.3',
+            'assets' => [['name' => 'stead-1.2.3.zip', 'browser_download_url' => 'https://x.test/z.zip']],
+            'zipball_url' => 'https://x.test/z',
+        ]);
+        $this->assertNotFalse($body);
+
+        $this->server = new FakeReleaseServer(200, $body);
+        $client = $this->makeClient($this->server);
+        $this->assertNull($client->fetchLatest());
+    }
+
+    public function testReturnsNullWhenPublishedAtEmpty(): void
+    {
+        $body = json_encode([
+            'tag_name' => 'v1.2.3',
+            'published_at' => '',
             'assets' => [['name' => 'stead-1.2.3.zip', 'browser_download_url' => 'https://x.test/z.zip']],
             'zipball_url' => 'https://x.test/z',
         ]);
@@ -143,19 +189,9 @@ final class ReleaseEndpointClientTest extends TestCase
     public function testReturnsNullWhenEndpointUnreachable(): void
     {
         // No server bound at this address; connect should fail and the
-        // client must report null (not throw). We subclass to point at
+        // client must report null (not throw). We point the base URL at
         // a known-closed port without spinning up a server.
-        $client = new class('owner/repo', 1, 'http://127.0.0.1:1/') extends ReleaseEndpointClient {
-            public function __construct(string $githubRepo, int $timeoutSeconds, private readonly string $overrideBaseUrl)
-            {
-                parent::__construct($githubRepo, $timeoutSeconds);
-            }
-
-            protected function apiUrl(): string
-            {
-                return $this->overrideBaseUrl;
-            }
-        };
+        $client = new ReleaseEndpointClient('owner/repo', 1, 'http://127.0.0.1:1/');
         $this->assertNull($client->fetchLatest());
     }
 
@@ -176,6 +212,7 @@ final class ReleaseEndpointClientTest extends TestCase
     {
         $body = json_encode([
             'tag_name' => '1.2.3',
+            'published_at' => '2026-08-13T12:34:56Z',
             'assets' => [['name' => 'stead-1.2.3.zip', 'browser_download_url' => 'https://x.test/z.zip']],
             'zipball_url' => '',
         ]);
@@ -184,22 +221,122 @@ final class ReleaseEndpointClientTest extends TestCase
         $this->server = new FakeReleaseServer(200, $body);
         $client = $this->makeClient($this->server);
         $payload = $client->fetchLatest();
-        $this->assertSame(['latest' => '1.2.3', 'url' => 'https://x.test/z.zip'], $payload);
+        $this->assertSame(
+            [
+                'latest' => '1.2.3',
+                'url' => 'https://x.test/z.zip',
+                'published_at' => '2026-08-13T12:34:56Z',
+            ],
+            $payload,
+        );
+    }
+
+    public function testFetchReleaseByTagReturnsFullPayloadOnSuccess(): void
+    {
+        $body = json_encode([
+            'tag_name' => 'v1.2.3',
+            'published_at' => '2026-08-13T12:34:56Z',
+            'assets' => [
+                ['name' => 'stead-1.2.3.zip', 'browser_download_url' => 'https://example.test/stead-1.2.3.zip'],
+            ],
+            'zipball_url' => 'https://api.github.com/repos/o/r/zipball/v1.2.3',
+        ]);
+        $this->assertNotFalse($body);
+
+        $this->server = new FakeReleaseServer(200, $body);
+        $client = $this->makeTagClient($this->server);
+        $payload = $client->fetchReleaseByTag('v1.2.3');
+        $this->assertSame(
+            [
+                'version' => '1.2.3',
+                'published_at' => '2026-08-13T12:34:56Z',
+                'download_url' => 'https://example.test/stead-1.2.3.zip',
+            ],
+            $payload,
+        );
+    }
+
+    public function testFetchReleaseByTagReturnsNullOn404(): void
+    {
+        $this->server = new FakeReleaseServer(404, '{"message":"Not Found"}');
+        $client = $this->makeTagClient($this->server);
+        $this->assertNull($client->fetchReleaseByTag('v9.9.9'));
+    }
+
+    public function testFetchReleaseByTagReturnsNullOnMalformedJson(): void
+    {
+        $this->server = new FakeReleaseServer(200, '<html>oops</html>');
+        $client = $this->makeTagClient($this->server);
+        $this->assertNull($client->fetchReleaseByTag('v1.2.3'));
+    }
+
+    public function testFetchReleaseByTagReturnsNullOnTransportFailure(): void
+    {
+        $client = new ReleaseEndpointClient('owner/repo', 1, 'http://127.0.0.1:1/');
+        $this->assertNull($client->fetchReleaseByTag('v1.2.3'));
+    }
+
+    public function testFetchReleaseByTagReturnsNullWhenPublishedAtMissing(): void
+    {
+        $body = json_encode([
+            'tag_name' => 'v1.2.3',
+            'assets' => [['name' => 'stead-1.2.3.zip', 'browser_download_url' => 'https://x.test/z.zip']],
+            'zipball_url' => '',
+        ]);
+        $this->assertNotFalse($body);
+
+        $this->server = new FakeReleaseServer(200, $body);
+        $client = $this->makeTagClient($this->server);
+        $this->assertNull($client->fetchReleaseByTag('v1.2.3'));
+    }
+
+    public function testFetchReleaseByTagReturnsPayloadWithNullDownloadUrlWhenNoUsableAsset(): void
+    {
+        $body = json_encode([
+            'tag_name' => 'v1.2.3',
+            'published_at' => '2026-08-13T12:34:56Z',
+            'assets' => [],
+            'zipball_url' => '',
+        ]);
+        $this->assertNotFalse($body);
+
+        $this->server = new FakeReleaseServer(200, $body);
+        $client = $this->makeTagClient($this->server);
+        $payload = $client->fetchReleaseByTag('v1.2.3');
+        $this->assertSame(
+            [
+                'version' => '1.2.3',
+                'published_at' => '2026-08-13T12:34:56Z',
+                'download_url' => null,
+            ],
+            $payload,
+        );
+    }
+
+    public function testFetchReleaseByTagReturnsNullForEmptyTag(): void
+    {
+        $client = new ReleaseEndpointClient('owner/repo', 5);
+        $this->assertNull($client->fetchReleaseByTag(''));
+    }
+
+    public function testFetchReleaseByTagReturnsNullForEmptyRepo(): void
+    {
+        $client = new ReleaseEndpointClient('', 5);
+        $this->assertNull($client->fetchReleaseByTag('v1.2.3'));
     }
 
     private function makeClient(FakeReleaseServer $server): ReleaseEndpointClient
     {
-        return new class('owner/repo', 5, $server->url() . 'repos/owner/repo/releases/latest') extends ReleaseEndpointClient {
-            public function __construct(string $githubRepo, int $timeoutSeconds, private readonly string $overrideBaseUrl)
-            {
-                parent::__construct($githubRepo, $timeoutSeconds);
-            }
+        // Point the API base at the fake server. URL paths under
+        // /repos/owner/repo/ are built by fetchJson() from this base.
+        return new ReleaseEndpointClient('owner/repo', 5, $server->url());
+    }
 
-            protected function apiUrl(): string
-            {
-                return $this->overrideBaseUrl;
-            }
-        };
+    private function makeTagClient(FakeReleaseServer $server): ReleaseEndpointClient
+    {
+        // Point the API base at the fake server. URL paths under
+        // /repos/owner/repo/ are built by fetchJson() from this base.
+        return new ReleaseEndpointClient('owner/repo', 5, $server->url());
     }
 }
 
