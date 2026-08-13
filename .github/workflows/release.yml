@@ -39,10 +39,8 @@ jobs:
 
       # No `composer install` here on purpose: bin/release shells out to
       # composer itself in its own clean temp directory, so the host
-      # environment does not need a pre-populated vendor/ tree.
-      - name: Install Composer
-        uses: composer/composer-action@v1
-
+      # environment does not need a pre-populated vendor/ tree. Composer
+      # itself comes bundled with the setup-php action above.
       - name: Build release ZIP
         env:
           # bin/release uses $APP_ENV (defaulting to production) for nothing
