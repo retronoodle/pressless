@@ -112,6 +112,21 @@ For non-technical users — a cPanel/shared-hosting audience — installing Stea
 
 If the installer is reachable but no DB connection succeeds, the most common cause is filesystem permissions on the project root — the wizard surfaces the exact path that couldn't be written. Once `installed.lock` exists, `/install/*` redirects to `/admin` and the only way back in is to delete that file (which is the correct behavior: the installer is destructive to in-progress state).
 
+## Installing Stead (Forge, Ploi, or any Git-based host)
+
+For hosts like [Forge](https://forge.laravel.com) or [Ploi](https://ploi.io) that deploy by connecting a site to a Git repository:
+
+1. **Create the site** and point its Git repository at `https://github.com/retronoodle/stead` (any branch — the deploy script below ignores it and pulls a tagged release instead).
+2. **Set the deploy script** to:
+   ```sh
+   php bin/deploy
+   ```
+   `bin/deploy` fetches the latest published GitHub Release ZIP (the same artefact the manual install uses) and extracts it over the site directory. It's self-contained — no `composer install` step needed first — and never touches `.env`, `installed.lock`, `storage/media/`, or `var/`, so re-deploys are safe once the site is installed. To deploy from a fork instead, set `STEAD_GITHUB_REPO=owner/repo` as an environment variable for the deploy script.
+3. **Set the web directory / document root** to `public/`.
+4. **Deploy**, then visit the site and walk through the installer wizard as described above.
+
+Note: deploys are additive — a file removed in a newer release isn't deleted by an older deploy of `bin/deploy`, only overwritten where the new release has a replacement. This trades perfect cleanliness for never risking a deploy that deletes something it shouldn't.
+
 ## Releasing and updating
 
 Maintainers build a dist ZIP with `bin/release <version>` (e.g. `bin/release 1.2.3`) — it installs production-only dependencies, strips dev/test files (`tests/`, `.git/`, `openspec/`, `phpunit.xml`, `phpstan.neon`, `.env`), stamps a `VERSION` file, and zips the result. Pushing a `vX.Y.Z` tag runs the same build in CI and publishes a GitHub Release with the ZIP attached as an asset automatically. See [`docs/RELEASING.md`](docs/RELEASING.md) for the full maintainer SOP (versioning, verification, rollback).

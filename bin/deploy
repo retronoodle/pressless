@@ -1,0 +1,234 @@
+<?php
+
+declare(strict_types=1);
+
+/**
+ * Deploy script for Forge/Ploi (or any host that runs a command after a
+ * git pull). Fetches the latest published Stead release ZIP from GitHub
+ * and extracts it over the current checkout, without touching runtime
+ * state (.env, installed.lock, uploaded media, backups, cache/logs).
+ *
+ * Deliberately self-contained — no `vendor/autoload.php` — because on a
+ * fresh Forge/Ploi site the only thing on disk before this runs is
+ * whatever the host cloned from git, and there is no vendor/ tree yet.
+ * Uses only the curl/zip PHP extensions Stead already requires (see
+ * composer.json), the same way src/Update/ReleaseEndpointClient.php
+ * talks to the GitHub Releases API for the update checker.
+ *
+ * Usage: point a Forge/Ploi site's Git repository at
+ * https://github.com/retronoodle/stead (or your fork — override via
+ * the STEAD_GITHUB_REPO env var), paste `php bin/deploy` into the
+ * host's deploy script field, and set the document root to `public/`.
+ * First deploy still needs the web installer wizard run once, same as
+ * a manual ZIP install — see README.md.
+ *
+ * Deliberately additive, not destructive: files are copied over, never
+ * deleted, so a release that drops a file leaves the stale copy behind.
+ * That trades perfect cleanliness for never risking a deploy that wipes
+ * something it shouldn't.
+ */
+
+const DEFAULT_REPO = 'retronoodle/stead';
+
+/**
+ * Paths (relative to the project root) that hold runtime state rather
+ * than application code. Left untouched by the copy step below.
+ *
+ * @var list<string>
+ */
+const EXCLUDE_PREFIXES = [
+    '.env',
+    'installed.lock',
+    'storage/media',
+    'var',
+];
+
+function main(): int
+{
+    $projectRoot = dirname(__DIR__);
+    $repo = getenv('STEAD_GITHUB_REPO') ?: DEFAULT_REPO;
+
+    fwrite(STDOUT, "Looking up latest release for {$repo}...\n");
+    $release = fetchLatestRelease($repo);
+    if ($release === null) {
+        fwrite(STDERR, "Could not find a published release ZIP for {$repo}.\n");
+        return 1;
+    }
+
+    fwrite(STDOUT, "Downloading {$release['tag']} ({$release['url']})...\n");
+    $zipPath = downloadZip($release['url']);
+
+    try {
+        fwrite(STDOUT, "Extracting...\n");
+        $extractedDir = extractZip($zipPath);
+
+        try {
+            fwrite(STDOUT, "Syncing into {$projectRoot}...\n");
+            copyInto($extractedDir, $projectRoot);
+        } finally {
+            removeRecursive($extractedDir);
+        }
+    } finally {
+        @unlink($zipPath);
+    }
+
+    fwrite(STDOUT, "Deployed {$release['tag']}. Visit the site to finish installing (or check /admin if already installed).\n");
+    return 0;
+}
+
+/**
+ * @return array{tag: string, url: string}|null
+ */
+function fetchLatestRelease(string $repo): ?array
+{
+    $ch = curl_init("https://api.github.com/repos/{$repo}/releases/latest");
+    if ($ch === false) {
+        return null;
+    }
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_FOLLOWLOCATION => true,
+        CURLOPT_MAXREDIRS => 3,
+        CURLOPT_TIMEOUT => 15,
+        CURLOPT_USERAGENT => 'Stead-Deploy/1.0',
+        CURLOPT_HTTPHEADER => ['Accept: application/vnd.github+json'],
+    ]);
+    $body = curl_exec($ch);
+    $status = curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
+    curl_close($ch);
+
+    if ($body === false || !is_int($status) || $status < 200 || $status >= 300) {
+        return null;
+    }
+
+    $decoded = json_decode((string) $body, true);
+    if (!is_array($decoded) || !is_string($decoded['tag_name'] ?? null)) {
+        return null;
+    }
+
+    foreach ((array) ($decoded['assets'] ?? []) as $asset) {
+        $name = is_array($asset) ? ($asset['name'] ?? null) : null;
+        $url = is_array($asset) ? ($asset['browser_download_url'] ?? null) : null;
+        if (is_string($name) && str_ends_with($name, '.zip') && is_string($url) && $url !== '') {
+            return ['tag' => $decoded['tag_name'], 'url' => $url];
+        }
+    }
+
+    return null;
+}
+
+function downloadZip(string $url): string
+{
+    $dest = tempnam(sys_get_temp_dir(), 'stead-deploy-');
+    if ($dest === false) {
+        throw new RuntimeException('Could not create a temp file for the release ZIP.');
+    }
+
+    $fh = fopen($dest, 'wb');
+    if ($fh === false) {
+        throw new RuntimeException("Could not open {$dest} for writing.");
+    }
+
+    $ch = curl_init($url);
+    if ($ch === false) {
+        fclose($fh);
+        throw new RuntimeException("Could not start a download for {$url}.");
+    }
+    curl_setopt_array($ch, [
+        CURLOPT_FILE => $fh,
+        CURLOPT_FOLLOWLOCATION => true,
+        CURLOPT_MAXREDIRS => 5,
+        CURLOPT_TIMEOUT => 120,
+        CURLOPT_USERAGENT => 'Stead-Deploy/1.0',
+    ]);
+    $ok = curl_exec($ch);
+    $status = curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
+    curl_close($ch);
+    fclose($fh);
+
+    if ($ok === false || !is_int($status) || $status < 200 || $status >= 300) {
+        @unlink($dest);
+        throw new RuntimeException("Download failed (HTTP {$status}).");
+    }
+
+    return $dest;
+}
+
+function extractZip(string $zipPath): string
+{
+    $dir = tempnam(sys_get_temp_dir(), 'stead-extract-');
+    if ($dir === false) {
+        throw new RuntimeException('Could not create a temp directory for extraction.');
+    }
+    @unlink($dir);
+    if (!mkdir($dir, 0775, true) && !is_dir($dir)) {
+        throw new RuntimeException("Could not create temp directory at {$dir}.");
+    }
+
+    $zip = new ZipArchive();
+    if ($zip->open($zipPath) !== true) {
+        throw new RuntimeException("Could not open downloaded ZIP at {$zipPath}.");
+    }
+    $zip->extractTo($dir);
+    $zip->close();
+
+    return $dir;
+}
+
+function copyInto(string $src, string $dest): void
+{
+    $iterator = new RecursiveIteratorIterator(
+        new RecursiveDirectoryIterator($src, FilesystemIterator::SKIP_DOTS),
+        RecursiveIteratorIterator::SELF_FIRST,
+    );
+
+    foreach ($iterator as $entry) {
+        $relative = substr($entry->getPathname(), strlen($src) + 1);
+        if (isExcluded($relative)) {
+            continue;
+        }
+
+        $target = $dest . '/' . $relative;
+        if ($entry->isDir()) {
+            if (!is_dir($target) && !mkdir($target, 0775, true) && !is_dir($target)) {
+                throw new RuntimeException("Could not create directory {$target}.");
+            }
+            continue;
+        }
+
+        $targetDir = dirname($target);
+        if (!is_dir($targetDir) && !mkdir($targetDir, 0775, true) && !is_dir($targetDir)) {
+            throw new RuntimeException("Could not create directory {$targetDir}.");
+        }
+        if (!copy($entry->getPathname(), $target)) {
+            throw new RuntimeException("Could not copy {$entry->getPathname()} to {$target}.");
+        }
+    }
+}
+
+function isExcluded(string $relative): bool
+{
+    foreach (EXCLUDE_PREFIXES as $prefix) {
+        if ($relative === $prefix || str_starts_with($relative, $prefix . '/')) {
+            return true;
+        }
+    }
+    return false;
+}
+
+function removeRecursive(string $path): void
+{
+    if (!is_dir($path)) {
+        return;
+    }
+    $iterator = new RecursiveIteratorIterator(
+        new RecursiveDirectoryIterator($path, FilesystemIterator::SKIP_DOTS),
+        RecursiveIteratorIterator::CHILD_FIRST,
+    );
+    foreach ($iterator as $entry) {
+        $entry->isDir() ? @rmdir($entry->getPathname()) : @unlink($entry->getPathname());
+    }
+    @rmdir($path);
+}
+
+exit(main());
