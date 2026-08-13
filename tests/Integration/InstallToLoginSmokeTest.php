@@ -15,7 +15,7 @@ use Stead\Console\ServePreflight;
 use Stead\Database\Connection;
 use Stead\Http\Kernel;
 use Stead\Http\Routes;
-use Stead\View\TwigRenderer;
+use Stead\Tests\Support\TestRenderer;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpFoundation\Request;
 
@@ -155,7 +155,7 @@ final class InstallToLoginSmokeTest extends TestCase
 
         // 2. Wire up the application as it boots in `bin/serve`
         $app = new Application($this->config);
-        $router = Routes::createWithStore($app, $this->makeStore(), new TwigRenderer($this->config));
+        $router = Routes::createWithStore($app, $this->makeStore(), TestRenderer::twig($this->config, $this->connection));
         $kernel = new Kernel($app, $router);
 
         // 3. Unauthenticated request to /admin must redirect to login (no shell markup).
@@ -192,7 +192,7 @@ final class InstallToLoginSmokeTest extends TestCase
             server: ['host' => '127.0.0.1', 'port' => 8000],
         );
         $app = new Application($this->config);
-        $router = Routes::createWithStore($app, $this->makeStore(), new TwigRenderer($this->config));
+        $router = Routes::createWithStore($app, $this->makeStore(), TestRenderer::twig($this->config, $this->connection));
         $kernel = new Kernel($app, $router);
 
         // Submit the same email for both failure modes so the bodies can be
@@ -233,7 +233,7 @@ final class InstallToLoginSmokeTest extends TestCase
         $adminPassword = (string) $result['seed']['admin_password'];
 
         $app = new Application($this->config);
-        $router = Routes::createWithStore($app, $this->makeStore(), new TwigRenderer($this->config));
+        $router = Routes::createWithStore($app, $this->makeStore(), TestRenderer::twig($this->config, $this->connection));
         $kernel = new Kernel($app, $router);
 
         // Login.

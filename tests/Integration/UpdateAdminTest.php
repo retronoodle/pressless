@@ -21,7 +21,7 @@ use Stead\Update\InstalledVersion;
 use Stead\Update\ReleaseEndpointClient;
 use Stead\Update\UpdateCheckCache;
 use Stead\Update\UpdateChecker;
-use Stead\View\TwigRenderer;
+use Stead\Tests\Support\TestRenderer;
 use Symfony\Component\HttpFoundation\Request;
 
 /**
@@ -121,7 +121,7 @@ final class UpdateAdminTest extends TestCase
         );
 
         $app = new Application($this->config);
-        $router = Routes::createWithStore($app, $this->store, new TwigRenderer($this->config));
+        $router = Routes::createWithStore($app, $this->store, TestRenderer::twig($this->config, $this->connection));
         $this->kernel = new Kernel($app, $router);
     }
 
@@ -272,7 +272,7 @@ final class UpdateAdminTest extends TestCase
         $cache->clear();
 
         $app = new Application($this->config);
-        $router = Routes::createWithStore($app, $this->store, new TwigRenderer($this->config));
+        $router = Routes::createWithStore($app, $this->store, TestRenderer::twig($this->config, $this->connection));
         $this->kernel = new Kernel($app, $router);
     }
 

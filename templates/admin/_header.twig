@@ -13,6 +13,7 @@
                 <li><a href="/admin/redirects" {% if active_nav|default('') == 'redirects' %}aria-current="page"{% endif %}>{% include 'admin/_icons/redirects.twig' %}Redirects</a></li>
                 <li><a href="/admin/invites" {% if active_nav|default('') == 'invites' %}aria-current="page"{% endif %}>{% include 'admin/_icons/invites.twig' %}Invites</a></li>
                 <li><a href="/admin/backups" {% if active_nav|default('') == 'backups' %}aria-current="page"{% endif %}>{% include 'admin/_icons/backups.twig' %}Backups</a></li>
+                <li><a href="/admin/themes" {% if active_nav|default('') == 'themes' %}aria-current="page"{% endif %}>{% include 'admin/_icons/themes.twig' %}Themes</a></li>
             {% else %}
                 <li><span class="nav-placeholder" aria-disabled="true">{% include 'admin/_icons/users.twig' %}Users</span></li>
                 <li><span class="nav-placeholder" aria-disabled="true">{% include 'admin/_icons/settings.twig' %}Settings</span></li>

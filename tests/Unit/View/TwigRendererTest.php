@@ -6,7 +6,10 @@ namespace Stead\Tests\Unit\View;
 
 use PHPUnit\Framework\TestCase;
 use Stead\Config\Configuration;
+use Stead\Database\Connection;
 use Stead\Exception\SafeException;
+use Stead\Themes\ActiveThemeResolver;
+use Stead\Themes\ThemeRepository;
 use Stead\View\TwigRenderer;
 
 final class TwigRendererTest extends TestCase
@@ -27,9 +30,20 @@ final class TwigRendererTest extends TestCase
         ]);
     }
 
+    private function renderer(Configuration $config): TwigRenderer
+    {
+        $connection = new Connection(new Configuration($config->projectRoot(), 'test', [
+            'database' => ['connection' => 'sqlite', 'database' => ':memory:'],
+        ]));
+        return new TwigRenderer(
+            $config,
+            new ActiveThemeResolver(new ThemeRepository($connection), $config),
+        );
+    }
+
     public function testRendersATemplateWithVariables(): void
     {
-        $output = (new TwigRenderer($this->config()))->render('greet', ['name' => 'Ada']);
+        $output = $this->renderer($this->config())->render('greet', ['name' => 'Ada']);
 
         $this->assertSame('Hello Ada!', $output);
     }
@@ -48,7 +62,7 @@ final class TwigRendererTest extends TestCase
             ],
         ]);
 
-        $output = (new TwigRenderer($config))->render('raw', ['value' => '<script>alert(1)</script>']);
+        $output = $this->renderer($config)->render('raw', ['value' => '<script>alert(1)</script>']);
 
         $this->assertStringNotContainsString('<script>', $output);
         $this->assertStringContainsString('&lt;script&gt;', $output);
@@ -56,7 +70,7 @@ final class TwigRendererTest extends TestCase
 
     public function testMissingTemplateBecomesASafeException(): void
     {
-        $renderer = new TwigRenderer($this->config());
+        $renderer = $this->renderer($this->config());
 
         try {
             $renderer->render('does-not-exist');
@@ -99,7 +113,7 @@ final class TwigRendererTest extends TestCase
     {
         $env = $this->configWithTheme('starter');
 
-        $output = (new TwigRenderer($env['config']))->render('greet', ['name' => 'Ada']);
+        $output = $this->renderer($env['config'])->render('greet', ['name' => 'Ada']);
 
         $this->assertSame('theme Ada', $output);
     }
@@ -108,7 +122,7 @@ final class TwigRendererTest extends TestCase
     {
         $env = $this->configWithTheme('starter');
 
-        $output = (new TwigRenderer($env['config']))->render('only-default');
+        $output = $this->renderer($env['config'])->render('only-default');
 
         $this->assertSame('only default', $output);
     }
@@ -127,7 +141,7 @@ final class TwigRendererTest extends TestCase
             ],
         ]);
 
-        $output = (new TwigRenderer($config))->render('greet', ['name' => 'Ada']);
+        $output = $this->renderer($config)->render('greet', ['name' => 'Ada']);
 
         $this->assertSame('default Ada', $output);
     }
@@ -149,7 +163,7 @@ final class TwigRendererTest extends TestCase
             'theme' => ['active' => 'no-such-theme'],
         ]);
 
-        $output = (new TwigRenderer($config))->render('greet', ['name' => 'Ada']);
+        $output = $this->renderer($config)->render('greet', ['name' => 'Ada']);
 
         $this->assertSame('default Ada', $output);
     }

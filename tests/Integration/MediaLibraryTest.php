@@ -21,7 +21,7 @@ use Stead\Media\LocalStorage;
 use Stead\Media\MediaRepository;
 use Stead\Media\TransformCache;
 use Stead\Tests\Integration\Support\JpegFixture;
-use Stead\View\TwigRenderer;
+use Stead\Tests\Support\TestRenderer;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
 use Symfony\Component\HttpFoundation\Request;
@@ -90,7 +90,7 @@ final class MediaLibraryTest extends TestCase
         $this->authService = new AuthenticationService($this->users, $sessions, $hasher, $this->store, 3600);
 
         $app = new Application($this->config);
-        $router = Routes::createWithStore($app, $this->store, new TwigRenderer($this->config));
+        $router = Routes::createWithStore($app, $this->store, TestRenderer::twig($this->config, $this->connection));
         $this->kernel = new Kernel($app, $router);
     }
 

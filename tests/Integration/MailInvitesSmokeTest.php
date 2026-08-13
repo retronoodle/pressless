@@ -20,7 +20,7 @@ use Stead\Invites\InviteRepository;
 use Stead\Mail\MailSettings;
 use Stead\Mail\MailSettingsRepository;
 use Stead\Mail\SmtpTransport;
-use Stead\View\TwigRenderer;
+use Stead\Tests\Support\TestRenderer;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpFoundation\Request;
 
@@ -96,7 +96,7 @@ final class MailInvitesSmokeTest extends TestCase
         $smtp = new SmtpTransport($this->mailSettings, 1);
 
         $app = new Application($this->config);
-        $router = Routes::createWithStore($app, $this->store, new TwigRenderer($this->config));
+        $router = Routes::createWithStore($app, $this->store, TestRenderer::twig($this->config, $this->connection));
         $this->kernel = new Kernel($app, $router);
 
         $this->admin = $this->users->create(

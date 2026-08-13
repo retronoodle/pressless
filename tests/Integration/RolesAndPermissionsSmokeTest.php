@@ -17,7 +17,7 @@ use Stead\Database\Connection;
 use Stead\Database\Migrator;
 use Stead\Http\Kernel;
 use Stead\Http\Routes;
-use Stead\View\TwigRenderer;
+use Stead\Tests\Support\TestRenderer;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpFoundation\Request;
 
@@ -85,7 +85,7 @@ final class RolesAndPermissionsSmokeTest extends TestCase
         $this->permissions = new PermissionRepository($this->connection);
 
         $app = new Application($this->config);
-        $router = Routes::createWithStore($app, $this->store, new TwigRenderer($this->config));
+        $router = Routes::createWithStore($app, $this->store, TestRenderer::twig($this->config, $this->connection));
         $this->kernel = new Kernel($app, $router);
     }
 

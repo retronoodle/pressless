@@ -1,0 +1,92 @@
+{% extends 'layout/base.twig' %}
+
+{% import 'admin/_state.twig' as state %}
+
+{% block title %}Themes - Stead admin{% endblock %}
+
+{% block body_class %}stead stead-admin stead-themes{% endblock %}
+
+{% block body %}
+{% include 'admin/_header.twig' with {active_nav: 'themes'} %}
+
+<main class="admin-main">
+    <section class="themes-header">
+        <h2>Themes</h2>
+        <p>Upload a theme ZIP and activate one without a redeploy.</p>
+    </section>
+
+    {% if flash %}
+        <section class="form-flash">
+            <p>{{ flash|e }}</p>
+        </section>
+    {% endif %}
+
+    {% if errors|length > 0 %}
+        <section class="form-errors">
+            <ul>
+                {% for message in errors %}
+                    <li>{{ message|e }}</li>
+                {% endfor %}
+            </ul>
+        </section>
+    {% endif %}
+
+    <section class="themes-upload">
+        <h3>Upload a theme</h3>
+        <p class="hint">ZIP must contain a single folder with <code>base.twig</code>, <code>home.twig</code>, <code>collection.twig</code>, and <code>entry.twig</code>.</p>
+        <form method="post" action="{{ action_url }}" enctype="multipart/form-data">
+            <p>
+                <label for="theme-file">Theme ZIP</label>
+                <input type="file" id="theme-file" name="file" required accept=".zip,application/zip">
+            </p>
+            <p>
+                <button type="submit">Upload</button>
+            </p>
+        </form>
+    </section>
+
+    {% if rows|length > 0 %}
+        <table class="admin-table themes-table">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Slug</th>
+                    <th>Version</th>
+                    <th>Author</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in rows %}
+                    <tr>
+                        <td>{{ row.name|e }}</td>
+                        <td><code>{{ row.slug|e }}</code></td>
+                        <td>{{ row.version|default('')|e }}</td>
+                        <td>{{ row.author|default('')|e }}</td>
+                        <td>
+                            {% if row.is_active %}
+                                <strong>Active</strong>
+                            {% else %}
+                                Inactive
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if not row.is_active %}
+                                <form method="post" action="/admin/themes/{{ row.id|e }}/activate">
+                                    <button type="submit">Activate</button>
+                                </form>
+                                <form method="post" action="/admin/themes/{{ row.id|e }}/delete" onsubmit="return confirm('Delete this theme?');">
+                                    <button type="submit" class="button--danger">{% include 'admin/_icons/delete.twig' %}Delete</button>
+                                </form>
+                            {% endif %}
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        {{ state.empty('No themes installed yet.', 'Upload a theme ZIP to get started.') }}
+    {% endif %}
+</main>
+{% endblock %}

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Stead\Http\Controller;
 
-use Stead\Config\Configuration;
+use Stead\Themes\ActiveThemeResolver;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -53,7 +53,7 @@ final class AssetController
         'ogg' => 'audio/ogg',
     ];
 
-    public function __construct(private readonly Configuration $config)
+    public function __construct(private readonly ActiveThemeResolver $themes)
     {
     }
 
@@ -98,19 +98,11 @@ final class AssetController
 
     private function resolveAssetsRoot(): ?string
     {
-        $active = $this->config->getString('theme.active');
-        if ($active === '') {
+        $themeDir = $this->themes->resolveThemeDirectory();
+        if ($themeDir === null) {
             return null;
         }
-        $themeRoot = $this->config->getString('paths.theme');
-        if ($themeRoot === '') {
-            return null;
-        }
-        $candidate = rtrim($this->config->projectRoot(), '/')
-            . '/' . trim($themeRoot, '/')
-            . '/' . trim($active, '/')
-            . '/assets';
-        $real = realpath($candidate);
+        $real = realpath($themeDir . '/assets');
         return $real === false ? null : $real;
     }
 

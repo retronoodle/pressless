@@ -37,6 +37,8 @@ defaults:
         theme: themes
     theme:
         active: starter
+        # Maximum theme ZIP upload size in bytes. Defaults to 10 MiB.
+        max_zip_bytes: 10485760
     sessions:
         name: stead_session
         lifetime: 7200
