@@ -37,12 +37,11 @@ jobs:
           extensions: mbstring, gd, intl
           coverage: none
 
+      # No `composer install` here on purpose: bin/release shells out to
+      # composer itself in its own clean temp directory, so the host
+      # environment does not need a pre-populated vendor/ tree.
       - name: Install Composer
         uses: composer/composer-action@v1
-        with:
-        # No `composer install` here on purpose: bin/release shells out to
-        # composer itself in its own clean temp directory, so the host
-        # environment does not need a pre-populated vendor/ tree.
 
       - name: Build release ZIP
         env:
