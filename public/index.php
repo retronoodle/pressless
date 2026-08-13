@@ -61,10 +61,17 @@ try {
 } catch (Throwable $exception) {
     // Bootstrap failed before the logger or exception handler existed, so
     // respond with a fixed safe body rather than anything derived from the error.
-    error_log('Stead bootstrap failure: ' . $exception->getMessage());
+    error_log(sprintf(
+        "Stead bootstrap failure: %s: %s in %s:%d\n%s",
+        $exception::class,
+        $exception->getMessage(),
+        $exception->getFile(),
+        $exception->getLine(),
+        $exception->getTraceAsString(),
+    ));
 
     (new Response(
-        'The application is not configured correctly.',
+        "The application is not configured correctly.\nCheck the web server's PHP error log for details.",
         Response::HTTP_INTERNAL_SERVER_ERROR,
         ['Content-Type' => 'text/plain; charset=utf-8'],
     ))->prepare($request)->send();
