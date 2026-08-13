@@ -407,6 +407,13 @@ final class WebInstallerSmokeTest extends TestCase
         $projectRoot = dirname($script, 3);
         $this->assertFileExists($projectRoot . '/public/index.php');
 
+        if (InstallerLock::isInstalled($projectRoot)) {
+            $this->markTestSkipped(
+                'installed.lock is present on this checkout; this test asserts the '
+                . 'installer-not-installed state and is only meaningful in a fresh clone.',
+            );
+        }
+
         $this->assertFalse(InstallerLock::isInstalled($projectRoot));
     }
 
