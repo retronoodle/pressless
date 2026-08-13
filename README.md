@@ -78,6 +78,8 @@ If a real plugin idea can't be expressed by this list, that's a signal for core 
 
 Distribution is `composer require` or a ZIP upload through the admin. A `bin/plugin` CLI scaffolds, validates, and packages plugins, and a discovery site lets people find and install yours. A full authoring guide is planned alongside the plugin discovery site.
 
+If you're building a theme specifically, see [`docs/building-themes.md`](docs/building-themes.md) for the required template set, exposed template variables, manifest format, ZIP packaging rules, and the upload validation you'll hit if you get something wrong.
+
 ## What it isn't
 
 - Not WordPress. Not trying to be.
