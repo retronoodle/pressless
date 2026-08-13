@@ -114,9 +114,9 @@ If the installer is reachable but no DB connection succeeds, the most common cau
 
 ## Releasing and updating
 
-Maintainers build a dist ZIP with `bin/release <version>` (e.g. `bin/release 1.2.3`) — it installs production-only dependencies, strips dev/test files (`tests/`, `.git/`, `openspec/`, `phpunit.xml`, `phpstan.neon`, `.env`), stamps a `VERSION` file, and zips the result. Pushing a `vX.Y.Z` tag runs the same build in CI and publishes the ZIP to the project website's release endpoint automatically.
+Maintainers build a dist ZIP with `bin/release <version>` (e.g. `bin/release 1.2.3`) — it installs production-only dependencies, strips dev/test files (`tests/`, `.git/`, `openspec/`, `phpunit.xml`, `phpstan.neon`, `.env`), stamps a `VERSION` file, and zips the result. Pushing a `vX.Y.Z` tag runs the same build in CI and publishes a GitHub Release with the ZIP attached as an asset automatically. See [`docs/RELEASING.md`](docs/RELEASING.md) for the full maintainer SOP (versioning, verification, rollback).
 
-Installed sites read their own `VERSION` file and periodically check that endpoint for a newer release (interval configurable via `UPDATE_CHECK_INTERVAL_HOURS`; leave `UPDATE_ENDPOINT_URL` empty to disable checks entirely). If the endpoint is unreachable or errors, the checker fails closed — no admin-facing error, just no update notice. When a newer version is available, admins see a banner on `/admin` linking to `/admin/update` for manual download-and-extract instructions; v1 has no one-click apply.
+Installed sites read their own `VERSION` file and periodically check GitHub's Releases API for a newer release (interval configurable via `UPDATE_CHECK_INTERVAL_HOURS`; set `UPDATE_GITHUB_REPO` to your fork's `owner/repo`, or leave `update.github_repo` empty to disable checks entirely). If the API is unreachable or errors, the checker fails closed — no admin-facing error, just no update notice. When a newer version is available, admins see a banner on `/admin` linking to `/admin/update` for manual download-and-extract instructions; v1 has no one-click apply.
 
 ## Backups and restore
 

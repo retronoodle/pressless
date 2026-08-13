@@ -1,24 +1,27 @@
 # Stead tagged-release pipeline
 #
-# Builds a production-only dist ZIP on a `vX.Y.Z` tag push and publishes it
-# to the project website's release/download endpoint. Non-release tag or
-# branch pushes are intentionally ignored — there is no other work this
-# workflow does, so the `on.push.tags` filter is the entire gate.
+# Builds a production-only dist ZIP on a `vX.Y.Z` tag push and publishes
+# it as a GitHub Release with the ZIP attached as a release asset.
+# Non-release tag or branch pushes are intentionally ignored — there is
+# no other work this workflow does, so the `on.push.tags` filter is
+# the entire gate.
 #
-# Required repository secrets (documented here so a maintainer can rotate
-# them without reading the workflow logic):
-#   - RELEASE_PUBLISH_URL : the full URL of the website's release upload
-#                           endpoint (HTTPS, accepts POST with
-#                           `version` and `file` form fields).
-#   - RELEASE_PUBLISH_TOKEN : bearer token (or other shared secret) used in
-#                             an `Authorization: Bearer ...` header to
-#                             authenticate the publish call.
+# No repo secrets are required: `gh release create` authenticates with
+# the Actions-provided `GITHUB_TOKEN`.
+#
+# Note: the previous version of this workflow published the ZIP to a
+# custom website endpoint using the repo secrets RELEASE_PUBLISH_URL
+# and RELEASE_PUBLISH_TOKEN. Those secrets are no longer referenced and
+# may be deleted from the repository settings.
 name: Release
 
 on:
   push:
     tags:
       - 'v[0-9]+.[0-9]+.[0-9]+*'
+
+permissions:
+  contents: write
 
 jobs:
   build-and-publish:
@@ -48,31 +51,21 @@ jobs:
           APP_ENV: production
         run: php bin/release "${GITHUB_REF_NAME#v}"
 
-      - name: Publish ZIP to website release endpoint
+      - name: Create GitHub Release
         env:
-          RELEASE_PUBLISH_URL: ${{ secrets.RELEASE_PUBLISH_URL }}
-          RELEASE_PUBLISH_TOKEN: ${{ secrets.RELEASE_PUBLISH_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
+          TAG="${GITHUB_REF_NAME}"
           VERSION="${GITHUB_REF_NAME#v}"
           ZIP="stead-${VERSION}.zip"
           if [ ! -f "$ZIP" ]; then
             echo "Expected $ZIP to exist after build step, but it does not." >&2
             exit 1
           fi
-          if [ -z "${RELEASE_PUBLISH_URL:-}" ]; then
-            echo "RELEASE_PUBLISH_URL secret is not configured." >&2
-            exit 1
-          fi
-          if [ -z "${RELEASE_PUBLISH_TOKEN:-}" ]; then
-            echo "RELEASE_PUBLISH_TOKEN secret is not configured." >&2
-            exit 1
-          fi
-          curl --fail --silent --show-error --location \
-            --header "Authorization: Bearer ${RELEASE_PUBLISH_TOKEN}" \
-            --form "version=${VERSION}" \
-            --form "file=@${ZIP}" \
-            "${RELEASE_PUBLISH_URL}"
+          gh release create "$TAG" "$ZIP" \
+            --title "$TAG" \
+            --generate-notes
 
       - name: Upload build artefact (fallback)
         uses: actions/upload-artifact@v4

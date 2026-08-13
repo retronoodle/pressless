@@ -156,25 +156,16 @@ final class Validator
     }
 
     /**
-     * The update checker settings are optional — an empty endpoint URL
-     * disables update checks entirely. When set, the values still need to
-     * be sane: the endpoint must look like an http(s) URL, the re-check
+     * The update checker settings are optional — an empty `github_repo`
+     * disables update checks entirely. The repo value is `owner/repo`;
+     * a malformed value yields a 404 from GitHub's API and the checker
+     * fails closed, so we don't validate the shape here. The re-check
      * interval must be positive, and the timeout must be within a
      * reasonable range so a misconfigured operator can't accidentally
      * hang their admin dashboard.
      */
     private static function validateUpdateChecker(Configuration $config): void
     {
-        $endpoint = $config->getString('update.endpoint_url');
-        if ($endpoint !== '') {
-            if (!preg_match('#^https?://[^\s]+$#i', $endpoint)) {
-                throw new SafeException(
-                    'Update endpoint URL must start with http:// or https:// and be a full URL.',
-                    ['setting' => 'update.endpoint_url', 'value' => $endpoint],
-                );
-            }
-        }
-
         $interval = $config->getInt('update.check_interval_hours', 24);
         if ($interval <= 0) {
             throw new SafeException(

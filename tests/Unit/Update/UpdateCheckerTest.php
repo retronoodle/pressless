@@ -46,7 +46,7 @@ final class UpdateCheckerTest extends TestCase
 
     public function testReturnsUnknownResultWhenVersionFileMissing(): void
     {
-        $checker = $this->makeChecker(endpointUrl: '');
+        $checker = $this->makeChecker(githubRepo: '');
         $result = $checker->check();
         $this->assertTrue($result->isUpToDate);
         $this->assertFalse($result->hasUpdate());
@@ -57,7 +57,7 @@ final class UpdateCheckerTest extends TestCase
     public function testReturnsUpToDateWhenEndpointNotConfigured(): void
     {
         $this->writeVersion('1.0.0');
-        $checker = $this->makeChecker(endpointUrl: '');
+        $checker = $this->makeChecker(githubRepo: '');
         $result = $checker->check();
         $this->assertTrue($result->isUpToDate);
         $this->assertFalse($result->hasUpdate());
@@ -80,9 +80,9 @@ final class UpdateCheckerTest extends TestCase
         $this->writeVersion('1.0.0');
         $client = $this->makeClient(
             returnValue: ['latest' => '1.1.0', 'url' => 'https://example.test/x.zip'],
-            endpointUrl: 'http://endpoint.test/',
+            githubRepo: 'owner/repo',
         );
-        $checker = $this->makeChecker(endpointUrl: 'http://endpoint.test/', client: $client);
+        $checker = $this->makeChecker(githubRepo: 'owner/repo', client: $client);
         $result = $checker->check();
         $this->assertFalse($result->isUpToDate);
         $this->assertTrue($result->hasUpdate());
@@ -95,9 +95,9 @@ final class UpdateCheckerTest extends TestCase
         $this->writeVersion('1.0.0');
         $client = $this->makeClient(
             returnValue: ['latest' => '1.0.0', 'url' => 'https://example.test/x.zip'],
-            endpointUrl: 'http://endpoint.test/',
+            githubRepo: 'owner/repo',
         );
-        $checker = $this->makeChecker(endpointUrl: 'http://endpoint.test/', client: $client);
+        $checker = $this->makeChecker(githubRepo: 'owner/repo', client: $client);
         $result = $checker->check();
         $this->assertTrue($result->isUpToDate);
         $this->assertFalse($result->hasUpdate());
@@ -130,7 +130,7 @@ final class UpdateCheckerTest extends TestCase
             }
         };
 
-        $config = $this->makeConfig(endpointUrl: 'http://example.test/');
+        $config = $this->makeConfig(githubRepo: 'owner/repo');
         $checker = new UpdateChecker(
             $config,
             new InstalledVersion($this->projectRoot),
@@ -144,28 +144,28 @@ final class UpdateCheckerTest extends TestCase
     }
 
     private function makeChecker(
-        string $endpointUrl = '',
+        string $githubRepo = '',
         ?ReleaseEndpointClient $client = null,
         ?UpdateCheckCache $cache = null,
     ): UpdateChecker {
-        $config = $this->makeConfig(endpointUrl: $endpointUrl);
+        $config = $this->makeConfig(githubRepo: $githubRepo);
         return new UpdateChecker(
             $config,
             new InstalledVersion($this->projectRoot),
-            $client ?? new ReleaseEndpointClient($endpointUrl, 1),
+            $client ?? new ReleaseEndpointClient($githubRepo, 1),
             $cache ?? new UpdateCheckCache($this->cacheRoot),
             new NullLogger(),
         );
     }
 
-    private function makeConfig(string $endpointUrl): Configuration
+    private function makeConfig(string $githubRepo): Configuration
     {
         return new Configuration(
             $this->projectRoot,
             'production',
             [
                 'update' => [
-                    'endpoint_url' => $endpointUrl,
+                    'github_repo' => $githubRepo,
                     'check_interval_hours' => 24,
                     'timeout_seconds' => 1,
                 ],
@@ -177,17 +177,17 @@ final class UpdateCheckerTest extends TestCase
     /**
      * @param array{latest: string, url: string}|null $returnValue
      */
-    private function makeClient(?array $returnValue, string $endpointUrl = ''): ReleaseEndpointClient
+    private function makeClient(?array $returnValue, string $githubRepo = ''): ReleaseEndpointClient
     {
-        return new class($returnValue, $endpointUrl) extends ReleaseEndpointClient {
+        return new class($returnValue, $githubRepo) extends ReleaseEndpointClient {
             /**
              * @param array{latest: string, url: string}|null $returnValue
              */
             public function __construct(
                 private readonly ?array $returnValue,
-                string $endpointUrl,
+                string $githubRepo,
             ) {
-                parent::__construct($endpointUrl, 1);
+                parent::__construct($githubRepo, 1);
             }
 
             /**

@@ -60,7 +60,7 @@ final class UpdateChecker
         }
 
         // No fresh cache → actually call the endpoint.
-        if ($this->client->endpointUrl() === '') {
+        if ($this->client->githubRepo() === '') {
             // No endpoint configured at all. Persist an "up to date"
             // sentinel so we don't log on every page load, and return
             // it.
@@ -132,8 +132,9 @@ final class UpdateChecker
         $installed ??= InstalledVersion::fromConfig($config);
         $cache ??= new UpdateCheckCache($config->path('paths.cache'));
         $client ??= new ReleaseEndpointClient(
-            endpointUrl: $config->getString('update.endpoint_url'),
+            githubRepo: $config->getString('update.github_repo'),
             timeoutSeconds: $config->getInt('update.timeout_seconds', 5),
+            apiBaseUrl: $config->getString('update.api_base_url', ReleaseEndpointClient::DEFAULT_API_BASE_URL),
         );
         return new self($config, $installed, $client, $cache, $logger);
     }

@@ -12,10 +12,16 @@ use Stead\Update\ReleaseEndpointClient;
  * server that lives for the duration of one test. Each test starts its
  * own server on an ephemeral port so the suite is parallel-safe.
  *
- * The smoke test in tasks.md (5.1/5.3) ultimately runs against a real
- * HTTPS endpoint; these tests pin the in-process behaviour so a regression
- * to "endpoint unreachable" → null vs → throw is caught here, before it
- * can ever reach the admin UI.
+ * The smoke test in tasks.md (5.1/5.3) ultimately runs against the real
+ * GitHub Releases API; these tests pin the in-process behaviour so a
+ * regression to "endpoint unreachable" → null vs → throw is caught here,
+ * before it can ever reach the admin UI.
+ *
+ * The fake server stands in for `https://api.github.com`. The test
+ * subclass of {@see ReleaseEndpointClient} overrides `apiUrl()` to point
+ * at the local server so we don't need DNS spoofing or HTTPS in the
+ * sandbox; the production URL path (`/repos/<owner>/<repo>/releases/latest`)
+ * is preserved so the test exercises the same path-based routing.
  */
 final class ReleaseEndpointClientTest extends TestCase
 {
@@ -26,51 +32,174 @@ final class ReleaseEndpointClientTest extends TestCase
         $this->server?->stop();
     }
 
-    public function testReturnsLatestAndUrlOnSuccess(): void
+    public function testReturnsLatestAndZipAssetUrlOnSuccess(): void
     {
-        $this->server = new FakeReleaseServer(
-            responseStatus: 200,
-            responseBody: '{"latest":"1.2.3","url":"https://example.test/stead-1.2.3.zip"}',
-        );
-        $client = new ReleaseEndpointClient($this->server->url(), timeoutSeconds: 5);
+        $body = json_encode([
+            'tag_name' => 'v1.2.3',
+            'assets' => [
+                [
+                    'name' => 'stead-1.2.3.zip',
+                    'browser_download_url' => 'https://example.test/stead-1.2.3.zip',
+                ],
+                [
+                    'name' => 'stead-1.2.3.tar.gz',
+                    'browser_download_url' => 'https://example.test/stead-1.2.3.tar.gz',
+                ],
+            ],
+            'zipball_url' => 'https://api.github.com/repos/o/r/zipball/v1.2.3',
+        ]);
+        $this->assertNotFalse($body);
+
+        $this->server = new FakeReleaseServer(200, $body);
+        $client = $this->makeClient($this->server);
         $payload = $client->fetchLatest();
-        $this->assertSame(['latest' => '1.2.3', 'url' => 'https://example.test/stead-1.2.3.zip'], $payload);
+        $this->assertSame(
+            ['latest' => '1.2.3', 'url' => 'https://example.test/stead-1.2.3.zip'],
+            $payload,
+        );
     }
 
-    public function testReturnsNullWhenEndpointReturnsNonJson(): void
+    public function testFallsBackToZipballUrlWhenNoZipAssetAttached(): void
     {
-        $this->server = new FakeReleaseServer(200, '<html>oops</html>');
-        $client = new ReleaseEndpointClient($this->server->url(), 5);
-        $this->assertNull($client->fetchLatest());
+        $body = json_encode([
+            'tag_name' => 'v1.2.3',
+            'assets' => [
+                ['name' => 'stead-1.2.3.tar.gz', 'browser_download_url' => 'https://example.test/x.tar.gz'],
+            ],
+            'zipball_url' => 'https://api.github.com/repos/o/r/zipball/v1.2.3',
+        ]);
+        $this->assertNotFalse($body);
+
+        $this->server = new FakeReleaseServer(200, $body);
+        $client = $this->makeClient($this->server);
+        $payload = $client->fetchLatest();
+        $this->assertSame(
+            ['latest' => '1.2.3', 'url' => 'https://api.github.com/repos/o/r/zipball/v1.2.3'],
+            $payload,
+        );
     }
 
-    public function testReturnsNullWhenEndpointReturnsMissingFields(): void
+    public function testFallsBackToZipballUrlWhenAssetsArrayMissing(): void
     {
-        $this->server = new FakeReleaseServer(200, '{"latest":"1.2.3"}');
-        $client = new ReleaseEndpointClient($this->server->url(), 5);
+        $body = json_encode([
+            'tag_name' => 'v1.2.3',
+            'zipball_url' => 'https://api.github.com/repos/o/r/zipball/v1.2.3',
+        ]);
+        $this->assertNotFalse($body);
+
+        $this->server = new FakeReleaseServer(200, $body);
+        $client = $this->makeClient($this->server);
+        $payload = $client->fetchLatest();
+        $this->assertSame(
+            ['latest' => '1.2.3', 'url' => 'https://api.github.com/repos/o/r/zipball/v1.2.3'],
+            $payload,
+        );
+    }
+
+    public function testReturnsNullWhenNoUsableUrl(): void
+    {
+        $body = json_encode([
+            'tag_name' => 'v1.2.3',
+            'assets' => [],
+            'zipball_url' => '',
+        ]);
+        $this->assertNotFalse($body);
+
+        $this->server = new FakeReleaseServer(200, $body);
+        $client = $this->makeClient($this->server);
         $this->assertNull($client->fetchLatest());
     }
 
     public function testReturnsNullOnNonTwoXxStatus(): void
     {
-        $this->server = new FakeReleaseServer(500, '{"latest":"1.2.3","url":"x"}');
-        $client = new ReleaseEndpointClient($this->server->url(), 5);
+        $this->server = new FakeReleaseServer(
+            500,
+            json_encode(['tag_name' => 'v1.2.3', 'assets' => [], 'zipball_url' => 'x']) ?: '',
+        );
+        $client = $this->makeClient($this->server);
+        $this->assertNull($client->fetchLatest());
+    }
+
+    public function testReturnsNullOnMalformedJson(): void
+    {
+        $this->server = new FakeReleaseServer(200, '<html>oops</html>');
+        $client = $this->makeClient($this->server);
+        $this->assertNull($client->fetchLatest());
+    }
+
+    public function testReturnsNullWhenTagNameMissing(): void
+    {
+        $body = json_encode([
+            'assets' => [['name' => 'stead-1.2.3.zip', 'browser_download_url' => 'https://x.test/z.zip']],
+            'zipball_url' => 'https://x.test/z',
+        ]);
+        $this->assertNotFalse($body);
+
+        $this->server = new FakeReleaseServer(200, $body);
+        $client = $this->makeClient($this->server);
         $this->assertNull($client->fetchLatest());
     }
 
     public function testReturnsNullWhenEndpointUnreachable(): void
     {
         // No server bound at this address; connect should fail and the
-        // client must report null (not throw).
-        $client = new ReleaseEndpointClient('http://127.0.0.1:1/', timeoutSeconds: 1);
+        // client must report null (not throw). We subclass to point at
+        // a known-closed port without spinning up a server.
+        $client = new class('owner/repo', 1, 'http://127.0.0.1:1/') extends ReleaseEndpointClient {
+            public function __construct(string $githubRepo, int $timeoutSeconds, private readonly string $overrideBaseUrl)
+            {
+                parent::__construct($githubRepo, $timeoutSeconds);
+            }
+
+            protected function apiUrl(): string
+            {
+                return $this->overrideBaseUrl;
+            }
+        };
         $this->assertNull($client->fetchLatest());
     }
 
-    public function testEmptyEndpointUrlIsANoOp(): void
+    public function testEmptyGithubRepoIsANoOp(): void
     {
         $client = new ReleaseEndpointClient('', 5);
-        $this->assertSame('', $client->endpointUrl());
+        $this->assertSame('', $client->githubRepo());
         $this->assertNull($client->fetchLatest());
+    }
+
+    public function testMalformedGithubRepoIsANoOp(): void
+    {
+        $client = new ReleaseEndpointClient('not-a-slash', 5);
+        $this->assertNull($client->fetchLatest());
+    }
+
+    public function testTagNameWithoutLeadingVIsUsedAsIs(): void
+    {
+        $body = json_encode([
+            'tag_name' => '1.2.3',
+            'assets' => [['name' => 'stead-1.2.3.zip', 'browser_download_url' => 'https://x.test/z.zip']],
+            'zipball_url' => '',
+        ]);
+        $this->assertNotFalse($body);
+
+        $this->server = new FakeReleaseServer(200, $body);
+        $client = $this->makeClient($this->server);
+        $payload = $client->fetchLatest();
+        $this->assertSame(['latest' => '1.2.3', 'url' => 'https://x.test/z.zip'], $payload);
+    }
+
+    private function makeClient(FakeReleaseServer $server): ReleaseEndpointClient
+    {
+        return new class('owner/repo', 5, $server->url() . 'repos/owner/repo/releases/latest') extends ReleaseEndpointClient {
+            public function __construct(string $githubRepo, int $timeoutSeconds, private readonly string $overrideBaseUrl)
+            {
+                parent::__construct($githubRepo, $timeoutSeconds);
+            }
+
+            protected function apiUrl(): string
+            {
+                return $this->overrideBaseUrl;
+            }
+        };
     }
 }
 
@@ -90,7 +219,6 @@ final class FakeReleaseServer
     {
         $this->routerPath = '';
 
-        // Pick a free port by binding a throwaway socket.
         $probe = @stream_socket_server('tcp://127.0.0.1:0');
         if ($probe === false) {
             throw new \RuntimeException('Could not pick a port for the fake release server.');
@@ -103,10 +231,6 @@ final class FakeReleaseServer
         if ($routerPath === false) {
             throw new \RuntimeException('Could not write a router script for the fake release server.');
         }
-        // Nowdoc (single-quoted heredoc label) keeps the response body
-        // literal — we don't want addslashes on a JSON blob because that
-        // would inject backslashes into the rendered response. JSON itself
-        // is safe here (no PHP variable interpolation characters).
         file_put_contents($routerPath, <<<'PHP'
 <?php
 header('Content-Type: application/json');
@@ -134,9 +258,6 @@ PHP);
         $this->process = $proc;
         $this->routerPath = $routerPath;
 
-        // Wait for the server to be reachable. Built-in `php -S` boots in
-        // ~50ms; we poll a few times with curl to avoid a race where the
-        // first request hits a not-yet-listening port.
         $deadline = microtime(true) + 2.0;
         do {
             $probe = @curl_init($this->url);

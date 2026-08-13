@@ -74,12 +74,18 @@ defaults:
         lockout_base_seconds: 60
         lockout_max_seconds: 3600
     update:
-        # URL of the project website's release endpoint. The endpoint is
-        # expected to respond to GET with a JSON body of shape:
-        #   {"latest": "<version>", "url": "<download-url>"}
-        # Leave empty to disable update checks entirely (the admin UI will
-        # silently not show any update notice). See src/Update/.
-        endpoint_url: ''
+        # GitHub repository to check for updates, in `owner/repo` form.
+        # The update checker queries
+        # https://api.github.com/repos/<owner>/<repo>/releases/latest
+        # and parses GitHub's release JSON (`tag_name`, `assets[]`,
+        # `zipball_url`). Leave empty to disable update checks entirely
+        # (the admin UI will silently not show any update notice). See
+        # src/Update/. Override via UPDATE_GITHUB_REPO in `.env`.
+        github_repo: ''
+        # Base URL for the GitHub-style release API. Defaults to GitHub
+        # itself and exists as an override for tests/local development;
+        # production installs should leave this empty.
+        api_base_url: ''
         # How often the update checker re-queries the endpoint, in hours.
         # Within this window the cached result is reused without making a
         # network call. The check piggybacks on admin page loads, not a

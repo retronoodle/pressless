@@ -75,7 +75,7 @@ final class UpdateAdminTest extends TestCase
 
         // The integration test runs Routes::createWithStore, which builds
         // its own UpdateChecker from config. To exercise the live code
-        // path we configure update.endpoint_url to point at the fake
+        // path we configure update.api_base_url to point at the fake
         // server below and seed a VERSION file.
         $this->config = new Configuration(
             $this->projectRoot,
@@ -94,7 +94,8 @@ final class UpdateAdminTest extends TestCase
                 ],
                 'sessions' => ['name' => 'stead_session'],
                 'update' => [
-                    'endpoint_url' => 'http://placeholder.invalid/',
+                    'github_repo' => 'stead/test',
+                    'api_base_url' => 'http://placeholder.invalid/',
                     'check_interval_hours' => 24,
                     'timeout_seconds' => 1,
                 ],
@@ -149,11 +150,17 @@ final class UpdateAdminTest extends TestCase
     {
         $this->server = new FakeReleaseServer(
             responseStatus: 200,
-            responseBody: '{"latest":"9.9.9","url":"https://example.test/stead-9.9.9.zip"}',
+            responseBody: json_encode([
+                'tag_name' => 'v9.9.9',
+                'assets' => [
+                    ['name' => 'stead-9.9.9.zip', 'browser_download_url' => 'https://example.test/stead-9.9.9.zip'],
+                ],
+                'zipball_url' => 'https://api.github.com/repos/stead/test/zipball/v9.9.9',
+            ]),
         );
         file_put_contents($this->projectRoot . '/VERSION', "1.0.0\n");
 
-        $this->retargetUpdateEndpoint($this->server->url());
+        $this->retargetUpdateSource($this->server->url());
         $this->logInAsAdmin();
 
         $response = $this->kernel->handle(Request::create('/admin'));
@@ -170,11 +177,17 @@ final class UpdateAdminTest extends TestCase
     {
         $this->server = new FakeReleaseServer(
             responseStatus: 200,
-            responseBody: '{"latest":"9.9.9","url":"https://example.test/stead-9.9.9.zip"}',
+            responseBody: json_encode([
+                'tag_name' => 'v9.9.9',
+                'assets' => [
+                    ['name' => 'stead-9.9.9.zip', 'browser_download_url' => 'https://example.test/stead-9.9.9.zip'],
+                ],
+                'zipball_url' => 'https://api.github.com/repos/stead/test/zipball/v9.9.9',
+            ]),
         );
         file_put_contents($this->projectRoot . '/VERSION', "1.0.0\n");
 
-        $this->retargetUpdateEndpoint($this->server->url());
+        $this->retargetUpdateSource($this->server->url());
         $this->logInAsAdmin();
 
         $response = $this->kernel->handle(Request::create('/admin/update'));
@@ -188,10 +201,10 @@ final class UpdateAdminTest extends TestCase
 
     public function testDashboardDoesNotShowBannerWhenEndpointUnreachable(): void
     {
-        // No fake server started → endpoint URL points at a closed port
+        // No fake server started → api_base_url points at a closed port
         // and the checker must fail closed.
         file_put_contents($this->projectRoot . '/VERSION', "1.0.0\n");
-        $this->retargetUpdateEndpoint('http://127.0.0.1:1/');
+        $this->retargetUpdateSource('http://127.0.0.1:1/');
         $this->logInAsAdmin();
 
         $response = $this->kernel->handle(Request::create('/admin'));
@@ -208,7 +221,7 @@ final class UpdateAdminTest extends TestCase
             responseBody: '{"error":"down"}',
         );
         file_put_contents($this->projectRoot . '/VERSION', "1.0.0\n");
-        $this->retargetUpdateEndpoint($this->server->url());
+        $this->retargetUpdateSource($this->server->url());
         $this->logInAsAdmin();
 
         $response = $this->kernel->handle(Request::create('/admin'));
@@ -221,10 +234,16 @@ final class UpdateAdminTest extends TestCase
     {
         $this->server = new FakeReleaseServer(
             responseStatus: 200,
-            responseBody: '{"latest":"1.0.0","url":"https://example.test/stead-1.0.0.zip"}',
+            responseBody: json_encode([
+                'tag_name' => 'v1.0.0',
+                'assets' => [
+                    ['name' => 'stead-1.0.0.zip', 'browser_download_url' => 'https://example.test/stead-1.0.0.zip'],
+                ],
+                'zipball_url' => 'https://api.github.com/repos/stead/test/zipball/v1.0.0',
+            ]),
         );
         file_put_contents($this->projectRoot . '/VERSION', "1.0.0\n");
-        $this->retargetUpdateEndpoint($this->server->url());
+        $this->retargetUpdateSource($this->server->url());
         $this->logInAsAdmin();
 
         $response = $this->kernel->handle(Request::create('/admin'));
@@ -234,12 +253,13 @@ final class UpdateAdminTest extends TestCase
     }
 
     /**
-     * Re-points the cached update checker at a different endpoint URL by
-     * rewriting the on-disk cache file. The routes were already wired
-     * with their own UpdateChecker in setUp(); this is the cleanest way
-     * to swap the endpoint URL without rebuilding the whole router.
+     * Re-points the cached update checker at a different release API
+     * base URL by rebuilding the kernel with a fresh Configuration. The
+     * routes were already wired with their own UpdateChecker in setUp();
+     * this is the cleanest way to swap the api_base_url without
+     * monkey-patching the route graph.
      */
-    private function retargetUpdateEndpoint(string $url): void
+    private function retargetUpdateSource(string $url): void
     {
         $this->config = new Configuration(
             $this->projectRoot,
@@ -258,14 +278,15 @@ final class UpdateAdminTest extends TestCase
                 ],
                 'sessions' => ['name' => 'stead_session'],
                 'update' => [
-                    'endpoint_url' => $url,
+                    'github_repo' => 'stead/test',
+                    'api_base_url' => $url,
                     'check_interval_hours' => 24,
                     'timeout_seconds' => 2,
                 ],
             ],
         );
 
-        // Build a fresh kernel/router pointed at the new endpoint URL.
+        // Build a fresh kernel/router pointed at the new api_base_url.
         // The cache stays on disk between requests, so we explicitly clear
         // it so the first request after retargeting re-queries.
         $cache = new UpdateCheckCache($this->cacheRoot);

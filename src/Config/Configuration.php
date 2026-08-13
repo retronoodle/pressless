@@ -50,7 +50,7 @@ final class Configuration
         'MAIL_FROM_NAME' => 'mail.from_name',
         'SERVE_HOST' => 'serve.host',
         'SERVE_PORT' => 'serve.port',
-        'UPDATE_ENDPOINT_URL' => 'update.endpoint_url',
+        'UPDATE_GITHUB_REPO' => 'update.github_repo',
         'UPDATE_CHECK_INTERVAL_HOURS' => 'update.check_interval_hours',
         'UPDATE_TIMEOUT_SECONDS' => 'update.timeout_seconds',
         'BACKUPS_TARGET' => 'backups.target',
