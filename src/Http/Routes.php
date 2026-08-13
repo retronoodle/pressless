@@ -62,6 +62,7 @@ use Stead\Http\Controller\PublicController;
 use Stead\Http\Controller\RedirectAdminController;
 use Stead\Http\Controller\SettingsAdminController;
 use Stead\Http\Controller\ThemesAdminController;
+use Stead\Http\Controller\ThemeSettingsAdminController;
 use Stead\Http\Controller\UserAdminController;
 use Stead\Invites\InviteRepository;
 use Stead\Mail\MailSettingsRepository;
@@ -70,7 +71,9 @@ use Stead\Media\GdImageTransformer;
 use Stead\Settings\SettingsRepository;
 use Stead\Themes\ActiveThemeResolver;
 use Stead\Themes\ThemeInstaller;
+use Stead\Themes\ThemeManifestReader;
 use Stead\Themes\ThemeRepository;
+use Stead\Themes\ThemeSettingsRepository;
 use Stead\Media\LocalStorage;
 use Stead\Media\MediaRepository;
 use Stead\Media\TransformCache;
@@ -119,7 +122,13 @@ final class Routes
 
         return self::register(
             $auth,
-            new TwigRenderer($config, $themeResolver),
+            new TwigRenderer(
+                $config,
+                $themeResolver,
+                new ThemeRepository($connection),
+                new ThemeManifestReader(),
+                new ThemeSettingsRepository($connection),
+            ),
             self::buildFieldTypeRegistry(new MediaRepository($connection)),
             $connection,
             $config,
@@ -246,6 +255,16 @@ final class Routes
         $themeInstaller = new ThemeInstaller($themeRepository, $config);
         $themesAdminController = new ThemesAdminController($renderer, $themeRepository, $themeInstaller, $config);
 
+        $themeSettingsRepository = new ThemeSettingsRepository($connection);
+        $themeSettingsAdminController = new ThemeSettingsAdminController(
+            $renderer,
+            $themeRepository,
+            $themeResolver,
+            new ThemeManifestReader(),
+            $themeSettingsRepository,
+            $config,
+        );
+
         $publicController = new PublicController($renderer, $collections, $entryRepository, $pageCache, $versions, $redirectRepository);
         $assetController = new AssetController($themeResolver);
 
@@ -358,6 +377,9 @@ final class Routes
         $router->post('/admin/themes', $guard->protect($collectionAuth->requireAdmin($themesAdminController->upload(...))), 'themes.upload');
         $router->post('/admin/themes/{id}/activate', $guard->protect($collectionAuth->requireAdmin($themesAdminController->activate(...))), 'themes.activate');
         $router->post('/admin/themes/{id}/delete', $guard->protect($collectionAuth->requireAdmin($themesAdminController->delete(...))), 'themes.delete');
+
+        $router->get('/admin/theme-settings', $guard->protect($collectionAuth->requireAdmin($themeSettingsAdminController->index(...))), 'theme-settings.index');
+        $router->post('/admin/theme-settings', $guard->protect($collectionAuth->requireAdmin($themeSettingsAdminController->save(...))), 'theme-settings.save');
 
         $router->get('/admin/invites', $guard->protect($collectionAuth->requireAdmin(static function (): RedirectResponse {
             return new RedirectResponse('/admin/invites/new', Response::HTTP_SEE_OTHER);

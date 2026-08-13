@@ -1,0 +1,86 @@
+{% extends 'layout/base.twig' %}
+
+{% block title %}Theme settings - Stead admin{% endblock %}
+
+{% block body_class %}stead stead-admin stead-theme-settings{% endblock %}
+
+{% block body %}
+{% include 'admin/_header.twig' with {active_nav: 'theme_settings'} %}
+
+<main class="admin-main">
+    <section class="theme-settings-header">
+        <h2>Theme settings</h2>
+        {% if active_theme %}
+            <p>Configure settings declared by the active theme <strong>{{ active_theme.name|e }}</strong> (slug <code>{{ active_theme.slug|e }}</code>).</p>
+        {% else %}
+            <p>Settings declared by the active theme appear here.</p>
+        {% endif %}
+    </section>
+
+    {% if flash %}
+        <section class="form-flash">
+            <p>{{ flash|e }}</p>
+        </section>
+    {% endif %}
+
+    {% if error %}
+        <section class="form-errors">
+            <p>{{ error|e }}</p>
+        </section>
+    {% endif %}
+
+    {% if active_theme is null or fields|length == 0 %}
+        <section class="theme-settings-empty">
+            <p>{{ empty_reason|default('No settings are available.')|e }}</p>
+        </section>
+    {% else %}
+        {% if errors|length > 0 %}
+            <section class="form-errors">
+                <h3>Please correct the following:</h3>
+                <ul>
+                    {% for field, messages in errors %}
+                        {% for message in messages %}
+                            <li><strong>{{ field|e }}:</strong> {{ message|e }}</li>
+                        {% endfor %}
+                    {% endfor %}
+                </ul>
+            </section>
+        {% endif %}
+
+        <form method="post" action="{{ action_url }}" class="theme-settings-form">
+            {% for field in fields %}
+                {% set key = field.key %}
+                {% set value = values[key]|default('') %}
+                <fieldset class="theme-setting field-{{ field.type|e }}">
+                    <label>
+                        <span>{{ field.label|e }}</span>
+                        {% if field.type == 'textarea' %}
+                            <textarea name="{{ key|e }}" rows="6">{{ value|e }}</textarea>
+                        {% elseif field.type == 'boolean' %}
+                            <input type="hidden" name="{{ key|e }}" value="0">
+                            <label class="checkbox">
+                                <input type="checkbox" name="{{ key|e }}" value="1" {% if value == '1' %}checked{% endif %}>
+                                <span>Enabled</span>
+                            </label>
+                        {% elseif field.type == 'select' %}
+                            <select name="{{ key|e }}">
+                                {% for option in field.options %}
+                                    <option value="{{ option|e }}" {% if value == option %}selected{% endif %}>{{ option|e }}</option>
+                                {% endfor %}
+                            </select>
+                        {% elseif field.type == 'color' %}
+                            <input type="color" name="{{ key|e }}" value="{{ value|e }}">
+                        {% elseif field.type == 'image' %}
+                            <input type="text" name="{{ key|e }}" value="{{ value|e }}" placeholder="/media/... or https://...">
+                            <small>Path or URL; uploaded via the media library for most setups.</small>
+                        {% else %}
+                            <input type="text" name="{{ key|e }}" value="{{ value|e }}">
+                        {% endif %}
+                    </label>
+                </fieldset>
+            {% endfor %}
+            <p><button type="submit">Save theme settings</button></p>
+        </form>
+    {% endif %}
+</main>
+{% endblock %}

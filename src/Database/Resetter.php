@@ -27,6 +27,7 @@ final class Resetter
         'backups',
         'redirects',
         'settings',
+        'theme_settings',
         'themes',
         'migrations',
     ];

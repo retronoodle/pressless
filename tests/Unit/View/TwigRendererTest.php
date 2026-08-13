@@ -7,9 +7,12 @@ namespace Stead\Tests\Unit\View;
 use PHPUnit\Framework\TestCase;
 use Stead\Config\Configuration;
 use Stead\Database\Connection;
+use Stead\Database\Migrator;
 use Stead\Exception\SafeException;
 use Stead\Themes\ActiveThemeResolver;
+use Stead\Themes\ThemeManifestReader;
 use Stead\Themes\ThemeRepository;
+use Stead\Themes\ThemeSettingsRepository;
 use Stead\View\TwigRenderer;
 
 final class TwigRendererTest extends TestCase
@@ -167,4 +170,138 @@ final class TwigRendererTest extends TestCase
 
         $this->assertSame('default Ada', $output);
     }
+
+    public function testThemeSettingsGlobalIsHtmlEscapedByDefault(): void
+    {
+        $env = $this->writerEnv([
+            ['key' => 'hero', 'type' => 'text', 'default' => ''],
+        ]);
+        $env['repo']->save('starter', ['hero' => '<script>alert(1)</script>']);
+        file_put_contents(
+            $env['themeDir'] . '/render.twig',
+            '{{ theme_settings.hero }}',
+        );
+
+        $output = $env['renderer']->render('render');
+
+        $this->assertStringNotContainsString('<script>', $output);
+        $this->assertStringContainsString('&lt;script&gt;', $output);
+    }
+
+    public function testThemeSettingsGlobalFallsBackToManifestDefaultWhenUnset(): void
+    {
+        $env = $this->writerEnv([
+            ['key' => 'hero', 'type' => 'text', 'default' => 'Hello world'],
+        ]);
+        file_put_contents($env['themeDir'] . '/render.twig', '{{ theme_settings.hero }}');
+
+        $output = $env['renderer']->render('render');
+
+        $this->assertStringContainsString('Hello world', $output);
+    }
+
+    public function testThemeSettingsGlobalIsEmptyWhenNoActiveTheme(): void
+    {
+        $tmp = sys_get_temp_dir() . '/stead-twig-' . bin2hex(random_bytes(4));
+        mkdir($tmp . '/templates', 0775, true);
+        mkdir($tmp . '/var/cache', 0775, true);
+        mkdir($tmp . '/themes', 0775, true);
+        file_put_contents($tmp . '/templates/render.twig', '[{{ theme_settings.hero|default("") }}]');
+
+        $config = new Configuration($tmp, 'test', [
+            'paths' => [
+                'templates' => 'templates',
+                'cache' => 'var/cache',
+                'theme' => 'themes',
+            ],
+            'theme' => ['active' => 'no-such-theme'],
+        ]);
+
+        $dbConfig = new Configuration($tmp, 'test', [
+            'database' => ['connection' => 'sqlite', 'database' => ':memory:'],
+            'paths' => ['migrations' => 'database/migrations'],
+        ]);
+        mkdir($tmp . '/database/migrations', 0775, true);
+        foreach (glob(__DIR__ . '/../../../database/migrations/*.sqlite.sql') ?: [] as $src) {
+            copy($src, $tmp . '/database/migrations/' . basename($src));
+        }
+        $connection = new Connection($dbConfig);
+        (new Migrator($connection, $dbConfig))->migrate();
+        $themeRepository = new ThemeRepository($connection);
+        $renderer = new TwigRenderer(
+            $config,
+            new ActiveThemeResolver($themeRepository, $config),
+            $themeRepository,
+            new ThemeManifestReader(),
+            new ThemeSettingsRepository($connection),
+        );
+
+        $output = $renderer->render('render');
+
+        $this->assertSame('[]', $output);
+        $connection->close();
+    }
+
+    /**
+     * Sets up an in-memory DB with a `starter` active theme row, on-disk
+     * theme dir with the given settings schema, and a renderer wired
+     * with all the dependencies needed to populate the global.
+     *
+     * @param list<array{key: string, type: string, default: string, label?: string, options?: list<string>}> $settings
+     * @return array{config: Configuration, renderer: TwigRenderer, themeDir: string, repo: ThemeSettingsRepository}
+     */
+    private function writerEnv(array $settings = []): array
+    {
+        $tmp = sys_get_temp_dir() . '/stead-twig-' . bin2hex(random_bytes(4));
+        mkdir($tmp . '/templates', 0775, true);
+        mkdir($tmp . '/var/cache', 0775, true);
+        mkdir($tmp . '/themes/starter', 0775, true);
+        mkdir($tmp . '/database/migrations', 0775, true);
+        foreach (glob(__DIR__ . '/../../../database/migrations/*.sqlite.sql') ?: [] as $src) {
+            copy($src, $tmp . '/database/migrations/' . basename($src));
+        }
+
+        $config = new Configuration($tmp, 'test', [
+            'paths' => [
+                'templates' => 'templates',
+                'cache' => 'var/cache',
+                'theme' => 'themes',
+                'migrations' => 'database/migrations',
+            ],
+            'theme' => ['active' => 'starter'],
+            'database' => ['connection' => 'sqlite', 'database' => ':memory:'],
+        ]);
+
+        $connection = new Connection($config);
+        (new Migrator($connection, $config))->migrate();
+        $themeRepository = new ThemeRepository($connection);
+        if ($themeRepository->findActive()?->slug !== 'starter') {
+            $themeRepository->create('starter', 'Starter');
+        }
+
+        if ($settings !== []) {
+            $payload = ['name' => 'Starter', 'settings' => $settings];
+            file_put_contents(
+                $tmp . '/themes/starter/theme.json',
+                json_encode($payload, JSON_THROW_ON_ERROR),
+            );
+        }
+
+        $repo = new ThemeSettingsRepository($connection);
+        $renderer = new TwigRenderer(
+            $config,
+            new ActiveThemeResolver($themeRepository, $config),
+            $themeRepository,
+            new ThemeManifestReader(),
+            $repo,
+        );
+
+        return [
+            'config' => $config,
+            'renderer' => $renderer,
+            'themeDir' => $tmp . '/themes/starter',
+            'repo' => $repo,
+        ];
+    }
 }
+

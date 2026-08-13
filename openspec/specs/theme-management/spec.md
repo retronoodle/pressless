@@ -34,7 +34,7 @@ The system SHALL allow an authenticated admin to upload a ZIP file containing a 
 - **THEN** the system rejects the upload with an error explaining a single theme folder is required
 
 ### Requirement: Optional theme manifest provides display metadata
-The system SHALL parse an optional `theme.json` file at the root of the uploaded theme folder for `name`, `version`, and `author` string fields. When absent or unparsable, the system SHALL derive a display name from the theme's slug and leave `version`/`author` empty, without failing the upload.
+The system SHALL parse an optional `theme.json` file at the root of the uploaded theme folder for `name`, `version`, `author` string fields and an optional `settings` array. When `name`/`version`/`author` are absent or unparsable, the system SHALL derive a display name from the theme's slug and leave `version`/`author` empty, without failing the upload. Each entry in `settings` SHALL be an object with a `key` (string, unique within the array) and `type` (one of `text`, `textarea`, `boolean`, `select`, `color`, `image`), and MAY include `label`, `default`, and — for `type: select` — `options` (a list of string choices). Entries missing `key` or `type`, or with a `type` outside the allowed set, SHALL be dropped from the parsed schema without failing the upload.
 
 #### Scenario: Manifest present and valid
 - **WHEN** an uploaded theme's ZIP contains a `theme.json` with `name`, `version`, and `author` fields
@@ -47,6 +47,14 @@ The system SHALL parse an optional `theme.json` file at the root of the uploaded
 #### Scenario: Manifest malformed
 - **WHEN** an uploaded theme's ZIP contains a `theme.json` that is not valid JSON or has non-string values for `name`/`version`/`author`
 - **THEN** the upload still succeeds, using the slug-derived name as fallback, and no error is raised for the malformed manifest
+
+#### Scenario: Manifest declares a settings schema
+- **WHEN** an uploaded theme's ZIP contains a `theme.json` with a `settings` array of valid entries (each with `key` and a supported `type`)
+- **THEN** the upload succeeds and the theme's parsed settings schema is available for the admin Theme Settings form and Twig rendering
+
+#### Scenario: Settings entry is invalid
+- **WHEN** a `theme.json`'s `settings` array contains an entry missing `key` or `type`, or with an unsupported `type`
+- **THEN** the upload still succeeds, that entry is excluded from the parsed schema, and no error is raised
 
 ### Requirement: Admin can list installed themes
 The system SHALL show all installed themes in the admin console, indicating which one is currently active.

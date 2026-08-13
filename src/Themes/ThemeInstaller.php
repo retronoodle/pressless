@@ -31,6 +31,7 @@ final class ThemeInstaller
     public function __construct(
         private readonly ThemeRepository $themes,
         private readonly Configuration $config,
+        private readonly ThemeManifestReader $manifestReader = new ThemeManifestReader(),
     ) {
     }
 
@@ -284,37 +285,15 @@ final class ThemeInstaller
     }
 
     /**
-     * @return array{name: string, version: string, author: string}
+     * @return array{name: string, version: string, author: string, settings: list<array{key: string, label: string, type: string, default: string, options: list<string>}>}
      */
     private function readManifest(\ZipArchive $zip, string $topLevel, string $slug): array
     {
-        $fallback = $this->nameFromSlug($slug);
         $raw = $zip->getFromName($topLevel . '/theme.json');
         if ($raw === false) {
-            return ['name' => $fallback, 'version' => '', 'author' => ''];
+            $raw = '';
         }
-        $decoded = json_decode($raw, true);
-        if (!is_array($decoded)) {
-            return ['name' => $fallback, 'version' => '', 'author' => ''];
-        }
-        $name = $decoded['name'] ?? null;
-        $version = $decoded['version'] ?? null;
-        $author = $decoded['author'] ?? null;
-        if (!is_string($name) || $name === '') {
-            $name = $fallback;
-        }
-        if (!is_string($version)) {
-            $version = '';
-        }
-        if (!is_string($author)) {
-            $author = '';
-        }
-        return ['name' => $name, 'version' => $version, 'author' => $author];
-    }
-
-    private function nameFromSlug(string $slug): string
-    {
-        return ucwords(str_replace('-', ' ', $slug));
+        return $this->manifestReader->parseManifestJson($raw, $slug);
     }
 
     /**
