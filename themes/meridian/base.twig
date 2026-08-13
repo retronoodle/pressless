@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}{{ site_name|default('Stead') }}{% endblock %}</title>
+    <link rel="stylesheet" href="/assets/site.css">
+</head>
+<body class="theme-meridian {% block body_class %}{% endblock %}">
+<header class="site-header">
+    <div class="wrap">
+        <a class="brand" href="/">{{ site_name|default('Stead') }}</a>
+    </div>
+</header>
+<main class="wrap">
+{% block body %}{% endblock %}
+</main>
+<footer class="site-footer">
+    <div class="wrap">
+        <span>{{ site_name|default('Stead') }}</span>
+        <span class="dot">&middot;</span>
+        <span>Meridian theme</span>
+    </div>
+</footer>
+</body>
+</html>

@@ -61,10 +61,18 @@ label {
     color: var(--stead-muted);
 }
 
+form > *:not(:last-child) {
+    margin-bottom: var(--stead-space-3);
+}
+
+form fieldset > *:not(:last-child) {
+    margin-bottom: var(--stead-space-3);
+}
+
 input {
     width: 100%;
     max-width: 22rem;
-    padding: var(--stead-space-2);
+    padding: var(--stead-space-3) var(--stead-space-2);
     border: 1px solid var(--stead-rule);
     border-radius: 3px;
     font: inherit;
@@ -74,7 +82,7 @@ input {
 button,
 a.button {
     display: inline-block;
-    padding: var(--stead-space-2) var(--stead-space-4);
+    padding: var(--stead-space-3) var(--stead-space-4);
     border: 1px solid var(--stead-ink);
     border-radius: 3px;
     background: var(--stead-ink);

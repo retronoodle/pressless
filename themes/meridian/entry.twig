@@ -1,0 +1,16 @@
+{% extends 'base.twig' %}
+
+{% block title %}{{ entry.value('title') }} — {{ collection.name }}{% endblock %}
+
+{% block body_class %}page-entry{% endblock %}
+
+{% block body %}
+<article class="entry">
+    <nav class="breadcrumb"><a href="/{{ collection.slug }}">&larr; {{ collection.name }}</a></nav>
+    <h1>{{ entry.value('title') }}</h1>
+    {% set body = entry.value('body') %}
+    {% if body is not null and body != '' %}
+        <div class="entry-body">{{ body|raw }}</div>
+    {% endif %}
+</article>
+{% endblock %}

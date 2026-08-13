@@ -1,0 +1,28 @@
+{% extends 'base.twig' %}
+
+{% block title %}{{ site_name|default('Stead') }}{% endblock %}
+
+{% block body_class %}page-home{% endblock %}
+
+{% block body %}
+<section class="hero">
+    <h1>{{ site_name|default('Stead') }}</h1>
+    <p class="tagline">A calm, well-organized home for your content.</p>
+</section>
+
+{% if collections is defined and collections|length > 0 %}
+<section class="collections">
+    <h2 class="section-label">Collections</h2>
+    <div class="card-grid">
+    {% for collection in collections %}
+        <a class="card" href="/{{ collection.slug }}">
+            <span class="card-title">{{ collection.name }}</span>
+            <span class="card-arrow" aria-hidden="true">&rarr;</span>
+        </a>
+    {% endfor %}
+    </div>
+</section>
+{% else %}
+    <p class="empty">No collections yet. Sign in to the admin to create one.</p>
+{% endif %}
+{% endblock %}

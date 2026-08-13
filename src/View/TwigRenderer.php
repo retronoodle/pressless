@@ -46,10 +46,13 @@ final class TwigRenderer implements Renderer
             @mkdir($cache, 0775, true);
         }
 
+        $debug = $config->isDevelopment() || $config->getBool('app.debug', false);
+
         $this->twig = new Environment($this->loader, [
             'autoescape' => 'html',
             'cache' => $cache,
             'strict_variables' => true,
+            'auto_reload' => $debug,
         ]);
     }
 

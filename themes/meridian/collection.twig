@@ -1,0 +1,29 @@
+{% extends 'base.twig' %}
+
+{% block title %}{{ collection.name }}{% endblock %}
+
+{% block body_class %}page-collection{% endblock %}
+
+{% block body %}
+<nav class="breadcrumb"><a href="/">&larr; Home</a></nav>
+<h1>{{ collection.name }}</h1>
+
+{% if entries|length == 0 %}
+    <p class="empty">No entries yet.</p>
+{% else %}
+    <ul class="entry-list">
+    {% for entry in entries %}
+        <li>
+            <a class="entry-link" href="/{{ collection.slug }}/{{ entry.slug }}">
+                <span class="entry-link-title">{{ entry.value('title') }}</span>
+                <span class="entry-link-arrow" aria-hidden="true">&rarr;</span>
+            </a>
+        </li>
+    {% endfor %}
+    </ul>
+{% endif %}
+
+{% if has_next %}
+    <p class="pagination"><a href="?page={{ page + 1 }}">Next page &rarr;</a></p>
+{% endif %}
+{% endblock %}
