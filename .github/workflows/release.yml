@@ -37,10 +37,13 @@ jobs:
           extensions: mbstring, gd, intl
           coverage: none
 
-      # No `composer install` here on purpose: bin/release shells out to
-      # composer itself in its own clean temp directory, so the host
-      # environment does not need a pre-populated vendor/ tree. Composer
-      # itself comes bundled with the setup-php action above.
+      # This installs deps for the checkout the workflow runs from, so
+      # `php bin/release` itself has an autoloader. bin/release then shells
+      # out to composer again in its own clean temp directory to assemble
+      # the production-only dependency set that ships in the dist ZIP.
+      - name: Install dependencies
+        run: composer install --no-progress --prefer-dist
+
       - name: Build release ZIP
         env:
           # bin/release uses $APP_ENV (defaulting to production) for nothing
