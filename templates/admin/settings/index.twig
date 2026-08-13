@@ -48,5 +48,18 @@
         </label>
         <p><button type="submit">Save settings</button></p>
     </form>
+
+    <section class="settings-seed-default-collections">
+        <h3>Seed default collections</h3>
+        <p>
+            The <code>posts</code> and <code>pages</code> collections are normally
+            created when the installer finishes. Use this if your site skipped
+            that step (or was installed before this seeding existed). Existing
+            collections are left untouched.
+        </p>
+        <form method="post" action="{{ seed_url }}">
+            <button type="submit">Seed default collections</button>
+        </form>
+    </section>
 </main>
 {% endblock %}

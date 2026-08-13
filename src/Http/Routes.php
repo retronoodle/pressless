@@ -23,6 +23,7 @@ use Stead\Backups\Dump\DumperFactory;
 use Stead\Backups\Storage\StorageTargetFactory;
 use Stead\Bootstrap\Application;
 use Stead\Config\Configuration;
+use Stead\Console\Seeder;
 use Stead\Content\CollectionRepository;
 use Stead\Content\CollectionSchemaValidator;
 use Stead\Content\EntryRepository;
@@ -266,7 +267,11 @@ final class Routes
         );
 
         $settingsRepository = new SettingsRepository($connection);
-        $settingsAdminController = new SettingsAdminController($renderer, $settingsRepository);
+        $settingsAdminController = new SettingsAdminController(
+            $renderer,
+            $settingsRepository,
+            new Seeder($connection, $config),
+        );
 
         $redirectAdminController = new RedirectAdminController($renderer, $redirectRepository);
 
@@ -342,6 +347,7 @@ final class Routes
         // Phase 13 — site settings (admin-only).
         $router->get('/admin/settings', $guard->protect($collectionAuth->requireAdmin($settingsAdminController->index(...))), 'settings.index');
         $router->post('/admin/settings', $guard->protect($collectionAuth->requireAdmin($settingsAdminController->save(...))), 'settings.save');
+        $router->post('/admin/settings/seed-default-collections', $guard->protect($collectionAuth->requireAdmin($settingsAdminController->seedDefaultCollections(...))), 'settings.seed-default-collections');
 
         // Phase 13 — manual redirects (admin-only).
         $router->get('/admin/redirects', $guard->protect($collectionAuth->requireAdmin($redirectAdminController->index(...))), 'redirects.index');

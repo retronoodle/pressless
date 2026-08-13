@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Stead\Http\Controller;
 
 use Stead\Auth\User;
+use Stead\Console\Seeder;
 use Stead\Exception\SafeException;
 use Stead\Settings\Settings;
 use Stead\Settings\SettingsRepository;
@@ -25,6 +26,7 @@ final class SettingsAdminController
     public function __construct(
         private readonly Renderer $renderer,
         private readonly SettingsRepository $settings,
+        private readonly Seeder $seeder,
     ) {
     }
 
@@ -35,7 +37,11 @@ final class SettingsAdminController
     {
         $actor = $this->requireAdmin($request);
 
-        return $this->renderForm($actor, $this->settings->load(), [], '');
+        $flash = (string) $request->query->get('flash', '');
+        $errorParam = (string) $request->query->get('error', '');
+        $errors = $errorParam === '' ? [] : ['_form' => [$errorParam]];
+
+        return $this->renderForm($actor, $this->settings->load(), $errors, $flash);
     }
 
     /**
@@ -69,6 +75,40 @@ final class SettingsAdminController
     }
 
     /**
+     * Admin-only "Seed default collections" action for sites that skipped
+     * the installer (or installed before this collection seeding existed).
+     * Idempotent: existing collections are left untouched, and the redirect
+     * reports how many were created — or "already present" when none were.
+     *
+     * @param array<string, string> $parameters
+     */
+    public function seedDefaultCollections(Request $request, array $parameters = []): Response
+    {
+        $this->requireAdmin($request);
+
+        try {
+            $created = $this->seeder->seedDefaultCollections();
+        } catch (\Throwable $e) {
+            $message = $e instanceof SafeException ? $e->publicMessage() : $e->getMessage();
+            return new RedirectResponse(
+                '/admin/settings?error=' . urlencode('Seeding failed: ' . $message),
+                Response::HTTP_SEE_OTHER,
+            );
+        }
+
+        if ($created === 0) {
+            $flash = 'Default collections are already present.';
+        } else {
+            $flash = sprintf('Created %d default collection%s.', $created, $created === 1 ? '' : 's');
+        }
+
+        return new RedirectResponse(
+            '/admin/settings?flash=' . urlencode($flash),
+            Response::HTTP_SEE_OTHER,
+        );
+    }
+
+    /**
      * @param array<string, list<string>> $errors
      */
     private function renderForm(User $actor, Settings $values, array $errors, string $flash): Response
@@ -84,6 +124,7 @@ final class SettingsAdminController
             'errors' => $errors,
             'flash' => $flash,
             'action_url' => '/admin/settings',
+            'seed_url' => '/admin/settings/seed-default-collections',
         ]));
     }
 

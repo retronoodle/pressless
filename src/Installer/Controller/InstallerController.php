@@ -303,8 +303,11 @@ final class InstallerController
             true,
         );
 
+        $seeder = new Seeder($connection, $config);
+        $seeder->seedDefaultCollections();
+
         if (($wizard['sample_data'] ?? 'no') === 'yes') {
-            (new Seeder($connection, $config))->seed(allowProduction: true);
+            $seeder->seed(allowProduction: true);
         }
 
         $connection->close();

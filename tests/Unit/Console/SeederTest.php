@@ -235,6 +235,53 @@ final class SeederTest extends TestCase
         $this->assertSame(1, $collectionCount, 'posts collection must not be duplicated.');
     }
 
+    public function testSeedDefaultCollectionsCreatesBothCollectionsAndIsIdempotent(): void
+    {
+        $seeder = new Seeder($this->connection, $this->config);
+
+        $first = $seeder->seedDefaultCollections();
+        $this->assertSame(2, $first);
+        $this->assertSame(2, $this->collectionCount());
+
+        $pages = $this->connection->fetchOne(
+            'SELECT slug, name, schema_definition FROM collections WHERE slug = :slug',
+            ['slug' => 'pages'],
+        );
+        $this->assertNotNull($pages);
+        $this->assertSame('Pages', $pages['name']);
+        $pagesSchema = json_decode((string) $pages['schema_definition'], true);
+        $this->assertIsArray($pagesSchema['fields']);
+        $this->assertSame('title', $pagesSchema['fields'][0]['key']);
+        $this->assertSame('text', $pagesSchema['fields'][0]['type']);
+        $this->assertTrue($pagesSchema['fields'][0]['required']);
+        $this->assertSame('body', $pagesSchema['fields'][1]['key']);
+        $this->assertSame('richtext', $pagesSchema['fields'][1]['type']);
+
+        $posts = $this->connection->fetchOne(
+            'SELECT slug FROM collections WHERE slug = :slug',
+            ['slug' => 'posts'],
+        );
+        $this->assertNotNull($posts);
+
+        // Re-running must be a no-op: no collections created, no duplicates.
+        $second = $seeder->seedDefaultCollections();
+        $this->assertSame(0, $second);
+        $this->assertSame(2, $this->collectionCount());
+
+        // Manually re-defining pages under a different shape must not be
+        // overwritten — idempotency protects existing rows under the same slug.
+        $this->connection->execute(
+            'UPDATE collections SET name = :name WHERE slug = :slug',
+            ['name' => 'Custom Pages', 'slug' => 'pages'],
+        );
+        $seeder->seedDefaultCollections();
+        $row = $this->connection->fetchOne(
+            'SELECT name FROM collections WHERE slug = :slug',
+            ['slug' => 'pages'],
+        );
+        $this->assertSame('Custom Pages', $row['name'], 'existing pages collection must not be overwritten.');
+    }
+
     private function findUser(string $email): ?User
     {
         $row = $this->connection->fetchOne(

@@ -37,9 +37,14 @@ final class Seeder
     private const ADMIN_NAME = 'Site Administrator';
     private const ADMIN_PASSWORD_LENGTH = 16;
 
-    /** Empty sample collections created on first seed. */
-    private const SAMPLE_COLLECTIONS = [
-        ['slug' => 'pages', 'name' => 'Pages'],
+    /** Default `pages` collection seeded on every install and on demand. */
+    private const PAGES_COLLECTION_SLUG = 'pages';
+    private const PAGES_COLLECTION_NAME = 'Pages';
+
+    /** Field set for the default `pages` collection. */
+    private const PAGES_FIELDS = [
+        ['key' => 'title', 'type' => 'text', 'label' => 'Title', 'required' => true],
+        ['key' => 'body', 'type' => 'richtext', 'label' => 'Body'],
     ];
 
     /** Slug of the demo content collection seeded with three sample entries. */
@@ -119,23 +124,9 @@ final class Seeder
             $adminPassword = $tempPassword;
         }
 
-        $created = 0;
-        foreach (self::SAMPLE_COLLECTIONS as $collection) {
-            if ($this->collectionExists($collection['slug'])) {
-                continue;
-            }
-            $this->createCollection($collection['slug'], $collection['name']);
-            $created++;
-        }
+        $created = $this->seedDefaultCollections();
 
-        $entriesCreated = 0;
-        if (!$this->collectionExists(self::POSTS_COLLECTION_SLUG)) {
-            $this->createPostsCollection();
-            $created++;
-            $entriesCreated = $this->createPostsEntries();
-        } else {
-            $entriesCreated = $this->createPostsEntries();
-        }
+        $entriesCreated = $this->createPostsEntries();
 
         return [
             'admin_email' => $adminEmail,
@@ -143,6 +134,54 @@ final class Seeder
             'collections_created' => $created,
             'entries_created' => $entriesCreated,
         ];
+    }
+
+    /**
+     * Creates any of the default `pages` / `posts` collections that don't
+     * already exist. Idempotent: existing collections (even ones with a
+     * different schema under the same slug) are left untouched.
+     *
+     * @return int number of collections actually created
+     */
+    public function seedDefaultCollections(): int
+    {
+        $created = 0;
+        if ($this->seedCollection(self::PAGES_COLLECTION_SLUG, self::PAGES_COLLECTION_NAME, self::PAGES_FIELDS)) {
+            $created++;
+        }
+        if ($this->seedCollection(self::POSTS_COLLECTION_SLUG, self::POSTS_COLLECTION_NAME, self::POSTS_FIELDS)) {
+            $created++;
+        }
+        return $created;
+    }
+
+    /**
+     * Idempotent single-collection insert. Returns true if a new row was
+     * created, false if a collection with the same slug already exists.
+     *
+     * @param list<array<string, mixed>> $fields
+     */
+    public function seedCollection(string $slug, string $name, array $fields): bool
+    {
+        if ($this->collectionExists($slug)) {
+            return false;
+        }
+
+        $now = gmdate('Y-m-d H:i:s');
+        $schema = json_encode(['fields' => $fields], JSON_THROW_ON_ERROR);
+
+        $this->connection->execute(
+            'INSERT INTO collections (slug, name, schema_definition, created_at, updated_at)
+             VALUES (:slug, :name, :schema_definition, :created_at, :updated_at)',
+            [
+                'slug' => $slug,
+                'name' => $name,
+                'schema_definition' => $schema,
+                'created_at' => $now,
+                'updated_at' => $now,
+            ],
+        );
+        return true;
     }
 
     private function findUser(string $email): ?User
@@ -165,47 +204,6 @@ final class Seeder
             ['slug' => $slug],
         );
         return $row !== null;
-    }
-
-    private function createCollection(string $slug, string $name): void
-    {
-        $now = gmdate('Y-m-d H:i:s');
-        $schema = json_encode([
-            'fields' => [
-                ['key' => 'title', 'type' => 'text', 'required' => true],
-                ['key' => 'body', 'type' => 'markdown'],
-            ],
-        ]);
-
-        $this->connection->execute(
-            'INSERT INTO collections (slug, name, schema_definition, created_at, updated_at)
-             VALUES (:slug, :name, :schema_definition, :created_at, :updated_at)',
-            [
-                'slug' => $slug,
-                'name' => $name,
-                'schema_definition' => $schema,
-                'created_at' => $now,
-                'updated_at' => $now,
-            ],
-        );
-    }
-
-    private function createPostsCollection(): void
-    {
-        $now = gmdate('Y-m-d H:i:s');
-        $schema = json_encode(['fields' => self::POSTS_FIELDS]);
-
-        $this->connection->execute(
-            'INSERT INTO collections (slug, name, schema_definition, created_at, updated_at)
-             VALUES (:slug, :name, :schema_definition, :created_at, :updated_at)',
-            [
-                'slug' => self::POSTS_COLLECTION_SLUG,
-                'name' => self::POSTS_COLLECTION_NAME,
-                'schema_definition' => $schema,
-                'created_at' => $now,
-                'updated_at' => $now,
-            ],
-        );
     }
 
     /**

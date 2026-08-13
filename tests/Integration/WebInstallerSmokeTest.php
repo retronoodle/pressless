@@ -401,6 +401,89 @@ final class WebInstallerSmokeTest extends TestCase
         $connection->close();
     }
 
+    public function testInstallerWithoutSampleDataStillCreatesDefaultCollections(): void
+    {
+        $dbSettings = $this->installerDbSettings();
+
+        $session = new ArrayInstallerSession();
+        $controller = $this->makeController($session);
+        $kernel = InstallerKernel::create($controller);
+
+        $kernel->handle(Request::create('/install/database', 'POST', $dbSettings['form']));
+        $kernel->handle(Request::create('/install/admin', 'POST', [
+            'email' => 'root@example.com',
+            'name' => 'Root',
+            'password' => 'correct-horse-battery-staple',
+            'confirm' => 'correct-horse-battery-staple',
+        ]));
+        $kernel->handle(Request::create('/install/sample-data', 'POST', [
+            'choice' => 'no',
+        ]));
+        $complete = $kernel->handle(Request::create('/install/complete', 'POST'));
+        $this->assertSame(302, $complete->getStatusCode());
+
+        $config = Configuration::fromProjectRoot($this->projectRoot, 'production');
+        $connection = new Connection($config);
+
+        $posts = $connection->fetchOne("SELECT id FROM collections WHERE slug = 'posts'");
+        $this->assertNotNull($posts, 'posts collection must exist after installer completes without sample data.');
+
+        $pages = $connection->fetchOne("SELECT id FROM collections WHERE slug = 'pages'");
+        $this->assertNotNull($pages, 'pages collection must exist after installer completes without sample data.');
+
+        $postEntries = (int) ($connection->fetchOne(
+            'SELECT COUNT(*) AS c FROM entries WHERE collection_id = :id',
+            ['id' => (int) $posts['id']],
+        )['c'] ?? 0);
+        $this->assertSame(0, $postEntries, 'no sample posts entries should be seeded when sample data was declined.');
+
+        $pageEntries = (int) ($connection->fetchOne(
+            'SELECT COUNT(*) AS c FROM entries WHERE collection_id = :id',
+            ['id' => (int) $pages['id']],
+        )['c'] ?? 0);
+        $this->assertSame(0, $pageEntries, 'no entries should be seeded into pages.');
+
+        $connection->close();
+    }
+
+    public function testInstallerWithSampleDataSeedsPostsEntriesAndBothCollections(): void
+    {
+        $dbSettings = $this->installerDbSettings();
+
+        $session = new ArrayInstallerSession();
+        $controller = $this->makeController($session);
+        $kernel = InstallerKernel::create($controller);
+
+        $kernel->handle(Request::create('/install/database', 'POST', $dbSettings['form']));
+        $kernel->handle(Request::create('/install/admin', 'POST', [
+            'email' => 'root@example.com',
+            'name' => 'Root',
+            'password' => 'correct-horse-battery-staple',
+            'confirm' => 'correct-horse-battery-staple',
+        ]));
+        $kernel->handle(Request::create('/install/sample-data', 'POST', [
+            'choice' => 'yes',
+        ]));
+        $complete = $kernel->handle(Request::create('/install/complete', 'POST'));
+        $this->assertSame(302, $complete->getStatusCode());
+
+        $config = Configuration::fromProjectRoot($this->projectRoot, 'production');
+        $connection = new Connection($config);
+
+        $posts = $connection->fetchOne("SELECT id FROM collections WHERE slug = 'posts'");
+        $this->assertNotNull($posts);
+        $pages = $connection->fetchOne("SELECT id FROM collections WHERE slug = 'pages'");
+        $this->assertNotNull($pages);
+
+        $postEntries = (int) ($connection->fetchOne(
+            'SELECT COUNT(*) AS c FROM entries WHERE collection_id = :id',
+            ['id' => (int) $posts['id']],
+        )['c'] ?? 0);
+        $this->assertSame(3, $postEntries, 'sample-data opt-in must still seed the three sample posts entries.');
+
+        $connection->close();
+    }
+
     public function testFrontControllerRoutesToInstallerWhenLockAbsent(): void
     {
         $script = (new \ReflectionClass(Application::class))->getFileName();
