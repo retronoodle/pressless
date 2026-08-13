@@ -9,6 +9,10 @@ use Stead\Content\EntryRepository;
 use Stead\Content\RedirectRepository;
 use Stead\Http\Cache\CollectionVersionStore;
 use Stead\Http\Cache\PageCache;
+use Stead\Settings\Settings;
+use Stead\Settings\SettingsRepository;
+use Stead\Themes\ActiveThemeResolver;
+use Stead\Themes\ThemeManifestReader;
 use Stead\View\Renderer;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -32,6 +36,9 @@ final class PublicController
         private readonly PageCache $pageCache,
         private readonly CollectionVersionStore $versions,
         private readonly RedirectRepository $redirects,
+        private readonly SettingsRepository $settings,
+        private readonly ActiveThemeResolver $themeResolver,
+        private readonly ThemeManifestReader $manifestReader,
     ) {
     }
 
@@ -40,16 +47,20 @@ final class PublicController
      */
     public function home(Request $request, array $parameters = []): Response
     {
-        $collections = $this->collections->all();
-        $key = 'home|' . $this->homeVersionsKey($collections);
+        $settings = $this->settings->load();
+        $resolution = $this->resolveHomepage($settings);
 
-        $html = $this->pageCache->remember($key, function () use ($collections): string {
-            return $this->renderer->render('home', [
-                'collections' => $collections,
-            ]);
-        });
+        if (
+            $resolution['type'] === Settings::HOMEPAGE_TYPE_STATIC_PAGE
+            && $resolution['pageId'] !== null
+        ) {
+            $entry = $this->entries->find($resolution['pageId']);
+            if ($entry !== null && $entry->isPublished()) {
+                return $this->renderStaticPageHome($entry);
+            }
+        }
 
-        return $this->html($html);
+        return $this->renderCollectionListHome();
     }
 
     /**
@@ -145,6 +156,97 @@ final class PublicController
         }
         $page = (int) $raw;
         return $page < 1 ? 1 : $page;
+    }
+
+    /**
+     * Resolves the effective homepage type per the design doc:
+     * admin override → active theme's `homepage_type` → `collection_list`.
+     *
+     * @return array{type: string, pageId: ?int, source: string}
+     */
+    private function resolveHomepage(Settings $settings): array
+    {
+        $pageId = $settings->homepagePageId;
+
+        if ($settings->homepageType === Settings::HOMEPAGE_TYPE_STATIC_PAGE) {
+            return [
+                'type' => Settings::HOMEPAGE_TYPE_STATIC_PAGE,
+                'pageId' => $pageId,
+                'source' => 'override',
+            ];
+        }
+
+        $manifest = $this->readActiveThemeManifest();
+        if ($manifest !== null && ($manifest['homepage_type'] ?? null) === Settings::HOMEPAGE_TYPE_STATIC_PAGE) {
+            return [
+                'type' => Settings::HOMEPAGE_TYPE_STATIC_PAGE,
+                'pageId' => $pageId,
+                'source' => 'theme',
+            ];
+        }
+
+        return [
+            'type' => ThemeManifestReader::HOMEPAGE_TYPE_COLLECTION_LIST,
+            'pageId' => null,
+            'source' => $manifest === null ? 'fallback' : ($settings->homepageType !== null ? 'override' : 'theme'),
+        ];
+    }
+
+    /**
+     * @return array{name: string, version: string, author: string, homepage_type: ?string, settings: list<array{key: string, label: string, type: string, default: string, options: list<string>}>}|null
+     */
+    private function readActiveThemeManifest(): ?array
+    {
+        try {
+            $directory = $this->themeResolver->resolveThemeDirectory();
+        } catch (\Throwable) {
+            return null;
+        }
+        if ($directory === null) {
+            return null;
+        }
+        try {
+            return $this->manifestReader->readFrom($directory);
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
+    private function renderStaticPageHome(\Stead\Content\Entry $entry): Response
+    {
+        $collection = $this->collections->find($entry->collectionId());
+        if ($collection === null) {
+            return $this->renderCollectionListHome();
+        }
+
+        $key = sprintf(
+            'home-static|%d|%d',
+            $entry->id(),
+            $this->versions->get($collection->id()),
+        );
+
+        $html = $this->pageCache->remember($key, function () use ($collection, $entry): string {
+            return $this->renderer->render('entry', [
+                'collection' => $collection,
+                'entry' => $entry,
+            ]);
+        });
+
+        return $this->html($html);
+    }
+
+    private function renderCollectionListHome(): Response
+    {
+        $collections = $this->collections->all();
+        $key = 'home|' . $this->homeVersionsKey($collections);
+
+        $html = $this->pageCache->remember($key, function () use ($collections): string {
+            return $this->renderer->render('home', [
+                'collections' => $collections,
+            ]);
+        });
+
+        return $this->html($html);
     }
 
     /**

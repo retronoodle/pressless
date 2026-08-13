@@ -3,9 +3,7 @@
 ## Purpose
 
 TBD
-
 ## Requirements
-
 ### Requirement: Admin can upload a theme ZIP
 The system SHALL allow an authenticated admin to upload a ZIP file containing a theme via the admin console. The system SHALL reject the upload without extracting any files if the ZIP fails any of: real-content MIME check (not client-supplied), configured size limit, entry-count cap, presence of an entry name containing `..`, an absolute path, or resolving outside the target theme directory, or presence of a symlink entry.
 
@@ -34,7 +32,7 @@ The system SHALL allow an authenticated admin to upload a ZIP file containing a 
 - **THEN** the system rejects the upload with an error explaining a single theme folder is required
 
 ### Requirement: Optional theme manifest provides display metadata
-The system SHALL parse an optional `theme.json` file at the root of the uploaded theme folder for `name`, `version`, `author` string fields and an optional `settings` array. When `name`/`version`/`author` are absent or unparsable, the system SHALL derive a display name from the theme's slug and leave `version`/`author` empty, without failing the upload. Each entry in `settings` SHALL be an object with a `key` (string, unique within the array) and `type` (one of `text`, `textarea`, `boolean`, `select`, `color`, `image`), and MAY include `label`, `default`, and — for `type: select` — `options` (a list of string choices). Entries missing `key` or `type`, or with a `type` outside the allowed set, SHALL be dropped from the parsed schema without failing the upload.
+The system SHALL parse an optional `theme.json` file at the root of the uploaded theme folder for `name`, `version`, `author` string fields, an optional `homepage_type` string field, and an optional `settings` array. When `name`/`version`/`author` are absent or unparsable, the system SHALL derive a display name from the theme's slug and leave `version`/`author` empty, without failing the upload. When `homepage_type` is absent or is not one of the recognized values (`collection_list`, `static_page`), it SHALL be treated as absent (the system falls back to `collection_list` at render time) without failing the upload. Each entry in `settings` SHALL be an object with a `key` (string, unique within the array) and `type` (one of `text`, `textarea`, `boolean`, `select`, `color`, `image`), and MAY include `label`, `default`, and — for `type: select` — `options` (a list of string choices). Entries missing `key` or `type`, or with a `type` outside the allowed set, SHALL be dropped from the parsed schema without failing the upload.
 
 #### Scenario: Manifest present and valid
 - **WHEN** an uploaded theme's ZIP contains a `theme.json` with `name`, `version`, and `author` fields
@@ -55,6 +53,14 @@ The system SHALL parse an optional `theme.json` file at the root of the uploaded
 #### Scenario: Settings entry is invalid
 - **WHEN** a `theme.json`'s `settings` array contains an entry missing `key` or `type`, or with an unsupported `type`
 - **THEN** the upload still succeeds, that entry is excluded from the parsed schema, and no error is raised
+
+#### Scenario: Manifest declares a homepage type default
+- **WHEN** an uploaded theme's ZIP contains a `theme.json` with `homepage_type: "static_page"`
+- **THEN** the upload succeeds and the theme's parsed homepage type default is available for homepage resolution when activated
+
+#### Scenario: Manifest declares an unrecognized homepage type
+- **WHEN** an uploaded theme's ZIP contains a `theme.json` with a `homepage_type` value that is not `collection_list` or `static_page`
+- **THEN** the upload still succeeds, the homepage type default is treated as absent, and no error is raised
 
 ### Requirement: Admin can list installed themes
 The system SHALL show all installed themes in the admin console, indicating which one is currently active.
@@ -94,3 +100,4 @@ The system SHALL resolve the active theme by checking the database first, fallin
 #### Scenario: Database is unreachable
 - **WHEN** the database cannot be queried for the active theme
 - **THEN** the system falls back to the theme configured via `theme.active` in configuration, if that directory exists, without returning a server error
+

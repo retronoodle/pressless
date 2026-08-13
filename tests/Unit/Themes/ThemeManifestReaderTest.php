@@ -30,6 +30,7 @@ final class ThemeManifestReaderTest extends TestCase
             'name' => 'Acme',
             'version' => '1.0.0',
             'author' => 'Ada',
+            'homepage_type' => 'static_page',
             'settings' => [
                 ['key' => 'hero_title', 'label' => 'Hero title', 'type' => 'text', 'default' => 'Hello'],
                 ['key' => 'accent', 'type' => 'color', 'default' => '#abc123'],
@@ -43,6 +44,7 @@ final class ThemeManifestReaderTest extends TestCase
         $this->assertSame('Acme', $manifest['name']);
         $this->assertSame('1.0.0', $manifest['version']);
         $this->assertSame('Ada', $manifest['author']);
+        $this->assertSame('static_page', $manifest['homepage_type']);
         $this->assertCount(6, $manifest['settings']);
         $this->assertSame('hero_title', $manifest['settings'][0]['key']);
         $this->assertSame('Hero title', $manifest['settings'][0]['label']);
@@ -50,6 +52,45 @@ final class ThemeManifestReaderTest extends TestCase
         $this->assertSame('Hello', $manifest['settings'][0]['default']);
         $this->assertSame([], $manifest['settings'][0]['options']);
         $this->assertSame(['one', 'two'], $manifest['settings'][2]['options']);
+    }
+
+    public function testHomepageTypeCollectionListIsParsed(): void
+    {
+        $manifest = $this->reader->parseManifestJson(json_encode([
+            'name' => 'Acme',
+            'homepage_type' => 'collection_list',
+        ]), 'slug');
+
+        $this->assertSame('collection_list', $manifest['homepage_type']);
+    }
+
+    public function testAbsentHomepageTypeIsNull(): void
+    {
+        $manifest = $this->reader->parseManifestJson(json_encode([
+            'name' => 'Acme',
+        ]), 'slug');
+
+        $this->assertNull($manifest['homepage_type']);
+    }
+
+    public function testUnrecognisedHomepageTypeIsTreatedAsAbsent(): void
+    {
+        $manifest = $this->reader->parseManifestJson(json_encode([
+            'name' => 'Acme',
+            'homepage_type' => 'carousel',
+        ]), 'slug');
+
+        $this->assertNull($manifest['homepage_type']);
+    }
+
+    public function testNonStringHomepageTypeIsTreatedAsAbsent(): void
+    {
+        $manifest = $this->reader->parseManifestJson(json_encode([
+            'name' => 'Acme',
+            'homepage_type' => ['nope'],
+        ]), 'slug');
+
+        $this->assertNull($manifest['homepage_type']);
     }
 
     public function testEntryMissingKeyOrTypeIsDroppedSilently(): void
@@ -113,6 +154,7 @@ final class ThemeManifestReaderTest extends TestCase
         $this->assertSame('Plain Theme', $manifest['name']);
         $this->assertSame('', $manifest['version']);
         $this->assertSame('', $manifest['author']);
+        $this->assertNull($manifest['homepage_type']);
         $this->assertSame([], $manifest['settings']);
     }
 

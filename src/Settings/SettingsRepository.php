@@ -24,7 +24,9 @@ final class SettingsRepository
     public function load(): Settings
     {
         $row = $this->connection->fetchOne(
-            'SELECT site_name, timezone, date_format FROM settings WHERE id = :id',
+            'SELECT site_name, timezone, date_format, homepage_type, homepage_page_id
+               FROM settings
+              WHERE id = :id',
             ['id' => self::ROW_ID],
         );
         if ($row === null) {
@@ -40,18 +42,20 @@ final class SettingsRepository
             'SELECT id FROM settings WHERE id = :id',
             ['id' => self::ROW_ID],
         );
+        $params = [
+            'site_name' => $settings->siteName,
+            'timezone' => $settings->timezone,
+            'date_format' => $settings->dateFormat,
+            'homepage_type' => $settings->homepageType,
+            'homepage_page_id' => $settings->homepagePageId,
+            'updated_at' => $now,
+            'id' => self::ROW_ID,
+        ];
         if ($row === null) {
             $this->connection->execute(
-                'INSERT INTO settings (id, site_name, timezone, date_format, created_at, updated_at)
-                 VALUES (:id, :site_name, :timezone, :date_format, :created_at, :updated_at)',
-                [
-                    'id' => self::ROW_ID,
-                    'site_name' => $settings->siteName,
-                    'timezone' => $settings->timezone,
-                    'date_format' => $settings->dateFormat,
-                    'created_at' => $now,
-                    'updated_at' => $now,
-                ],
+                'INSERT INTO settings (id, site_name, timezone, date_format, homepage_type, homepage_page_id, created_at, updated_at)
+                 VALUES (:id, :site_name, :timezone, :date_format, :homepage_type, :homepage_page_id, :created_at, :updated_at)',
+                $params + ['created_at' => $now],
             );
             return;
         }
@@ -60,15 +64,11 @@ final class SettingsRepository
                 SET site_name = :site_name,
                     timezone = :timezone,
                     date_format = :date_format,
+                    homepage_type = :homepage_type,
+                    homepage_page_id = :homepage_page_id,
                     updated_at = :updated_at
               WHERE id = :id',
-            [
-                'site_name' => $settings->siteName,
-                'timezone' => $settings->timezone,
-                'date_format' => $settings->dateFormat,
-                'updated_at' => $now,
-                'id' => self::ROW_ID,
-            ],
+            $params,
         );
     }
 }

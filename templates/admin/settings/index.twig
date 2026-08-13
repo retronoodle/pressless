@@ -46,6 +46,60 @@
             <input type="text" name="date_format" value="{{ values.date_format|e }}" required placeholder="Y-m-d">
             <small>PHP <code>date()</code> format string (e.g. <code>Y-m-d</code>, <code>F j, Y</code>).</small>
         </label>
+
+        <fieldset class="settings-homepage">
+            <legend>Homepage</legend>
+            <p class="settings-homepage-current">
+                Currently serving
+                <strong>{{ homepage.effective_type == 'static_page' ? 'a static page' : 'the collection listing' }}</strong>
+                {% if homepage.effective_source == 'override' %}
+                    (admin override)
+                {% elseif homepage.effective_source == 'theme' %}
+                    (theme default)
+                {% else %}
+                    (built-in fallback — no theme default declared)
+                {% endif %}.
+            </p>
+
+            <label class="settings-homepage-action">
+                <input type="radio" name="homepage_action" value="use_theme_default"
+                       {% if not homepage.has_override %}checked{% endif %}>
+                Use theme default
+                {% if homepage.theme_default is not null %}
+                    ({{ homepage.theme_default == 'static_page' ? 'static page' : 'collection listing' }})
+                {% else %}
+                    (collection listing — no theme default declared)
+                {% endif %}
+            </label>
+
+            <label class="settings-homepage-action">
+                <input type="radio" name="homepage_action" value="static_page"
+                       {% if homepage.has_override and values.homepage_type == 'static_page' %}checked{% endif %}>
+                Use a static page as the homepage
+            </label>
+
+            <label class="settings-homepage-page">
+                <span>Page</span>
+                <select name="homepage_page_id">
+                    <option value="">— Pick a published entry —</option>
+                    {% for page in homepage.pages %}
+                        <option value="{{ page.id }}"
+                                {% if values.homepage_page_id is not empty and values.homepage_page_id == page.id %}selected{% endif %}>
+                            {{ page.collection_name|e }} / {{ page.title|e }} ({{ page.slug|e }})
+                        </option>
+                    {% else %}
+                        <option value="" disabled>No published entries yet — create one first.</option>
+                    {% endfor %}
+                </select>
+                {% if errors.homepage_page_id is defined %}
+                    <small class="field-error">{{ errors.homepage_page_id[0]|e }}</small>
+                {% endif %}
+            </label>
+            {% if errors.homepage_type is defined %}
+                <p class="field-error">{{ errors.homepage_type[0]|e }}</p>
+            {% endif %}
+        </fieldset>
+
         <p><button type="submit">Save settings</button></p>
     </form>
 

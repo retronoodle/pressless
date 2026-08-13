@@ -64,6 +64,8 @@ final class SettingsRepositoryTest extends TestCase
         $this->assertSame('', $settings->siteName);
         $this->assertSame('UTC', $settings->timezone);
         $this->assertSame('Y-m-d', $settings->dateFormat);
+        $this->assertNull($settings->homepageType);
+        $this->assertNull($settings->homepagePageId);
     }
 
     public function testSaveThenLoadRoundTripsValues(): void
@@ -88,5 +90,54 @@ final class SettingsRepositoryTest extends TestCase
         $this->assertSame('Second', $settings->siteName);
         $this->assertSame('America/New_York', $settings->timezone);
         $this->assertSame('d/m/Y', $settings->dateFormat);
+    }
+
+    public function testHomepageOverrideRoundTripsAsStaticPageWithPageId(): void
+    {
+        $this->repository->save(new Settings(
+            'Site',
+            'UTC',
+            'Y-m-d',
+            Settings::HOMEPAGE_TYPE_STATIC_PAGE,
+            42,
+        ));
+
+        $settings = $this->repository->load();
+        $this->assertSame(Settings::HOMEPAGE_TYPE_STATIC_PAGE, $settings->homepageType);
+        $this->assertSame(42, $settings->homepagePageId);
+    }
+
+    public function testHomepageOverrideRoundTripsAsNullWhenCleared(): void
+    {
+        $this->repository->save(new Settings(
+            'Site',
+            'UTC',
+            'Y-m-d',
+            Settings::HOMEPAGE_TYPE_STATIC_PAGE,
+            7,
+        ));
+        $this->repository->save(new Settings('Site', 'UTC', 'Y-m-d', null, null));
+
+        $settings = $this->repository->load();
+        $this->assertNull($settings->homepageType);
+        $this->assertNull($settings->homepagePageId);
+    }
+
+    public function testHomepagePageIdIsDroppedWhenTypeIsNotStaticPage(): void
+    {
+        $this->connection->execute(
+            'UPDATE settings SET homepage_type = :type, homepage_page_id = :pid WHERE id = 1',
+            ['type' => 'something_else', 'pid' => 5],
+        );
+
+        $settings = $this->repository->load();
+        $this->assertNull(
+            $settings->homepageType,
+            'an unrecognised homepage_type is read back as null so clearing the override is unambiguous.',
+        );
+        $this->assertNull(
+            $settings->homepagePageId,
+            'a non-static-page type means homepage_page_id has no meaning and reads back as null.',
+        );
     }
 }

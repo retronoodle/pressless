@@ -128,6 +128,36 @@ final class EntryRepository
         return (int) ($row['c'] ?? 0);
     }
 
+    /**
+     * Lists all published entries, joined with their collection slug, for
+     * admin pickers (e.g. the homepage-page picker). Sorted by collection
+     * slug then title so the dropdown groups sensibly.
+     *
+     * @return list<array{id: int, title: string, slug: string, collection_slug: string, collection_name: string}>
+     */
+    public function listPublishedForPicker(): array
+    {
+        $rows = $this->connection->fetchAll(
+            'SELECT e.id, e.title, e.slug, c.slug AS collection_slug, c.name AS collection_name
+               FROM entries e
+               JOIN collections c ON c.id = e.collection_id
+              WHERE e.status = :status
+              ORDER BY c.slug ASC, e.title ASC, e.id ASC',
+            ['status' => self::STATUS_PUBLISHED],
+        );
+        $out = [];
+        foreach ($rows as $row) {
+            $out[] = [
+                'id' => (int) $row['id'],
+                'title' => (string) $row['title'],
+                'slug' => (string) $row['slug'],
+                'collection_slug' => (string) $row['collection_slug'],
+                'collection_name' => (string) $row['collection_name'],
+            ];
+        }
+        return $out;
+    }
+
     public function countByCollection(int $collectionId, ?string $status = null): int
     {
         $sql = 'SELECT COUNT(*) AS c FROM entries WHERE collection_id = :collection_id';

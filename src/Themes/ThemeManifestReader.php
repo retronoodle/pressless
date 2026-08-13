@@ -19,13 +19,22 @@ final class ThemeManifestReader
     /** @var list<string> */
     public const SETTING_TYPES = ['text', 'textarea', 'boolean', 'select', 'color', 'image'];
 
+    public const HOMEPAGE_TYPE_COLLECTION_LIST = 'collection_list';
+    public const HOMEPAGE_TYPE_STATIC_PAGE = 'static_page';
+
+    /** @var list<string> */
+    public const HOMEPAGE_TYPES = [
+        self::HOMEPAGE_TYPE_COLLECTION_LIST,
+        self::HOMEPAGE_TYPE_STATIC_PAGE,
+    ];
+
     /**
      * Reads `theme.json` from `$themeDir`, returning the parsed manifest or
      * `null` when the file is missing or empty. Mirrors the soft-failure
      * behaviour of {@see ThemeInstaller::install()}: a missing manifest
      * isn't an error, callers fall back to slug-derived metadata.
      *
-     * @return array{name: string, version: string, author: string, settings: list<array{key: string, label: string, type: string, default: string, options: list<string>}>}|null
+     * @return array{name: string, version: string, author: string, homepage_type: ?string, settings: list<array{key: string, label: string, type: string, default: string, options: list<string>}>}|null
      */
     public function readFrom(string $themeDir): ?array
     {
@@ -43,9 +52,12 @@ final class ThemeManifestReader
      * {@see readFrom()} for on-disk reads. Returns a normalised array
      * with a `settings` list — entries missing `key`/`type` or with an
      * unsupported `type` are dropped silently so a malformed manifest
-     * never fails the call site.
+     * never fails the call site. An unrecognised `homepage_type` is
+     * treated as absent (returns `null`) so a malformed manifest never
+     * fails the call site, mirroring the soft-failure behaviour for
+     * the other top-level fields.
      *
-     * @return array{name: string, version: string, author: string, settings: list<array{key: string, label: string, type: string, default: string, options: list<string>}>}
+     * @return array{name: string, version: string, author: string, homepage_type: ?string, settings: list<array{key: string, label: string, type: string, default: string, options: list<string>}>}
      */
     public function parseManifestJson(string $raw, string $slugForName = ''): array
     {
@@ -72,8 +84,17 @@ final class ThemeManifestReader
             'name' => $name,
             'version' => $version,
             'author' => $author,
+            'homepage_type' => $this->parseHomepageType($decoded['homepage_type'] ?? null),
             'settings' => $this->parseSettings($decoded['settings'] ?? null),
         ];
+    }
+
+    private function parseHomepageType(mixed $raw): ?string
+    {
+        if (!is_string($raw)) {
+            return null;
+        }
+        return in_array($raw, self::HOMEPAGE_TYPES, true) ? $raw : null;
     }
 
     /**
@@ -138,7 +159,7 @@ final class ThemeManifestReader
     }
 
     /**
-     * @return array{name: string, version: string, author: string, settings: list<array{key: string, label: string, type: string, default: string, options: list<string>}>}
+     * @return array{name: string, version: string, author: string, homepage_type: ?string, settings: list<array{key: string, label: string, type: string, default: string, options: list<string>}>}
      */
     private function emptyManifest(string $slug): array
     {
@@ -146,6 +167,7 @@ final class ThemeManifestReader
             'name' => $this->nameFromSlug($slug),
             'version' => '',
             'author' => '',
+            'homepage_type' => null,
             'settings' => [],
         ];
     }

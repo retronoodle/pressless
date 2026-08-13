@@ -265,7 +265,19 @@ final class Routes
             $config,
         );
 
-        $publicController = new PublicController($renderer, $collections, $entryRepository, $pageCache, $versions, $redirectRepository);
+        $settingsRepository = new SettingsRepository($connection);
+
+        $publicController = new PublicController(
+            $renderer,
+            $collections,
+            $entryRepository,
+            $pageCache,
+            $versions,
+            $redirectRepository,
+            $settingsRepository,
+            $themeResolver,
+            new ThemeManifestReader(),
+        );
         $assetController = new AssetController($themeResolver);
 
         $userAdminController = new UserAdminController($renderer, $users);
@@ -285,11 +297,13 @@ final class Routes
             $config,
         );
 
-        $settingsRepository = new SettingsRepository($connection);
         $settingsAdminController = new SettingsAdminController(
             $renderer,
             $settingsRepository,
             new Seeder($connection, $config),
+            $entryRepository,
+            $themeResolver,
+            new ThemeManifestReader(),
         );
 
         $redirectAdminController = new RedirectAdminController($renderer, $redirectRepository);

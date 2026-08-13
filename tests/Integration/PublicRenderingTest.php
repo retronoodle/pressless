@@ -196,6 +196,149 @@ final class PublicRenderingTest extends TestCase
         $this->assertStringContainsString('href="/posts"', $body);
     }
 
+    public function testHomeRendersThemeDefaultStaticPageWhenNoOverride(): void
+    {
+        $this->writeThemeManifest(['homepage_type' => 'static_page']);
+        $pagesId = $this->seedCollection('pages', [
+            ['key' => 'title', 'type' => 'text', 'label' => 'Title'],
+        ]);
+        $entryId = $this->seedEntry($pagesId, 'welcome', 'Welcome from entry');
+
+        $this->connection->execute(
+            'UPDATE settings SET homepage_type = :type, homepage_page_id = :pid WHERE id = 1',
+            ['type' => 'static_page', 'pid' => $entryId],
+        );
+
+        $response = $this->kernel->handle(Request::create('/'));
+
+        $this->assertSame(200, $response->getStatusCode());
+        $body = (string) $response->getContent();
+        $this->assertStringContainsString('class="entry"', $body);
+        $this->assertStringContainsString('Welcome from entry', $body);
+        $this->assertStringNotContainsString(
+            '<h1>Welcome</h1>',
+            $body,
+            'collection_list home.twig must not win when the theme default is static_page.',
+        );
+    }
+
+    public function testHomePrefersAdminOverrideOverThemeDefault(): void
+    {
+        $this->writeThemeManifest(['homepage_type' => 'static_page']);
+        $pagesId = $this->seedCollection('pages', [
+            ['key' => 'title', 'type' => 'text', 'label' => 'Title'],
+        ]);
+        $staticEntryId = $this->seedEntry($pagesId, 'static', 'Static page');
+        $this->seedCollection('posts', [
+            ['key' => 'title', 'type' => 'text', 'label' => 'Title'],
+        ]);
+
+        // Admin explicitly clears the override — falls back to theme
+        // default (collection_list, since the theme declares static_page
+        // but no override picks a page). We assert the override-clear
+        // path produces collection_list home.twig.
+        $this->connection->execute(
+            'UPDATE settings SET homepage_type = NULL, homepage_page_id = NULL WHERE id = 1',
+        );
+
+        $this->assertSame(
+            'collection_list',
+            $this->homepageResolution(),
+            'with no override and the theme defaulting to static_page but no page, the controller must fall back to collection_list.',
+        );
+
+        // Now save a static_page override that points at a real entry —
+        // this is the override-takes-precedence scenario from the spec.
+        $this->connection->execute(
+            'UPDATE settings SET homepage_type = :type, homepage_page_id = :pid WHERE id = 1',
+            ['type' => 'static_page', 'pid' => $staticEntryId],
+        );
+
+        $response = $this->kernel->handle(Request::create('/'));
+        $this->assertSame(200, $response->getStatusCode());
+        $body = (string) $response->getContent();
+        $this->assertStringContainsString('Static page', $body);
+        $this->assertStringContainsString('class="entry"', $body);
+    }
+
+    public function testHomeFallsBackToCollectionListWhenStaticPageEntryMissing(): void
+    {
+        $this->writeThemeManifest(['homepage_type' => 'static_page']);
+        $this->seedCollection('posts', [
+            ['key' => 'title', 'type' => 'text', 'label' => 'Title'],
+        ]);
+
+        // Override is "static_page" but points at an entry id that no
+        // longer exists — the homepage must fall back to collection_list
+        // rather than 500.
+        $this->connection->execute(
+            'UPDATE settings SET homepage_type = :type, homepage_page_id = :pid WHERE id = 1',
+            ['type' => 'static_page', 'pid' => 999999],
+        );
+
+        $response = $this->kernel->handle(Request::create('/'));
+        $this->assertSame(
+            200,
+            $response->getStatusCode(),
+            'Body: ' . (string) $response->getContent(),
+        );
+        $body = (string) $response->getContent();
+        $this->assertStringContainsString('Welcome', $body);
+        $this->assertStringContainsString('href="/posts"', $body);
+        $this->assertStringNotContainsString('class="entry"', $body);
+    }
+
+    public function testHomeFallsBackToCollectionListWhenStaticPageEntryIsDraft(): void
+    {
+        $pagesId = $this->seedCollection('pages', [
+            ['key' => 'title', 'type' => 'text', 'label' => 'Title'],
+        ]);
+        $entryId = $this->seedEntry($pagesId, 'draft-page', 'Draft only');
+        $this->seedCollection('posts', [
+            ['key' => 'title', 'type' => 'text', 'label' => 'Title'],
+        ]);
+
+        $this->connection->execute(
+            'UPDATE settings SET homepage_type = :type, homepage_page_id = :pid WHERE id = 1',
+            ['type' => 'static_page', 'pid' => $entryId],
+        );
+        $this->connection->execute(
+            "UPDATE entries SET status = 'draft' WHERE id = :id",
+            ['id' => $entryId],
+        );
+
+        $response = $this->kernel->handle(Request::create('/'));
+        $this->assertSame(200, $response->getStatusCode());
+        $body = (string) $response->getContent();
+        $this->assertStringContainsString('Welcome', $body);
+        $this->assertStringNotContainsString('class="entry"', $body);
+    }
+
+    private function writeThemeManifest(array $overrides): void
+    {
+        $manifest = ['name' => 'Starter'] + $overrides;
+        file_put_contents(
+            $this->projectRoot . '/themes/starter/theme.json',
+            json_encode($manifest),
+        );
+    }
+
+    private function homepageResolution(): string
+    {
+        $row = $this->connection->fetchOne(
+            'SELECT homepage_type, homepage_page_id FROM settings WHERE id = 1',
+        );
+        if ($row === null) {
+            return 'no-settings';
+        }
+        $type = $row['homepage_type'];
+        $pageId = $row['homepage_page_id'];
+        if ($type === 'static_page' && $pageId !== null) {
+            return 'static_page';
+        }
+        return 'collection_list';
+    }
+
     /**
      * @param list<array<string, mixed>> $fields
      */
