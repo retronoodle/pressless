@@ -65,6 +65,7 @@ function main(): int
         try {
             fwrite(STDOUT, "Syncing into {$projectRoot}...\n");
             copyInto($extractedDir, $projectRoot);
+            clearCompiledTemplates($projectRoot);
         } finally {
             removeRecursive($extractedDir);
         }
@@ -202,6 +203,35 @@ function copyInto(string $src, string $dest): void
         }
         if (!copy($entry->getPathname(), $target)) {
             throw new RuntimeException("Could not copy {$entry->getPathname()} to {$target}.");
+        }
+    }
+}
+
+/**
+ * Drops Twig's compiled-template cache so the freshly synced templates are
+ * recompiled on the next request.
+ *
+ * Necessary because `var/` is in EXCLUDE_PREFIXES (it holds runtime state we
+ * must not clobber), so the cache survives every deploy — and TwigRenderer
+ * sets `auto_reload` from the debug flag, which is off in production, so Twig
+ * never re-checks whether a compiled template is stale. Without this, a
+ * template change can go unnoticed indefinitely, or render against a cache
+ * compiled when the loader's search paths were different (e.g. before a theme
+ * was activated).
+ *
+ * Paths mirror TwigRenderer and InstallerRenderer, which append `/twig` and
+ * `/twig-installer` to the configured cache directory. Only the default
+ * `paths.cache` of `var/cache` is handled — this script deliberately runs
+ * without the config loader. A site that has moved its cache elsewhere needs
+ * to clear it by hand.
+ */
+function clearCompiledTemplates(string $projectRoot): void
+{
+    foreach (['var/cache/twig', 'var/cache/twig-installer'] as $relative) {
+        $path = $projectRoot . '/' . $relative;
+        if (is_dir($path)) {
+            fwrite(STDOUT, "Clearing compiled templates in {$relative}...\n");
+            removeRecursive($path);
         }
     }
 }
