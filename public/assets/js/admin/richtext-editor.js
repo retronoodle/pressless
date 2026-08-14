@@ -154,6 +154,13 @@
             container.classList.add('stead-richtext--no-editor');
             return;
         }
+        /* Mounting twice on the same container would stack a second toolbar
+         * and a second ProseMirror view on the same element — the document
+         * appears duplicated and whichever editor registered its submit
+         * handler last wins, silently discarding edits made in the other. */
+        if (container.steadTiptap) {
+            return;
+        }
         var editorEl = container.querySelector('.stead-richtext__editor');
         var hidden = container.querySelector('input[type="hidden"]');
         if (!editorEl || !hidden) {
@@ -167,7 +174,9 @@
         var editor = new Tip.Editor({
             element: editorEl,
             extensions: [
-                Tip.StarterKit,
+                /* StarterKit 3.x ships its own Link; disable it so the
+                 * configured one below is the only `link` mark registered. */
+                Tip.StarterKit.configure({ link: false }),
                 Tip.Link.configure({
                     openOnClick: false,
                     autolink: true,
