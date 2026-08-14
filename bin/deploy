@@ -73,8 +73,34 @@ function main(): int
         @unlink($zipPath);
     }
 
+    runPendingMigrations($projectRoot);
+
     fwrite(STDOUT, "Deployed {$release['tag']}. Visit the site to finish installing (or check /admin if already installed).\n");
     return 0;
+}
+
+/**
+ * Runs `bin/migrate` as a subprocess so a deploy that ships new
+ * migrations doesn't leave the DB schema behind the code (the cause of
+ * "Database operation failed" errors on pages that touch new columns).
+ * Skipped when the site hasn't been installed yet (no DB to migrate) or
+ * migrate isn't runnable yet (no vendor/, e.g. first deploy).
+ */
+function runPendingMigrations(string $projectRoot): void
+{
+    if (!is_file($projectRoot . '/installed.lock')) {
+        return;
+    }
+    if (!is_file($projectRoot . '/vendor/autoload.php')) {
+        return;
+    }
+
+    fwrite(STDOUT, "Running database migrations...\n");
+    $exitCode = 0;
+    passthru('php ' . escapeshellarg($projectRoot . '/bin/migrate'), $exitCode);
+    if ($exitCode !== 0) {
+        fwrite(STDERR, "Migrations failed (exit {$exitCode}). Check the output above and run `php bin/migrate` manually.\n");
+    }
 }
 
 /**
