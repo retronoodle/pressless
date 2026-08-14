@@ -10,7 +10,6 @@ docs/
 
 # Composer
 /vendor/
-composer.lock
 
 # Stead dist artefacts (built by `bin/release`). The release ZIP is meant
 # to be uploaded, not committed.
