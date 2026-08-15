@@ -55,7 +55,7 @@
                     {% if homepage.effective_type == 'static_page' %}
                         a static page
                     {% elseif homepage.effective_type == 'blog' %}
-                        a blog (most-recent-first listing)
+                        a blog-style listing of a collection (most-recent-first)
                     {% else %}
                         the collection listing
                     {% endif %}
@@ -108,7 +108,7 @@
             <label class="settings-homepage-action">
                 <input type="radio" name="homepage_action" value="blog"
                        {% if homepage.has_override and values.homepage_type == 'blog' %}checked{% endif %}>
-                Use a blog as the homepage
+                Use a collection as the homepage
             </label>
 
             <label class="settings-homepage-collection">
