@@ -21,11 +21,13 @@ final class ThemeManifestReader
 
     public const HOMEPAGE_TYPE_COLLECTION_LIST = 'collection_list';
     public const HOMEPAGE_TYPE_STATIC_PAGE = 'static_page';
+    public const HOMEPAGE_TYPE_BLOG = 'blog';
 
     /** @var list<string> */
     public const HOMEPAGE_TYPES = [
         self::HOMEPAGE_TYPE_COLLECTION_LIST,
         self::HOMEPAGE_TYPE_STATIC_PAGE,
+        self::HOMEPAGE_TYPE_BLOG,
     ];
 
     /**

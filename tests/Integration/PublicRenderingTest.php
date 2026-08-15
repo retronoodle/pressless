@@ -314,6 +314,140 @@ final class PublicRenderingTest extends TestCase
         $this->assertStringNotContainsString('class="entry"', $body);
     }
 
+    public function testBlogHomepageRendersMostRecentFirstWhenOverridden(): void
+    {
+        $postsId = $this->seedCollection('posts', [
+            ['key' => 'title', 'type' => 'text', 'label' => 'Title'],
+        ]);
+        $oldest = $this->seedEntryWithPublishedAt($postsId, 'oldest', 'Oldest post', '2025-01-01 00:00:00');
+        $middle = $this->seedEntryWithPublishedAt($postsId, 'middle', 'Middle post', '2025-02-01 00:00:00');
+        $newest = $this->seedEntryWithPublishedAt($postsId, 'newest', 'Newest post', '2025-03-01 00:00:00');
+
+        $this->connection->execute(
+            'UPDATE settings SET homepage_type = :type, homepage_collection_id = :cid WHERE id = 1',
+            ['type' => 'blog', 'cid' => $postsId],
+        );
+
+        $response = $this->kernel->handle(Request::create('/'));
+        $this->assertSame(200, $response->getStatusCode());
+        $body = (string) $response->getContent();
+        $this->assertStringContainsString('class="blog-listing"', $body, 'blog template should win.');
+        $newestPos = strpos($body, 'Newest post');
+        $middlePos = strpos($body, 'Middle post');
+        $oldestPos = strpos($body, 'Oldest post');
+        $this->assertNotFalse($newestPos);
+        $this->assertNotFalse($middlePos);
+        $this->assertNotFalse($oldestPos);
+        $this->assertLessThan($middlePos, $newestPos, 'newest must appear before middle.');
+        $this->assertLessThan($oldestPos, $middlePos, 'middle must appear before oldest.');
+        $this->assertStringContainsString('href="/posts/newest"', $body);
+    }
+
+    public function testBlogHomepagePaginationViaPageQuery(): void
+    {
+        $postsId = $this->seedCollection('posts', [
+            ['key' => 'title', 'type' => 'text', 'label' => 'Title'],
+        ]);
+        $total = 11;
+        for ($i = 0; $i < $total; $i++) {
+            $slug = sprintf('post-%02d', $i);
+            $title = sprintf('Post %02d', $i);
+            $this->seedEntryWithPublishedAt(
+                $postsId,
+                $slug,
+                $title,
+                gmdate('Y-m-d H:i:s', 1_700_000_000 + $i * 60),
+            );
+        }
+
+        $this->connection->execute(
+            'UPDATE settings SET homepage_type = :type, homepage_collection_id = :cid WHERE id = 1',
+            ['type' => 'blog', 'cid' => $postsId],
+        );
+
+        $page2 = $this->kernel->handle(Request::create('/?page=2'));
+        $this->assertSame(200, $page2->getStatusCode());
+        $body2 = (string) $page2->getContent();
+        $this->assertStringContainsString('class="blog-listing"', $body2);
+        $this->assertStringContainsString('href="?page=1"', $body2, 'previous page link must point at page 1.');
+        $this->assertStringNotContainsString('href="?page=3"', $body2, 'page 2 is the last page (11 entries / 10 per page = 2 pages) so no next-page link.');
+        $this->assertStringContainsString('Post 00', $body2, 'page 2 starts at index 10 (Post 10) when ordered most-recent-first.');
+
+        $page1 = $this->kernel->handle(Request::create('/'));
+        $body1 = (string) $page1->getContent();
+        $this->assertStringContainsString('class="blog-listing"', $body1);
+        $this->assertStringNotContainsString('href="?page=0"', $body1, 'first page must not render a previous-page link.');
+    }
+
+    public function testBlogHomepageFallsBackToPostsCollectionWhenThemeDefault(): void
+    {
+        $this->writeThemeManifest(['homepage_type' => 'blog']);
+        $postsId = $this->seedCollection('posts', [
+            ['key' => 'title', 'type' => 'text', 'label' => 'Title'],
+        ]);
+        $this->seedEntryWithPublishedAt($postsId, 'hello', 'Hello from posts', '2025-04-01 00:00:00');
+
+        $response = $this->kernel->handle(Request::create('/'));
+        $this->assertSame(200, $response->getStatusCode());
+        $body = (string) $response->getContent();
+        $this->assertStringContainsString('class="blog-listing"', $body, 'theme-default blog must fall back to the posts collection.');
+        $this->assertStringContainsString('Hello from posts', $body);
+    }
+
+    public function testBlogHomepageFallsBackToCollectionListWhenNoCollectionResolvable(): void
+    {
+        $this->writeThemeManifest(['homepage_type' => 'blog']);
+
+        $response = $this->kernel->handle(Request::create('/'));
+        $this->assertSame(200, $response->getStatusCode());
+        $body = (string) $response->getContent();
+        $this->assertStringContainsString('Welcome', $body, 'no resolvable collection must fall back to collection_list home.twig.');
+        $this->assertStringNotContainsString('class="blog-listing"', $body);
+    }
+
+    public function testBlogHomepageFallsBackToCollectionListWhenCollectionDeleted(): void
+    {
+        $this->writeThemeManifest(['homepage_type' => 'blog']);
+        $this->seedCollection('posts', [
+            ['key' => 'title', 'type' => 'text', 'label' => 'Title'],
+        ]);
+
+        $this->connection->execute(
+            'UPDATE settings SET homepage_type = :type, homepage_collection_id = :cid WHERE id = 1',
+            ['type' => 'blog', 'cid' => 999999],
+        );
+
+        $response = $this->kernel->handle(Request::create('/'));
+        $this->assertSame(200, $response->getStatusCode());
+        $body = (string) $response->getContent();
+        $this->assertStringContainsString('Welcome', $body);
+        $this->assertStringNotContainsString('class="blog-listing"', $body);
+    }
+
+    public function testBlogHomepageIgnoresDrafts(): void
+    {
+        $postsId = $this->seedCollection('posts', [
+            ['key' => 'title', 'type' => 'text', 'label' => 'Title'],
+        ]);
+        $this->seedEntryWithPublishedAt($postsId, 'first', 'First post', '2025-01-01 00:00:00');
+        $draftId = $this->seedEntryWithPublishedAt($postsId, 'draft', 'Draft post', '2025-12-01 00:00:00');
+        $this->connection->execute(
+            "UPDATE entries SET status = 'draft' WHERE id = :id",
+            ['id' => $draftId],
+        );
+
+        $this->connection->execute(
+            'UPDATE settings SET homepage_type = :type, homepage_collection_id = :cid WHERE id = 1',
+            ['type' => 'blog', 'cid' => $postsId],
+        );
+
+        $response = $this->kernel->handle(Request::create('/'));
+        $this->assertSame(200, $response->getStatusCode());
+        $body = (string) $response->getContent();
+        $this->assertStringContainsString('First post', $body);
+        $this->assertStringNotContainsString('Draft post', $body);
+    }
+
     private function writeThemeManifest(array $overrides): void
     {
         $manifest = ['name' => 'Starter'] + $overrides;
@@ -365,6 +499,40 @@ final class PublicRenderingTest extends TestCase
             'INSERT INTO entries (collection_id, slug, title, status, created_at, updated_at)
              VALUES (:cid, :slug, :title, :status, :ts, :ts)',
             ['cid' => $collectionId, 'slug' => $slug, 'title' => $title, 'status' => 'published', 'ts' => $now],
+        );
+        $entryId = (int) $this->connection->fetchOne(
+            'SELECT id FROM entries WHERE collection_id = :cid AND slug = :slug',
+            ['cid' => $collectionId, 'slug' => $slug],
+        )['id'];
+        $this->connection->execute(
+            'INSERT INTO entry_values (entry_id, field_key, field_type, value, value_text, created_at, updated_at)
+             VALUES (:eid, :key, :type, :value, :value_text, :ts, :ts)',
+            [
+                'eid' => $entryId,
+                'key' => 'title',
+                'type' => 'text',
+                'value' => $title,
+                'value_text' => $title,
+                'ts' => $now,
+            ],
+        );
+        return $entryId;
+    }
+
+    private function seedEntryWithPublishedAt(int $collectionId, string $slug, string $title, string $publishedAt): int
+    {
+        $now = gmdate('Y-m-d H:i:s');
+        $this->connection->execute(
+            'INSERT INTO entries (collection_id, slug, title, status, published_at, created_at, updated_at)
+             VALUES (:cid, :slug, :title, :status, :pat, :ts, :ts)',
+            [
+                'cid' => $collectionId,
+                'slug' => $slug,
+                'title' => $title,
+                'status' => 'published',
+                'pat' => $publishedAt,
+                'ts' => $now,
+            ],
         );
         $entryId = (int) $this->connection->fetchOne(
             'SELECT id FROM entries WHERE collection_id = :cid AND slug = :slug',
@@ -447,6 +615,22 @@ final class PublicRenderingTest extends TestCase
             . "{% block body %}<article class=\"entry\">"
             . "<h1>{{ entry.value('title') }}</h1>"
             . "</article>{% endblock %}\n",
+        );
+
+        file_put_contents(
+            $dir . '/home-blog.twig',
+            "{% extends 'base.twig' %}\n"
+            . "{% block title %}{{ collection.name }}{% endblock %}\n"
+            . "{% block body %}<section class=\"blog-listing\">"
+            . "<h1>{{ collection.name }}</h1>"
+            . "<ul class=\"entries\">"
+            . "{% for entry in entries %}<li><a href=\"/{{ collection.slug }}/{{ entry.slug }}\">{{ entry.value('title') }}</a></li>{% endfor %}"
+            . "</ul>"
+            . "<nav class=\"pagination\">"
+            . "{% if has_prev %}<a class=\"prev\" href=\"?page={{ page - 1 }}\">Previous</a>{% endif %}"
+            . "{% if has_next %}<a class=\"next\" href=\"?page={{ page + 1 }}\">Next</a>{% endif %}"
+            . "</nav>"
+            . "</section>{% endblock %}\n",
         );
     }
 

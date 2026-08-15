@@ -60,6 +60,13 @@ final class PublicController
             }
         }
 
+        if ($resolution['type'] === Settings::HOMEPAGE_TYPE_BLOG) {
+            $collection = $this->resolveBlogCollection($settings, $resolution);
+            if ($collection !== null) {
+                return $this->renderBlogHome($request, $collection);
+            }
+        }
+
         return $this->renderCollectionListHome();
     }
 
@@ -162,7 +169,14 @@ final class PublicController
      * Resolves the effective homepage type per the design doc:
      * admin override → active theme's `homepage_type` → `collection_list`.
      *
-     * @return array{type: string, pageId: ?int, source: string}
+     * For `blog`, `collectionId` carries the resolved target collection when
+     * one is identifiable. When the effective type came from the theme's
+     * default (no admin override) and the admin hasn't set
+     * `homepage_collection_id`, the `posts` collection by slug is the
+     * fallback per the design doc — resolved lazily here via
+     * {@see resolveBlogCollection()} so this method stays pure.
+     *
+     * @return array{type: string, pageId: ?int, collectionId: ?int, source: string}
      */
     private function resolveHomepage(Settings $settings): array
     {
@@ -172,24 +186,77 @@ final class PublicController
             return [
                 'type' => Settings::HOMEPAGE_TYPE_STATIC_PAGE,
                 'pageId' => $pageId,
+                'collectionId' => null,
+                'source' => 'override',
+            ];
+        }
+
+        if ($settings->homepageType === Settings::HOMEPAGE_TYPE_BLOG) {
+            return [
+                'type' => Settings::HOMEPAGE_TYPE_BLOG,
+                'pageId' => null,
+                'collectionId' => $settings->homepageCollectionId,
                 'source' => 'override',
             ];
         }
 
         $manifest = $this->readActiveThemeManifest();
-        if ($manifest !== null && ($manifest['homepage_type'] ?? null) === Settings::HOMEPAGE_TYPE_STATIC_PAGE) {
-            return [
-                'type' => Settings::HOMEPAGE_TYPE_STATIC_PAGE,
-                'pageId' => $pageId,
-                'source' => 'theme',
-            ];
+        if ($manifest !== null) {
+            $manifestType = $manifest['homepage_type'] ?? null;
+            if ($manifestType === Settings::HOMEPAGE_TYPE_STATIC_PAGE) {
+                return [
+                    'type' => Settings::HOMEPAGE_TYPE_STATIC_PAGE,
+                    'pageId' => $pageId,
+                    'collectionId' => null,
+                    'source' => 'theme',
+                ];
+            }
+            if ($manifestType === Settings::HOMEPAGE_TYPE_BLOG) {
+                return [
+                    'type' => Settings::HOMEPAGE_TYPE_BLOG,
+                    'pageId' => null,
+                    'collectionId' => $settings->homepageCollectionId,
+                    'source' => 'theme',
+                ];
+            }
         }
 
         return [
             'type' => ThemeManifestReader::HOMEPAGE_TYPE_COLLECTION_LIST,
             'pageId' => null,
-            'source' => $manifest === null ? 'fallback' : ($settings->homepageType !== null ? 'override' : 'theme'),
+            'collectionId' => null,
+            'source' => $manifest === null ? 'fallback' : 'theme',
         ];
+    }
+
+    /**
+     * Resolves the {@see \Stead\Content\Collection} for the blog homepage.
+     * Order per the design doc:
+     *   1. `settings.homepage_collection_id` (always preferred when set)
+     *   2. the `posts` collection by slug (only when the effective type
+     *      came from the theme's default — i.e. there's no admin override)
+     * Returns `null` when neither path yields a collection so the caller
+     * can fall back to `collection_list` rendering.
+     *
+     * @param array{type: string, pageId: ?int, collectionId: ?int, source: string} $resolution
+     */
+    private function resolveBlogCollection(Settings $settings, array $resolution): ?\Stead\Content\Collection
+    {
+        if ($resolution['collectionId'] !== null) {
+            $collection = $this->collections->find($resolution['collectionId']);
+            if ($collection !== null) {
+                return $collection;
+            }
+        }
+
+        if ($resolution['source'] === 'theme') {
+            $posts = $this->collections->findBySlug('posts');
+            if ($posts !== null) {
+                return $posts;
+            }
+        }
+
+        return null;
     }
 
     /**
@@ -243,6 +310,37 @@ final class PublicController
         $html = $this->pageCache->remember($key, function () use ($collections): string {
             return $this->renderer->render('home', [
                 'collections' => $collections,
+            ]);
+        });
+
+        return $this->html($html);
+    }
+
+    private function renderBlogHome(Request $request, \Stead\Content\Collection $collection): Response
+    {
+        $page = $this->resolvePage($request);
+        $listing = $this->entries->listByCollectionPagedRecent(
+            $collection->id(),
+            $page,
+            EntryRepository::STATUS_PUBLISHED,
+        );
+
+        $key = sprintf(
+            'home-blog|%d|%d|%d',
+            $collection->id(),
+            $this->versions->get($collection->id()),
+            $listing['page'],
+        );
+
+        $html = $this->pageCache->remember($key, function () use ($collection, $listing): string {
+            return $this->renderer->render('home-blog', [
+                'collection' => $collection,
+                'entries' => $listing['entries'],
+                'page' => $listing['page'],
+                'has_next' => $listing['has_next'],
+                'has_prev' => $listing['page'] > 1,
+                'total' => $listing['total'],
+                'page_size' => $listing['page_size'],
             ]);
         });
 

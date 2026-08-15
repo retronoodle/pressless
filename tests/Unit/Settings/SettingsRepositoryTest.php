@@ -140,4 +140,65 @@ final class SettingsRepositoryTest extends TestCase
             'a non-static-page type means homepage_page_id has no meaning and reads back as null.',
         );
     }
+
+    public function testBlogOverrideRoundTripsWithCollectionId(): void
+    {
+        $this->repository->save(new Settings(
+            'Site',
+            'UTC',
+            'Y-m-d',
+            Settings::HOMEPAGE_TYPE_BLOG,
+            null,
+            7,
+        ));
+
+        $settings = $this->repository->load();
+        $this->assertSame(Settings::HOMEPAGE_TYPE_BLOG, $settings->homepageType);
+        $this->assertSame(7, $settings->homepageCollectionId);
+        $this->assertNull(
+            $settings->homepagePageId,
+            'a blog override never carries a page id.',
+        );
+    }
+
+    public function testBlogOverrideClearedRoundTripsAsNull(): void
+    {
+        $this->repository->save(new Settings(
+            'Site',
+            'UTC',
+            'Y-m-d',
+            Settings::HOMEPAGE_TYPE_BLOG,
+            null,
+            9,
+        ));
+        $this->repository->save(new Settings('Site', 'UTC', 'Y-m-d', null, null, null));
+
+        $settings = $this->repository->load();
+        $this->assertNull($settings->homepageType);
+        $this->assertNull($settings->homepageCollectionId);
+    }
+
+    public function testHomepageCollectionIdIsDroppedWhenTypeIsNotBlog(): void
+    {
+        $this->connection->execute(
+            'UPDATE settings SET homepage_type = :type, homepage_collection_id = :cid WHERE id = 1',
+            ['type' => 'static_page', 'cid' => 11],
+        );
+
+        $settings = $this->repository->load();
+        $this->assertSame(Settings::HOMEPAGE_TYPE_STATIC_PAGE, $settings->homepageType);
+        $this->assertNull(
+            $settings->homepageCollectionId,
+            'a non-blog type means homepage_collection_id has no meaning and reads back as null.',
+        );
+    }
+
+    public function testDefaultsExposeNullHomepageCollectionId(): void
+    {
+        $settings = $this->repository->load();
+        $this->assertNull(
+            $settings->homepageCollectionId,
+            'a freshly migrated settings row has no blog override by default.',
+        );
+    }
 }

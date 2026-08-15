@@ -64,6 +64,16 @@ final class ThemeManifestReaderTest extends TestCase
         $this->assertSame('collection_list', $manifest['homepage_type']);
     }
 
+    public function testHomepageTypeBlogIsParsed(): void
+    {
+        $manifest = $this->reader->parseManifestJson(json_encode([
+            'name' => 'Acme',
+            'homepage_type' => 'blog',
+        ]), 'slug');
+
+        $this->assertSame('blog', $manifest['homepage_type']);
+    }
+
     public function testAbsentHomepageTypeIsNull(): void
     {
         $manifest = $this->reader->parseManifestJson(json_encode([

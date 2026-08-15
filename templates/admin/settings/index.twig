@@ -51,7 +51,15 @@
             <legend>Homepage</legend>
             <p class="settings-homepage-current">
                 Currently serving
-                <strong>{{ homepage.effective_type == 'static_page' ? 'a static page' : 'the collection listing' }}</strong>
+                <strong>
+                    {% if homepage.effective_type == 'static_page' %}
+                        a static page
+                    {% elseif homepage.effective_type == 'blog' %}
+                        a blog (most-recent-first listing)
+                    {% else %}
+                        the collection listing
+                    {% endif %}
+                </strong>
                 {% if homepage.effective_source == 'override' %}
                     (admin override)
                 {% elseif homepage.effective_source == 'theme' %}
@@ -66,7 +74,8 @@
                        {% if not homepage.has_override %}checked{% endif %}>
                 Use theme default
                 {% if homepage.theme_default is not null %}
-                    ({{ homepage.theme_default == 'static_page' ? 'static page' : 'collection listing' }})
+                    ({{ homepage.theme_default == 'static_page' ? 'static page'
+                        : (homepage.theme_default == 'blog' ? 'blog' : 'collection listing') }})
                 {% else %}
                     (collection listing — no theme default declared)
                 {% endif %}
@@ -95,6 +104,31 @@
                     <small class="field-error">{{ errors.homepage_page_id[0]|e }}</small>
                 {% endif %}
             </label>
+
+            <label class="settings-homepage-action">
+                <input type="radio" name="homepage_action" value="blog"
+                       {% if homepage.has_override and values.homepage_type == 'blog' %}checked{% endif %}>
+                Use a blog as the homepage
+            </label>
+
+            <label class="settings-homepage-collection">
+                <span>Collection</span>
+                <select name="homepage_collection_id">
+                    <option value="">— Pick a collection —</option>
+                    {% for collection in homepage.collections %}
+                        <option value="{{ collection.id() }}"
+                                {% if values.homepage_collection_id is not empty and values.homepage_collection_id == collection.id() %}selected{% endif %}>
+                            {{ collection.name|e }} ({{ collection.slug|e }})
+                        </option>
+                    {% else %}
+                        <option value="" disabled>No collections yet — create one first.</option>
+                    {% endfor %}
+                </select>
+                {% if errors.homepage_collection_id is defined %}
+                    <small class="field-error">{{ errors.homepage_collection_id[0]|e }}</small>
+                {% endif %}
+            </label>
+
             {% if errors.homepage_type is defined %}
                 <p class="field-error">{{ errors.homepage_type[0]|e }}</p>
             {% endif %}

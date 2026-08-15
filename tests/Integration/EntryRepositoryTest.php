@@ -67,6 +67,14 @@ final class EntryRepositoryTest extends DatabaseTestCase
         );
     }
 
+    private function setPublishedAt(int $entryId, string $timestamp): void
+    {
+        $this->connection->execute(
+            'UPDATE entries SET published_at = :ts WHERE id = :id',
+            ['ts' => $timestamp, 'id' => $entryId],
+        );
+    }
+
     private function postsCollection(): Collection
     {
         $repo = new CollectionRepository($this->connection);
@@ -318,6 +326,96 @@ final class EntryRepositoryTest extends DatabaseTestCase
             array_map(static fn(Entry $e) => $e->id(), $saved),
             array_map(static fn(Entry $e) => $e->id(), $page['entries']),
         );
+    }
+
+    public function testListByCollectionPagedRecentOrdersMostRecentFirstByPublishedAt(): void
+    {
+        $collection = $this->postsCollection();
+        $repo = $this->buildRepository();
+        $a = $repo->save(new Entry(0, $collection->id(), '', []), $collection, ['title' => 'A', 'body' => '']);
+        $b = $repo->save(new Entry(0, $collection->id(), '', []), $collection, ['title' => 'B', 'body' => '']);
+        $c = $repo->save(new Entry(0, $collection->id(), '', []), $collection, ['title' => 'C', 'body' => '']);
+
+        $this->setPublishedAt($a->id(), '2025-01-01 00:00:00');
+        $this->setPublishedAt($b->id(), '2025-03-01 00:00:00');
+        $this->setPublishedAt($c->id(), '2025-02-01 00:00:00');
+
+        $page = $repo->listByCollectionPagedRecent($collection->id(), 1);
+
+        $this->assertSame(
+            [$b->id(), $c->id(), $a->id()],
+            array_map(static fn(Entry $e) => $e->id(), $page['entries']),
+            'recent listing must return newest published_at first.',
+        );
+        $this->assertSame(3, $page['total']);
+        $this->assertSame(1, $page['page']);
+        $this->assertSame(EntryRepository::PAGE_SIZE, $page['page_size']);
+        $this->assertFalse($page['has_next']);
+    }
+
+    public function testListByCollectionPagedRecentBreaksTiesOnIdDescending(): void
+    {
+        $collection = $this->postsCollection();
+        $repo = $this->buildRepository();
+        $first = $repo->save(new Entry(0, $collection->id(), '', []), $collection, ['title' => 'First', 'body' => '']);
+        $second = $repo->save(new Entry(0, $collection->id(), '', []), $collection, ['title' => 'Second', 'body' => '']);
+
+        $sameTimestamp = '2025-06-01 00:00:00';
+        $this->setPublishedAt($first->id(), $sameTimestamp);
+        $this->setPublishedAt($second->id(), $sameTimestamp);
+
+        $page = $repo->listByCollectionPagedRecent($collection->id(), 1);
+
+        $this->assertSame(
+            [$second->id(), $first->id()],
+            array_map(static fn(Entry $e) => $e->id(), $page['entries']),
+            'ties on published_at must break on id DESC so the order stays stable.',
+        );
+    }
+
+    public function testListByCollectionPagedRecentPaginationFieldsMatchTheExistingPagedMethod(): void
+    {
+        $collection = $this->postsCollection();
+        $repo = $this->buildRepository();
+        $total = EntryRepository::PAGE_SIZE + 3;
+        for ($i = 0; $i < $total; $i++) {
+            $saved = $repo->save(
+                new Entry(0, $collection->id(), '', []),
+                $collection,
+                ['title' => 'Post ' . $i, 'body' => ''],
+            );
+            $this->setPublishedAt($saved->id(), gmdate('Y-m-d H:i:s', 1_700_000_000 + $i));
+        }
+
+        $firstPage = $repo->listByCollectionPagedRecent($collection->id(), 1);
+        $this->assertCount(EntryRepository::PAGE_SIZE, $firstPage['entries']);
+        $this->assertTrue($firstPage['has_next']);
+        $this->assertSame($total, $firstPage['total']);
+        $this->assertSame(1, $firstPage['page']);
+        $this->assertSame(EntryRepository::PAGE_SIZE, $firstPage['page_size']);
+
+        $lastPage = $repo->listByCollectionPagedRecent($collection->id(), 2);
+        $this->assertCount(3, $lastPage['entries']);
+        $this->assertFalse($lastPage['has_next']);
+        $this->assertSame($total, $lastPage['total']);
+        $this->assertSame(2, $lastPage['page']);
+    }
+
+    public function testListByCollectionPagedRecentHonoursStatusFilter(): void
+    {
+        $collection = $this->postsCollection();
+        $repo = $this->buildRepository();
+        $published = $repo->save(new Entry(0, $collection->id(), '', []), $collection, ['title' => 'Pub', 'body' => '']);
+        $draft = $repo->save(new Entry(0, $collection->id(), '', []), $collection, ['title' => 'Dft', 'body' => '']);
+        $repo->publish($published->id());
+        $this->setPublishedAt($published->id(), '2025-04-01 00:00:00');
+        $this->setPublishedAt($draft->id(), '2025-05-01 00:00:00');
+
+        $page = $repo->listByCollectionPagedRecent($collection->id(), 1, EntryRepository::STATUS_PUBLISHED);
+
+        $this->assertCount(1, $page['entries']);
+        $this->assertSame($published->id(), $page['entries'][0]->id());
+        $this->assertSame(1, $page['total']);
     }
 
     public function testDeleteRemovesEntryAndValues(): void

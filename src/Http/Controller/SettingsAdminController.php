@@ -6,6 +6,7 @@ namespace Stead\Http\Controller;
 
 use Stead\Auth\User;
 use Stead\Console\Seeder;
+use Stead\Content\CollectionRepository;
 use Stead\Content\EntryRepository;
 use Stead\Exception\SafeException;
 use Stead\Settings\Settings;
@@ -32,6 +33,7 @@ final class SettingsAdminController
         private readonly SettingsRepository $settings,
         private readonly Seeder $seeder,
         private readonly EntryRepository $entries,
+        private readonly CollectionRepository $collections,
         private readonly ActiveThemeResolver $themeResolver,
         private readonly ThemeManifestReader $manifestReader,
     ) {
@@ -78,6 +80,7 @@ final class SettingsAdminController
             $dateFormat,
             $homepage['homepageType'],
             $homepage['homepagePageId'],
+            $homepage['homepageCollectionId'],
         );
 
         if ($errors !== []) {
@@ -139,6 +142,7 @@ final class SettingsAdminController
                 'date_format' => $values->dateFormat,
                 'homepage_type' => $values->homepageType ?? '',
                 'homepage_page_id' => $values->homepagePageId ?? '',
+                'homepage_collection_id' => $values->homepageCollectionId ?? '',
             ],
             'homepage' => $homepage,
             'errors' => $errors,
@@ -150,32 +154,60 @@ final class SettingsAdminController
 
     /**
      * @param array<string, list<string>> $errors
-     * @return array{homepageType: ?string, homepagePageId: ?int}
+     * @return array{homepageType: ?string, homepagePageId: ?int, homepageCollectionId: ?int}
      */
     private function normaliseHomepageSubmission(Request $request, array &$errors): array
     {
         $action = (string) $request->request->get('homepage_action', 'use_theme_default');
         if ($action === 'use_theme_default') {
-            return ['homepageType' => null, 'homepagePageId' => null];
+            return ['homepageType' => null, 'homepagePageId' => null, 'homepageCollectionId' => null];
         }
-        if ($action !== 'static_page') {
-            $errors['homepage_type'] = ['Pick a homepage action.'];
-            return ['homepageType' => null, 'homepagePageId' => null];
+        if ($action === 'static_page') {
+            return ['homepageType' => Settings::HOMEPAGE_TYPE_STATIC_PAGE, 'homepagePageId' => $this->resolveStaticPageId($request, $errors), 'homepageCollectionId' => null];
         }
+        if ($action === 'blog') {
+            return ['homepageType' => Settings::HOMEPAGE_TYPE_BLOG, 'homepagePageId' => null, 'homepageCollectionId' => $this->resolveBlogCollectionId($request, $errors)];
+        }
+        $errors['homepage_type'] = ['Pick a homepage action.'];
+        return ['homepageType' => null, 'homepagePageId' => null, 'homepageCollectionId' => null];
+    }
 
+    /**
+     * @param array<string, list<string>> $errors
+     */
+    private function resolveStaticPageId(Request $request, array &$errors): ?int
+    {
         $rawId = $request->request->get('homepage_page_id', '');
         if (!is_numeric($rawId)) {
             $errors['homepage_page_id'] = ['Pick an entry to use as the homepage.'];
-            return ['homepageType' => Settings::HOMEPAGE_TYPE_STATIC_PAGE, 'homepagePageId' => null];
+            return null;
         }
         $id = (int) $rawId;
         $entry = $this->entries->find($id);
         if ($entry === null) {
             $errors['homepage_page_id'] = ['Pick an entry that exists.'];
-            return ['homepageType' => Settings::HOMEPAGE_TYPE_STATIC_PAGE, 'homepagePageId' => null];
+            return null;
         }
+        return $id;
+    }
 
-        return ['homepageType' => Settings::HOMEPAGE_TYPE_STATIC_PAGE, 'homepagePageId' => $id];
+    /**
+     * @param array<string, list<string>> $errors
+     */
+    private function resolveBlogCollectionId(Request $request, array &$errors): ?int
+    {
+        $rawId = $request->request->get('homepage_collection_id', '');
+        if (!is_numeric($rawId)) {
+            $errors['homepage_collection_id'] = ['Pick a collection to use as the blog.'];
+            return null;
+        }
+        $id = (int) $rawId;
+        $collection = $this->collections->find($id);
+        if ($collection === null) {
+            $errors['homepage_collection_id'] = ['Pick a collection that exists.'];
+            return null;
+        }
+        return $id;
     }
 
     /**
@@ -184,7 +216,8 @@ final class SettingsAdminController
      *     effective_source: string,
      *     theme_default: ?string,
      *     has_override: bool,
-     *     pages: list<array{id: int, title: string, slug: string, collection_slug: string, collection_name: string}>
+     *     pages: list<array{id: int, title: string, slug: string, collection_slug: string, collection_name: string}>,
+     *     collections: list<\Stead\Content\Collection>
      * }
      */
     private function resolveHomepageForDisplay(Settings $values): array
@@ -202,6 +235,7 @@ final class SettingsAdminController
             'theme_default' => $themeDefault,
             'has_override' => $hasOverride,
             'pages' => $this->entries->listPublishedForPicker(),
+            'collections' => $this->collections->all(),
         ];
     }
 

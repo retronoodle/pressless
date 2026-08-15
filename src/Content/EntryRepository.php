@@ -122,6 +122,53 @@ final class EntryRepository
         ];
     }
 
+    /**
+     * Same shape as {@see listByCollectionPaged()}, but ordered most-recent
+     * first (`published_at DESC, id DESC`). Used for blog-style feeds where
+     * the existing id-ascending order would be insertion order rather than
+     * recency. The collection listing route keeps id-ascending behaviour.
+     *
+     * Entries with `published_at IS NULL` sort last in SQLite (NULLs sort
+     * before non-null on ASC, so they sort last on DESC). The `id DESC`
+     * tiebreaker keeps the order stable when two entries share the same
+     * published_at timestamp.
+     *
+     * @return array{entries: list<Entry>, has_next: bool, total: int, page: int, page_size: int}
+     */
+    public function listByCollectionPagedRecent(int $collectionId, int $page, ?string $status = null): array
+    {
+        $pageSize = self::PAGE_SIZE;
+        $page = $page < 1 ? 1 : $page;
+        $offset = ($page - 1) * $pageSize;
+
+        $total = $this->countByCollection($collectionId, $status);
+
+        $sql = 'SELECT id, collection_id, slug, title, status, published_at, author_id, meta_title, meta_description, og_image_id FROM entries
+              WHERE collection_id = :collection_id';
+        $params = ['collection_id' => $collectionId];
+        if ($status !== null) {
+            $sql .= ' AND status = :status';
+            $params['status'] = $status;
+        }
+        $sql .= ' ORDER BY published_at DESC, id DESC LIMIT :limit OFFSET :offset';
+        $params['limit'] = $pageSize;
+        $params['offset'] = $offset;
+
+        $rows = $this->connection->fetchAll($sql, $params);
+        $entries = [];
+        foreach ($rows as $row) {
+            $entries[] = $this->hydrate($row);
+        }
+
+        return [
+            'entries' => $entries,
+            'has_next' => ($offset + count($entries)) < $total,
+            'total' => $total,
+            'page' => $page,
+            'page_size' => $pageSize,
+        ];
+    }
+
     public function count(): int
     {
         $row = $this->connection->fetchOne('SELECT COUNT(*) AS c FROM entries');

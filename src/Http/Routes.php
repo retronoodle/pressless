@@ -302,6 +302,7 @@ final class Routes
             $settingsRepository,
             new Seeder($connection, $config),
             $entryRepository,
+            $collections,
             $themeResolver,
             new ThemeManifestReader(),
         );

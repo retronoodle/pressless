@@ -530,6 +530,48 @@ a.button--danger:hover {
     font-variant-numeric: tabular-nums;
 }
 
+/* Settings: homepage fieldset ----------------------------------------------- */
+
+.settings-homepage {
+    border: 1px solid var(--stead-rule);
+    border-radius: 4px;
+    padding: var(--stead-space-4) var(--stead-space-5);
+    margin: 0 0 var(--stead-space-4);
+}
+
+.settings-homepage legend {
+    padding: 0 var(--stead-space-2);
+    font-weight: 600;
+    color: var(--stead-ink);
+}
+
+.settings-homepage-current {
+    color: var(--stead-ink);
+    margin-bottom: var(--stead-space-3);
+}
+
+.settings-homepage-action {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--stead-space-2);
+    color: var(--stead-ink);
+    margin-bottom: var(--stead-space-2);
+}
+
+.settings-homepage-action input[type="radio"] {
+    width: auto;
+    max-width: none;
+    flex: 0 0 auto;
+    margin-top: 0.3rem;
+    padding: 0;
+}
+
+.settings-homepage-page {
+    display: block;
+    margin-top: var(--stead-space-3);
+    color: var(--stead-muted);
+}
+
 /* Dark mode ---------------------------------------------------------------- */
 
 @media (prefers-color-scheme: dark) {

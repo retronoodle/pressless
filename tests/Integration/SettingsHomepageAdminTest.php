@@ -138,6 +138,47 @@ final class SettingsHomepageAdminTest extends TestCase
         $this->assertStringContainsString('static page', $body);
     }
 
+    public function testIndexShowsBlogAsThemeDefault(): void
+    {
+        file_put_contents(
+            $this->projectRoot . '/themes/starter/theme.json',
+            json_encode(['name' => 'Starter', 'homepage_type' => 'blog']),
+        );
+        $this->login('admin@example.com');
+
+        $page = $this->get('/admin/settings');
+        $body = (string) $page->getContent();
+        $this->assertSame(200, $page->getStatusCode());
+        $this->assertStringContainsString('theme default', $body);
+        $this->assertStringContainsString('blog', $body);
+    }
+
+    public function testIndexExposesCollectionPicker(): void
+    {
+        $postsId = $this->seedCollection('posts', [
+            ['key' => 'title', 'type' => 'text', 'label' => 'Title'],
+        ]);
+        $newsId = $this->seedCollection('news', [
+            ['key' => 'title', 'type' => 'text', 'label' => 'Title'],
+        ]);
+        $this->login('admin@example.com');
+
+        $page = $this->get('/admin/settings');
+        $body = (string) $page->getContent();
+        $this->assertSame(200, $page->getStatusCode());
+        $this->assertStringContainsString('name="homepage_collection_id"', $body);
+        $this->assertMatchesRegularExpression(
+            sprintf('/<option value="%d"[^>]*>\s*Posts\s*\(\s*posts\s*\)/', $postsId),
+            $body,
+            'the posts collection must appear in the picker.',
+        );
+        $this->assertMatchesRegularExpression(
+            sprintf('/<option value="%d"[^>]*>\s*News\s*\(\s*news\s*\)/', $newsId),
+            $body,
+            'the news collection must appear in the picker.',
+        );
+    }
+
     public function testSavingStaticPageOverrideStoresAndRenders(): void
     {
         $pagesId = $this->seedCollection('pages', [
@@ -252,10 +293,139 @@ final class SettingsHomepageAdminTest extends TestCase
         $this->assertNull($settings->homepagePageId);
     }
 
+    public function testSavingBlogOverrideStoresAndRenders(): void
+    {
+        $postsId = $this->seedCollection('posts', [
+            ['key' => 'title', 'type' => 'text', 'label' => 'Title'],
+        ]);
+        $this->login('admin@example.com');
+
+        $response = $this->post('/admin/settings', [
+            'site_name' => 'Site',
+            'timezone' => 'UTC',
+            'date_format' => 'Y-m-d',
+            'homepage_action' => 'blog',
+            'homepage_collection_id' => (string) $postsId,
+        ]);
+
+        $this->assertSame(303, $response->getStatusCode());
+
+        $settings = $this->loadSettings();
+        $this->assertSame(Settings::HOMEPAGE_TYPE_BLOG, $settings->homepageType);
+        $this->assertSame($postsId, $settings->homepageCollectionId);
+        $this->assertNull($settings->homepagePageId, 'saving a blog override must clear any stale page id.');
+
+        $page = $this->get('/admin/settings');
+        $body = (string) $page->getContent();
+        $this->assertStringContainsString('admin override', $body);
+        $this->assertStringContainsString('a blog', $body);
+        $this->assertMatchesRegularExpression(
+            sprintf('/<option value="%d"\s+selected/', $postsId),
+            $body,
+            'the picked collection must be marked selected in the picker.',
+        );
+    }
+
+    public function testBlogWithoutCollectionIsRejected(): void
+    {
+        $this->login('admin@example.com');
+
+        $response = $this->post('/admin/settings', [
+            'site_name' => 'Site',
+            'timezone' => 'UTC',
+            'date_format' => 'Y-m-d',
+            'homepage_action' => 'blog',
+        ]);
+
+        $this->assertSame(
+            200,
+            $response->getStatusCode(),
+            'a blog submission without a collection id must surface as a form error, not a 500.',
+        );
+        $body = (string) $response->getContent();
+        $this->assertStringContainsString('homepage_collection_id', $body);
+
+        $settings = $this->loadSettings();
+        $this->assertNull($settings->homepageType, 'invalid blog submission must not be persisted.');
+        $this->assertNull($settings->homepageCollectionId);
+    }
+
+    public function testInvalidBlogCollectionIdIsRejected(): void
+    {
+        $this->login('admin@example.com');
+
+        $response = $this->post('/admin/settings', [
+            'site_name' => 'Site',
+            'timezone' => 'UTC',
+            'date_format' => 'Y-m-d',
+            'homepage_action' => 'blog',
+            'homepage_collection_id' => '999999',
+        ]);
+
+        $this->assertSame(200, $response->getStatusCode());
+        $body = (string) $response->getContent();
+        $this->assertStringContainsString('homepage_collection_id', $body);
+
+        $settings = $this->loadSettings();
+        $this->assertNull($settings->homepageType);
+        $this->assertNull($settings->homepageCollectionId);
+    }
+
+    public function testClearingBlogOverrideResetsBothColumns(): void
+    {
+        $postsId = $this->seedCollection('posts', [
+            ['key' => 'title', 'type' => 'text', 'label' => 'Title'],
+        ]);
+        $this->login('admin@example.com');
+
+        $this->post('/admin/settings', [
+            'site_name' => 'Site',
+            'timezone' => 'UTC',
+            'date_format' => 'Y-m-d',
+            'homepage_action' => 'blog',
+            'homepage_collection_id' => (string) $postsId,
+        ]);
+        $this->assertSame(Settings::HOMEPAGE_TYPE_BLOG, $this->loadSettings()->homepageType);
+
+        $this->post('/admin/settings', [
+            'site_name' => 'Site',
+            'timezone' => 'UTC',
+            'date_format' => 'Y-m-d',
+            'homepage_action' => 'use_theme_default',
+        ]);
+
+        $settings = $this->loadSettings();
+        $this->assertNull($settings->homepageType);
+        $this->assertNull($settings->homepagePageId);
+        $this->assertNull($settings->homepageCollectionId);
+    }
+
+    public function testNonAdminCannotSaveBlogHomepageChange(): void
+    {
+        $postsId = $this->seedCollection('posts', [
+            ['key' => 'title', 'type' => 'text', 'label' => 'Title'],
+        ]);
+        $this->login('editor@example.com');
+
+        $response = $this->post('/admin/settings', [
+            'site_name' => 'Site',
+            'timezone' => 'UTC',
+            'date_format' => 'Y-m-d',
+            'homepage_action' => 'blog',
+            'homepage_collection_id' => (string) $postsId,
+        ]);
+
+        $this->assertSame(403, $response->getStatusCode());
+
+        $settings = $this->loadSettings();
+        $this->assertNull($settings->homepageType);
+        $this->assertNull($settings->homepageCollectionId);
+    }
+
     private function loadSettings(): Settings
     {
         $row = $this->connection->fetchOne(
-            'SELECT site_name, timezone, date_format, homepage_type, homepage_page_id FROM settings WHERE id = 1',
+            'SELECT site_name, timezone, date_format, homepage_type, homepage_page_id, homepage_collection_id FROM settings WHERE id = 1',
         );
         if ($row === null) {
             return Settings::defaults();

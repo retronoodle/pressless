@@ -1,0 +1,27 @@
+{% extends 'base.twig' %}
+
+{% block title %}{{ collection.name }}{% endblock %}
+
+{% block body %}
+<section class="blog-listing">
+    <h1>{{ collection.name }}</h1>
+    {% if entries|length == 0 %}
+        <p class="empty">No posts yet.</p>
+    {% else %}
+        <ul class="entries">
+        {% for entry in entries %}
+            <li><a href="/{{ collection.slug }}/{{ entry.slug }}">{{ entry.value('title') }}</a></li>
+        {% endfor %}
+        </ul>
+    {% endif %}
+
+    <nav class="pagination">
+        {% if has_prev %}
+            <a class="prev" href="?page={{ page - 1 }}">&larr; Previous page</a>
+        {% endif %}
+        {% if has_next %}
+            <a class="next" href="?page={{ page + 1 }}">Next page &rarr;</a>
+        {% endif %}
+    </nav>
+</section>
+{% endblock %}
